@@ -15,6 +15,8 @@ from packaging.version import Version
 from CAT.data_handling.entry_points import main
 from CAT.test_utils import assert_mol_allclose
 
+from rdkit_references import RDKIT_REF_PATH
+
 if sys.version_info >= (3, 7):
     from builtins import dict as OrderedDict
 else:
@@ -25,7 +27,7 @@ PATH = Path('tests') / 'test_files'
 LIG_PATH = PATH / 'ligand'
 QD_PATH = PATH / 'qd'
 DB_PATH = PATH / 'database'
-PATH_REF = PATH / 'ligand_ref'
+PATH_REF = RDKIT_REF_PATH / 'ligand_ref'
 
 
 class TestMain:

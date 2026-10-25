@@ -17,6 +17,8 @@ from CAT.base import prep
 from CAT.attachment.ligand_attach import (_get_rotmat1, _get_rotmat2)
 from CAT.workflows import MOL
 
+from rdkit_references import RDKIT_REF_PATH
+
 if TYPE_CHECKING:
     import _pytest
 
@@ -109,7 +111,7 @@ class TestDihedral:
         qd_df, _, _ = prep(arg)
         qd = qd_df[MOL].iloc[0]
 
-        ref = np.load(PATH / f"test_dihedral_{name}.npy").view(np.recarray)
+        ref = np.load(RDKIT_REF_PATH / f"test_dihedral_{name}.npy").view(np.recarray)
         yield DihedTup(qd, ref, name)
 
         # Teardown
@@ -150,7 +152,7 @@ class TestAllignment:
         qd_df, _, _ = prep(arg)
         qd = qd_df[MOL].iloc[0]
 
-        with h5py.File(PATH / "test_allignment.hdf5", "r") as f2:
+        with h5py.File(RDKIT_REF_PATH / "test_allignment.hdf5", "r") as f2:
             atoms_ref = f2[f"TestAllignment/{allignment}/atoms"][...].view(np.recarray)
             bonds_ref = f2[f"TestAllignment/{allignment}/bonds"][...].view(np.recarray)
         yield AllignmentTup(qd, atoms_ref, bonds_ref, allignment)
@@ -223,7 +225,7 @@ class TestCoreAnchor:
         qd_df, _, _ = prep(arg)
         qd = qd_df[MOL].iloc[0]
 
-        with h5py.File(PATH / "test_allignment.hdf5", "r") as f2:
+        with h5py.File(RDKIT_REF_PATH / "test_allignment.hdf5", "r") as f2:
             atoms_ref = f2[f"TestCoreAnchor/{name}/atoms"][...].view(np.recarray)
             bonds_ref = f2[f"TestCoreAnchor/{name}/bonds"][...].view(np.recarray)
         yield AllignmentTup(qd, atoms_ref, bonds_ref, name)
