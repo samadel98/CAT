@@ -1,3 +1,111 @@
+# Minimum requirements for the build system to execute.
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nlesc-CAT"
+dynamic = [
+    "version",
+    "readme",
+]
+description = "A collection of tools designed for the automatic construction of chemical compounds."
+license = "LGPL-3.0-only"
+license-files = ["LICENSE.md", "LICENSE-Apache-2.0.txt", "NOTICE"]
+authors = [
+    { name = "Bas van Beek", email = "b.f.van.beek@vu.nl" },
+    { name = "Jelena Belic" },
+]
+keywords = [
+    "quantum-mechanics",
+    "molecular-mechanics",
+    "science",
+    "chemistry",
+    "python-3",
+    "automation",
+    "scientific-workflows",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "Nano-Utils>=2.3.2",
+    "numpy>=1.21.2",
+    "numpy>=2.1; python_version>='3.13'",  # NumPy 1.x has no wheels for Python >= 3.13
+    "scipy>=1.7.2",
+    "pandas>=1.4.0",
+    "pyyaml>=6.0",
+    "schema>=0.7.2,!=0.7.5",
+    "AssertionLib>=2.2.3",
+    "plams>=1.5.1,<2024",  # No QMFlows release supports PLAMS >= 2024 (which removed `ADFJob`)
+    "typing-extensions>=3.7.4.3",
+    "qmflows>=0.13.0",  # QMFlows 0.12 needs `pkg_resources`, which setuptools 82 removed
+    "rdkit>=2022.3.3",
+    "packaging>=17.1",
+]
+
+[project.scripts]
+init_cat = "CAT.data_handling.entry_points:main"
+
+[project.urls]
+Homepage = "https://github.com/samadel98/CAT"
+"Bug Tracker" = "https://github.com/samadel98/CAT/issues"
+Documentation = "https://cat.readthedocs.io/en/latest/"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=6.2.5",
+    "pytest-cov",
+    "pytest-mock",
+    "h5py>=3.6.0",
+    "ipython>=5.0.0",
+    "sphinx>=2.4",
+    "sphinx_rtd_theme",
+]
+docs = [
+    "sphinx>=2.4",
+    "sphinx_rtd_theme",
+]
+lint = [
+    "flake8>=3.8.0",
+    "pydocstyle[toml]>=6.1",
+    "Flake8-pyproject>=1.2.2",
+]
+
+[tool.setuptools.packages.find]
+include = ["CAT*"]
+
+[tool.setuptools.package-data]
+CAT = [
+    "data/templates/*yaml",
+    "data/coskf/*coskf",
+    "data/coskf/misc/*coskf",
+    "data/CORES/*xyz",
+    "data/LIGANDS/*xyz",
+    "workflows/workflow_yaml.yaml",
+    "workflows/*.pyi",
+    "py.typed",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "CAT.__version__.__version__" }
+readme = { file = ["README.rst"], content-type = "text/x-rst" }
+
 [tool.mypy]
 plugins = "numpy.typing.mypy_plugin"
 show_error_codes = true
@@ -15,3 +123,34 @@ module = [
     "schema.*",
 ]
 ignore_missing_imports = true
+
+[tool.pydocstyle]
+convention = "numpy"
+add_ignore = ["D401"]
+ignore_decorators = "overload"
+
+[tool.flake8]
+max-line-length = 100
+per-file-ignores = [
+    "CAT/test_utils.py: E501",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["CAT", "tests"]
+addopts = "--tb=short --doctest-glob='*.py' --doctest-glob='*.rst' --cov=CAT --cov-report xml --cov-report term --cov-report html --doctest-modules --pdbcls=IPython.terminal.debugger:TerminalPdb"
+markers = [
+    "slow: A marker for slow tests.",
+]
+filterwarnings = [
+    "ignore:Conversion of the second argument of issubdtype from `.` to `.` is deprecated:FutureWarning:h5py.*",
+    "ignore:invalid escape sequence:DeprecationWarning:h5py.*",
+    "ignore:numpy\\.dtype size changed, may indicate binary incompatibility:RuntimeWarning",
+    "ignore:job_recipe \\.yaml storage has been discontinued:DeprecationWarning",
+    "ignore::CAT.utils.MoleculeWarning",
+    "ignore::DeprecationWarning:numpy.distutils.*",
+    "ignore:Setting the shape on a NumPy array has been deprecated:DeprecationWarning:(scm|qmflows)",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["CAT"]

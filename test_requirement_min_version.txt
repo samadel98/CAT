@@ -1,0 +1,14 @@
+Nano-Utils==2.3.2
+numpy==1.21.2
+scipy==1.7.2
+pandas==1.4.0
+pyyaml==6.0
+schema==0.7.2
+AssertionLib==2.2.3
+plams==1.5.1
+typing-extensions==3.7.4.3
+qmflows==0.13.0
+rdkit==2022.3.3
+packaging==17.1
+pytest==6.2.5
+h5py==3.6.0
