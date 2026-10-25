@@ -53,6 +53,8 @@ from rdkit import Chem, RDLogger
 
 from ..utils import get_formula
 from ..logger import logger
+from ..mol_utils import rdkit_props
+from .._compat import get_conformation, readpdb
 from ..data_handling.validate_mol import validate_mol
 
 __all__ = ['read_mol', 'set_mol_prop']
@@ -135,7 +137,7 @@ def read_mol_xyz(mol_dict: Settings) -> Optional[Molecule]:
 def read_mol_pdb(mol_dict: Settings) -> Optional[Molecule]:
     """Read a .pdb file."""
     try:
-        mol = molkit.readpdb(mol_dict.mol)
+        mol = readpdb(mol_dict.mol)
         if mol_dict.guess_bonds and not mol_dict.is_qd:
             mol.guess_bonds()
         if mol_dict.canonicalize:
@@ -188,7 +190,7 @@ def _from_smiles(smiles: str) -> Molecule:
     _rdmol = Chem.MolFromSmiles(smiles, params=SMILES_PARAMS)
     rdmol = Chem.AddHs(_rdmol)
     rdmol.SetProp('smiles', smiles)
-    return molkit.get_conformations(rdmol, 1, None, None, rms=0.1)
+    return get_conformation(rdmol)
 
 
 def read_mol_plams(mol_dict: Settings) -> Optional[Molecule]:
@@ -376,26 +378,26 @@ def set_atom_prop(atom: Atom, at_id: Sequence[str], residue_name: str) -> None:
     symbol = '{:4}'.format(atom.symbol + ''.join(at_id))
 
     # Add a number of properties to atom
-    atom.properties.pdb_info.ResidueName = residue_name
-    atom.properties.pdb_info.Occupancy = 1.0
-    atom.properties.pdb_info.TempFactor = 0.0
-    atom.properties.pdb_info.ResidueNumber = 1
-    atom.properties.pdb_info.Name = symbol
-    atom.properties.pdb_info.ChainId = 'A'
+    rdkit_props(atom).pdb_info.ResidueName = residue_name
+    rdkit_props(atom).pdb_info.Occupancy = 1.0
+    rdkit_props(atom).pdb_info.TempFactor = 0.0
+    rdkit_props(atom).pdb_info.ResidueNumber = 1
+    rdkit_props(atom).pdb_info.Name = symbol
+    rdkit_props(atom).pdb_info.ChainId = 'A'
 
     # Changes hydrogen and carbon from heteroatom to atom
     if atom.symbol in ('H', 'C'):
-        atom.properties.pdb_info.IsHeteroAtom = False
+        rdkit_props(atom).pdb_info.IsHeteroAtom = False
     else:
-        atom.properties.pdb_info.IsHeteroAtom = True
+        rdkit_props(atom).pdb_info.IsHeteroAtom = True
 
     # Sets the formal atomic charge
-    if atom.properties.charge:
+    if rdkit_props(atom).charge:
         return
 
     # Default to a charge of 0 if no charge is available for that specific element
     if atom.symbol not in CHARGE_MAPPING:
-        atom.properties.charge = 0
+        rdkit_props(atom).charge = 0
         return
 
     # Update the charge of non-hypervalent atoms
@@ -405,17 +407,17 @@ def set_atom_prop(atom: Atom, at_id: Sequence[str], residue_name: str) -> None:
     sign = -1 * int(default_charge / abs_charge)
 
     # Take the default charge and correct for the number (and order) of bonds
-    atom.properties.charge = default_charge + sign * total_bonds
+    rdkit_props(atom).charge = default_charge + sign * total_bonds
     if total_bonds <= abs_charge:
         return
 
     # Update formal atomic charges for hypervalent atoms
     if total_bonds is 2 + abs_charge:
-        atom.properties.charge -= 2 * sign
+        rdkit_props(atom).charge -= 2 * sign
     elif total_bonds is 4 + abs_charge:
-        atom.properties.charge -= 4 * sign
+        rdkit_props(atom).charge -= 4 * sign
     elif total_bonds >= 6 + abs_charge:
-        atom.properties.charge -= 6 * sign
+        rdkit_props(atom).charge -= 6 * sign
     return
 
 
@@ -461,11 +463,11 @@ def set_qd(qd: Molecule, mol_dict: Settings) -> Molecule:
 
     # Update the pdb_info of all atoms
     for i, at in enumerate(qd, 1):
-        at.properties.pdb_info.SerialNumber = i
+        rdkit_props(at).pdb_info.SerialNumber = i
         if i <= core_idx_max:  # A core atom
-            at.properties.pdb_info.ResidueNumber = 1
+            rdkit_props(at).pdb_info.ResidueNumber = 1
         else:  # A ligand atom
-            at.properties.pdb_info.ResidueNumber = 2 + int((i - core_idx_max) / len(ligand))
+            rdkit_props(at).pdb_info.ResidueNumber = 2 + int((i - core_idx_max) / len(ligand))
 
 
 def print_exception(func_name: str, mol_name: str, ex: Exception) -> None:

@@ -8,6 +8,7 @@ import pandas as pd
 
 from scm.plams import Molecule, MoleculeError
 
+from ._compat import atoms_as_array
 from .utils import AnchorTup, get_formula
 from .workflows import WorkFlow
 from .mol_utils import to_symbol
@@ -97,7 +98,7 @@ def _multi_lig_anchor(qd_series, ligands, path, anchor, allignment) -> np.ndarra
                 raise MoleculeError(f'Failed to identify {to_symbol(atnum)!r} in '
                                     f'{get_formula(qd)!r}') from ex
 
-            coords = Molecule.as_array(None, atom_subset=atoms)
+            coords = atoms_as_array(atoms)
             qd.properties.dummies = np.array(coords, ndmin=2, dtype=float)
             qd = ligand_to_qd(qd, ligand, path=path)
             ret[j, i] = qd

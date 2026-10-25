@@ -7,7 +7,7 @@ from schema import SchemaError
 from unittest import mock
 
 import numpy as np
-from scm.plams import AMSJob, ADFJob, Settings, CRSJob
+from scm.plams import AMSJob, Settings, CRSJob
 from assertionlib import assertion
 
 from CAT.utils import get_template, AllignmentTup, AllignmentEnum
@@ -309,12 +309,12 @@ def test_qd_opt_schema() -> None:
         assertion.assert_(qd_opt_schema.validate, qd_opt_dict, exception=SchemaError)
         qd_opt_dict[job] = 'bob'  # Exception: incorrect value
         assertion.assert_(qd_opt_schema.validate, qd_opt_dict, exception=SchemaError)
-        qd_opt_dict[job] = 'ADFJob'
-        assertion.is_(qd_opt_schema.validate(qd_opt_dict)[job], ADFJob)
-        qd_opt_dict[job] = 'ADFJOB'
-        assertion.is_(qd_opt_schema.validate(qd_opt_dict)[job], ADFJob)
-        qd_opt_dict[job] = ADFJob
-        assertion.is_(qd_opt_schema.validate(qd_opt_dict)[job], ADFJob)
+        qd_opt_dict[job] = 'AMSJob'
+        assertion.is_(qd_opt_schema.validate(qd_opt_dict)[job], AMSJob)
+        qd_opt_dict[job] = 'AMSJOB'
+        assertion.is_(qd_opt_schema.validate(qd_opt_dict)[job], AMSJob)
+        qd_opt_dict[job] = AMSJob
+        assertion.is_(qd_opt_schema.validate(qd_opt_dict)[job], AMSJob)
 
     ref = {'key1': {'key2': {'key3': True}}}
 
@@ -361,12 +361,12 @@ def test_crs_schema() -> None:
         assertion.assert_(crs_schema.validate, crs_dict, exception=SchemaError)
         crs_dict[job] = 'bob'  # Exception: incorrect value
         assertion.assert_(crs_schema.validate, crs_dict, exception=SchemaError)
-        crs_dict[job] = 'ADFJob'
-        assertion.is_(crs_schema.validate(crs_dict)[job], ADFJob)
-        crs_dict[job] = 'ADFJOB'
-        assertion.is_(crs_schema.validate(crs_dict)[job], ADFJob)
-        crs_dict[job] = ADFJob
-        assertion.is_(crs_schema.validate(crs_dict)[job], ADFJob)
+        crs_dict[job] = 'AMSJob'
+        assertion.is_(crs_schema.validate(crs_dict)[job], AMSJob)
+        crs_dict[job] = 'AMSJOB'
+        assertion.is_(crs_schema.validate(crs_dict)[job], AMSJob)
+        crs_dict[job] = AMSJob
+        assertion.is_(crs_schema.validate(crs_dict)[job], AMSJob)
 
     ref = {'key1': {'key2': {'key3': True}}}
 
@@ -471,12 +471,12 @@ def test_bde_schema() -> None:
         assertion.assert_(bde_schema.validate, bde_dict, exception=SchemaError)
         bde_dict[job] = 'bob'  # Exception: incorrect value
         assertion.assert_(bde_schema.validate, bde_dict, exception=SchemaError)
-        bde_dict[job] = 'ADFJob'
-        assertion.is_(bde_schema.validate(bde_dict)[job], ADFJob)
-        bde_dict[job] = 'ADFJOB'
-        assertion.is_(bde_schema.validate(bde_dict)[job], ADFJob)
-        bde_dict[job] = ADFJob
-        assertion.is_(bde_schema.validate(bde_dict)[job], ADFJob)
+        bde_dict[job] = 'AMSJob'
+        assertion.is_(bde_schema.validate(bde_dict)[job], AMSJob)
+        bde_dict[job] = 'AMSJOB'
+        assertion.is_(bde_schema.validate(bde_dict)[job], AMSJob)
+        bde_dict[job] = AMSJob
+        assertion.is_(bde_schema.validate(bde_dict)[job], AMSJob)
 
     ref = {'key1': {'key2': {'key3': True}}}
 

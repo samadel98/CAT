@@ -13,6 +13,7 @@ Index
     adf_connectivity
     fix_carboxyl
     fix_h
+    rdkit_props
 
 API
 ---
@@ -25,6 +26,7 @@ API
 .. autofunction:: adf_connectivity
 .. autofunction:: fix_carboxyl
 .. autofunction:: fix_h
+.. autofunction:: rdkit_props
 
 """
 
@@ -32,16 +34,38 @@ from typing import Optional, Iterable, Union, Tuple, List
 
 import numpy as np
 
-from scm.plams import Molecule, Atom, Bond, MoleculeError, add_to_class, PTError
+from scm.plams import Molecule, Atom, Bond, MoleculeError, Settings, add_to_class, PTError
 from scm.plams.tools.periodic_table import PeriodicTable
 import scm.plams.interfaces.molecule.rdkit as molkit
 
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms
 
+from ._compat import RDKIT_PROPS_IN_SUBKEY
 from ._mol_str_parser import FormatEnum
 
-__all__ = ['adf_connectivity', 'fix_h', 'fix_carboxyl']
+__all__ = ['adf_connectivity', 'fix_h', 'fix_carboxyl', 'rdkit_props']
+
+
+def rdkit_props(obj: Union[Atom, Bond]) -> Settings:
+    """Return the properties where PLAMS keeps the RDKit charge, PDB info and stereo of **obj**.
+
+    These are ``obj.properties`` in PLAMS < 2024 and ``obj.properties.rdkit`` in later versions.
+
+    Examples
+    --------
+    .. code:: python
+
+        >>> from scm.plams import Atom
+        >>> from CAT.mol_utils import rdkit_props
+
+        >>> atom = Atom(symbol="O")
+        >>> rdkit_props(atom).charge = -1
+        >>> rdkit_props(atom).charge
+        -1
+
+    """
+    return obj.properties.rdkit if RDKIT_PROPS_IN_SUBKEY else obj.properties
 
 
 @add_to_class(Molecule)
@@ -180,20 +204,27 @@ def separate_mod(self) -> Tuple[Molecule]:
 
 
 @add_to_class(Molecule)
-def round_coords(self, decimals: int = 3) -> None:
+def round_coords(self, decimals: int = 3, inplace: bool = True) -> Optional[Molecule]:
     """Round the Cartesian coordinates of this instance to a given precision in decimal digits.
 
-    Performs an inplace update of all atoms in this instance.
+    Performs an inplace update of all atoms in this instance,
+    or returns a rounded copy if **inplace** is ``False``.
 
     Parameters
     ----------
     decimals : int
         The desired precision in decimal digits.
 
+    inplace : bool
+        Whether to update this instance rather than return a rounded copy;
+        :func:`round` calls this method with ``inplace=False``.
+
     """
-    xyz = self.as_array()
+    mol = self if inplace else self.copy()
+    xyz = mol.as_array()
     xyz[:] = np.round(xyz, decimals=decimals)
-    self.from_array(xyz)
+    mol.from_array(xyz)
+    return None if inplace else mol
 
 
 def to_atnum(value: Union[str, int, Atom]) -> int:

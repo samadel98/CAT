@@ -16,12 +16,14 @@ import pytest
 import numpy as np
 from unittest import mock
 from rdkit import Chem
-from scm.plams import from_smiles, Molecule, to_rdmol, PT
+from scm.plams import Molecule, to_rdmol, PT
 from assertionlib import assertion
 from schema import SchemaError
 from packaging.version import Version
 
 from CAT.utils import get_template, KindEnum, AnchorTup, FormatEnum, MultiAnchorEnum
+from CAT.mol_utils import rdkit_props
+from CAT._compat import from_smiles
 from CAT.base import prep_input
 from CAT.attachment.ligand_anchoring import (
     get_functional_groups, _smiles_to_rdmol, find_substructure, init_ligand_anchoring
@@ -132,7 +134,7 @@ class TestFindSubstructure:
 
     @staticmethod
     def get_symbols_and_bonds(mol: Molecule) -> Tuple[np.ndarray, np.ndarray]:
-        atoms_iter = ((at.properties.get("charge", 0.0), at.symbol) for at in mol)
+        atoms_iter = ((rdkit_props(at).get("charge", 0.0), at.symbol) for at in mol)
         atoms_dtype = [("charge", "f8"), ("symbol", "S2")]
         atoms_ar = np.fromiter(atoms_iter, dtype=atoms_dtype)
 
@@ -196,7 +198,7 @@ class TestFindSubstructure:
         for m in out:
             assertion.len_eq(m, len(mol) - 1)
 
-        assertion.eq(mol1[1].properties.charge, -1)
+        assertion.eq(rdkit_props(mol1[1]).charge, -1)
         assertion.eq(mol1[1].symbol, 'N')
         assertion.len_eq(mol1[1].bonds, 2)
         assertion.is_(mol1.properties.dummies, mol1[1])
@@ -204,7 +206,7 @@ class TestFindSubstructure:
         assertion.eq(mol1.properties.smiles, '[NH-]C(O)C(=O)O')
         assertion.is_not(mol1, mol)
 
-        assertion.eq(mol2[3].properties.charge, -1)
+        assertion.eq(rdkit_props(mol2[3]).charge, -1)
         assertion.eq(mol2[3].symbol, 'O')
         assertion.len_eq(mol2[3].bonds, 1)
         assertion.is_(mol2.properties.dummies, mol2[3])
@@ -212,7 +214,7 @@ class TestFindSubstructure:
         assertion.eq(mol2.properties.smiles, 'NC([O-])C(=O)O')
         assertion.is_not(mol1, mol)
 
-        assertion.eq(mol3[6].properties.charge, -1)
+        assertion.eq(rdkit_props(mol3[6]).charge, -1)
         assertion.eq(mol3[6].symbol, 'O')
         assertion.len_eq(mol3[6].bonds, 1)
         assertion.is_(mol3.properties.dummies, mol3[6])
