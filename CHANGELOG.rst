@@ -8,7 +8,11 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 
 0.7.3
 *****
-* *placeholder*.
+* Drop support for Python 3.7, 3.8 and 3.9; Python 3.10 is now the minimum.
+* Add support for Python 3.12, 3.13 and 3.14, NumPy 2, pandas 2 and 3, and newer RDKit versions.
+* Replace the ``rdkit-pypi`` dependency with ``rdkit`` and cap PLAMS below 2024.
+* Move the package metadata from ``setup.py`` to ``pyproject.toml``.
+* Test against the CAT and Auto-FOX forks and CP2K 2026.2.
 
 
 0.7.2
