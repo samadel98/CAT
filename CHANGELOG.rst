@@ -23,6 +23,8 @@ Unreleased
 * Add reference geometries made with RDKit 2026.09 to the tests.
 * Finish importing pre-built quantum dots (``input_qd``): ligands are found by their connectivity,
   bonds are guessed when missing, and imported quantum dots are stored in the database.
+* Add the ``--template``, ``--validate`` and ``--dry-run`` options to ``init_cat``,
+  and log a summary of the results at the end of a run.
 * Fix ``val_nano_cat()`` raising an ``ImportError`` without its message.
 * Fix ``mol_to_file(overwrite=False)`` overwriting existing files.
 * Write molecules whose name exceeds the 255-byte filename limit under a shortened, hashed name

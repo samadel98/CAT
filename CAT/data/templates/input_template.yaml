@@ -1,0 +1,44 @@
+# A starter input file for CAT; run it with `init_cat input.yaml`.
+# Check it first with `init_cat --validate input.yaml` (input only) or
+# `init_cat --dry-run input.yaml` (also reads all molecules and lists what would run).
+# All options are described at https://cat.readthedocs.io/en/latest/4_optional.html
+
+# The working directory; cores and ligands given as file names are read from `<path>/core`
+# and `<path>/ligand`, and all results are written below it
+path: .
+
+# One or more cores (.xyz, .pdb, .mol, .mol2 files, SMILES strings or folders)
+input_cores:
+    - Cd68Se55.xyz:
+        guess_bonds: False
+
+# One or more ligands (file names or SMILES strings)
+input_ligands:
+    - OC(C)=O
+    - OC(CC)=O
+
+optional:
+    database:
+        read: True  # Reuse results of previous runs
+        write: True
+        overwrite: False
+        mol_format: [pdb, xyz]  # Formats of the exported structures
+        mongodb: False
+
+    core:
+        # The atoms (here: chlorine) marking where the ligands are attached;
+        # they are replaced by the ligands
+        dummy: Cl
+        subset: null
+
+    ligand:
+        optimize: True  # Optimize the ligands with RDKit UFF
+        split: True  # Remove a proton or counterion from the anchor (e.g. carboxylic acid -> carboxylate)
+        anchor: null  # null: detect the functional group automatically
+
+    qd:
+        construct_qd: True
+        optimize: False
+        activation_strain: False  # Requires Nano-CAT
+        dissociate: False  # Ligand dissociation energies; requires Nano-CAT
+        bulkiness: False  # Requires Nano-CAT

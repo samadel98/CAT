@@ -18,6 +18,14 @@ As is implied by the name, everything in ``optional`` is completely optional.
 3.  Run **CAT** with the following command:
 ``init_cat input_settings.yaml``
 
+Some other useful commands:
+
+* ``init_cat --template > input_settings.yaml``: write a commented starter input file.
+* ``init_cat --validate input_settings.yaml``: only check the input file.
+* ``init_cat --dry-run input_settings.yaml``: check the input file, read all input molecules
+  and list the workflows that would run (and any missing AMS, CP2K or Nano-CAT installation),
+  without running anything or creating any files.
+
 4.  Congratulations, you just ran
 **CAT**!
 
