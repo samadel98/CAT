@@ -81,3 +81,15 @@ class TestWorkflow:
         *_, ligand_df = prep(s)
         ref = [61, 81, 82]
         np.testing.assert_allclose(ligand_df[CONE_ANGLE], ref, rtol=0, atol=1)
+
+    @pytest.mark.parametrize("dist", [0.0, [0.0, 5.0]], ids=["default", "vector"])
+    def test_from_db(self, dist: float | list[float]) -> None:
+        """Cone angles stored by a previous run are read back from the database."""
+        s = self.SETTINGS.copy()
+        s.optional.ligand.cone_angle = {"distance": dist}
+        *_, ligand_df1 = prep(s.copy())
+        *_, ligand_df2 = prep(s.copy())
+
+        columns = [("cone_angle", f"dist={i}") for i in np.atleast_1d(dist)]
+        assert not ligand_df1[columns].isna().any(axis=None)
+        np.testing.assert_allclose(ligand_df2[columns], ligand_df1[columns])
