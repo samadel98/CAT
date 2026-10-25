@@ -99,7 +99,8 @@ class TestDihedral:
     }
 
     @pytest.fixture(scope="class", autouse=True, name="output", params=PARAMS.items(), ids=PARAMS)
-    def run_cat(self, request: "_pytest.fixtures.SubRequest") -> Generator[DihedTup, None, None]:
+    @classmethod
+    def run_cat(cls, request: "_pytest.fixtures.SubRequest") -> Generator[DihedTup, None, None]:
         # Setup
         name, dihed = request.param  # type: str, str | float
         yaml_path = PATH / 'CAT_dihedral.yaml'
@@ -138,8 +139,9 @@ class TestAllignment:
     PARAMS = ("sphere", "surface", "sphere_invert", "surface_invert")
 
     @pytest.fixture(scope="class", name="output", params=PARAMS)
+    @classmethod
     def run_cat(
-        self, request: "_pytest.fixtures.SubRequest"
+        cls, request: "_pytest.fixtures.SubRequest"
     ) -> Generator[AllignmentTup, None, None]:
         # Setup
         allignment: str = request.param
@@ -208,8 +210,9 @@ class TestCoreAnchor:
     }
 
     @pytest.fixture(scope="class", name="output", params=PARAMS.items(), ids=PARAMS)
+    @classmethod
     def run_cat(
-        self, request: "_pytest.fixtures.SubRequest"
+        cls, request: "_pytest.fixtures.SubRequest"
     ) -> Generator[AllignmentTup, None, None]:
         # Setup
         name, (core, kwargs) = request.param

@@ -169,8 +169,8 @@ def assert_mol_allclose(
     """
     __tracebackhide__ = True
 
-    a = np.array(actual, dtype=np.float64)
-    b = np.array(desired, dtype=np.float64)
+    a = actual.as_array().astype(np.float64, copy=False)
+    b = desired.as_array().astype(np.float64, copy=False)
     if a.shape != b.shape:
         raise ValueError(f"Molecules must have the same number of atoms: {len(a)} {len(b)}")
     elif len(actual.bonds) != len(desired.bonds):

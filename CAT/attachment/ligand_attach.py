@@ -79,7 +79,7 @@ def init_qd_construction(ligand_df: SettingsDataFrame, core_df: SettingsDataFram
     # import pdb; pdb.set_trace()
     qd_df = _get_df(core_df.index, ligand_df.index, ligand_df.settings)
     qd_df[MOL] = None
-    qd_df.sort_index(inplace=True)
+    qd_df = qd_df.sort_index()
     if not construct_qd:
         return qd_df
 

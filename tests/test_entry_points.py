@@ -32,7 +32,8 @@ PATH_REF = RDKIT_REF_PATH / 'ligand_ref'
 
 class TestMain:
     @pytest.fixture(scope="class", autouse=True)
-    def run_cat(self) -> Generator[None, None, None]:
+    @classmethod
+    def run_cat(cls) -> Generator[None, None, None]:
         # Setup
         filename = str(PATH / 'input2.yaml')
         main([filename])

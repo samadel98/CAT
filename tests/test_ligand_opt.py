@@ -13,7 +13,7 @@ MOL = readpdb(join(PATH, 'Methanol.pdb'))
 
 def test_rdmol_as_array() -> None:
     """Test :func:`CAT.attachment.ligand_opt.rdmol_as_array`."""
-    xyz_ref = np.array(MOL)
+    xyz_ref = MOL.as_array()
 
     rdmol = to_rdmol(MOL)
     xyz = rdmol_as_array(rdmol)
