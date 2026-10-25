@@ -35,7 +35,7 @@ You want to make some kind of change to the code base
 1. (**important**) announce your plan to the rest of the community *before you start working*. This announcement should be in the form of a (new) issue;
 1. (**important**) wait until some kind of consensus is reached about your idea being a good idea;
 1. if needed, fork the repository to your own Github profile and create your own feature branch off of the latest master commit. While working on your feature branch, make sure to stay up to date with the master branch by pulling in changes, possibly from the 'upstream' repository (follow the instructions `here <https://help.github.com/articles/configuring-a-remote-for-a-fork/>`__ and `here <https://help.github.com/articles/syncing-a-fork/>`__);
-1. make sure the existing tests still work by running ``python setup.py test``;
+1. make sure the existing tests still work by running ``pip install -e .[test]`` followed by ``pytest``;
 1. add your own tests (if necessary);
 1. update or expand the documentation;
 1. `push <http://rogerdudler.github.io/git-guide/>`_ your feature branch to (your fork of) the Compound Attachment/Analysis Tool repository on GitHub;

@@ -7,6 +7,7 @@ from shutil import copyfile
 from pathlib import Path
 
 import h5py
+import numpy as np
 
 from scm.plams import writepdb
 from assertionlib import assertion
@@ -58,10 +59,23 @@ def test_init() -> None:
     """Test :meth:`PDBContainer.__init__`."""
     atoms = [(True, 1, 'Cad', 'LIG', 'A', 1, -5.231, 0.808, -0.649, 1, 0, 'C', 0, 0)]
     bonds = [(1, 2, 1)]
-    assertion.assert_(PDBContainer, atoms, bonds, 1, 1)
+    pdb1 = PDBContainer(atoms, bonds, 1, 1)
+    np.testing.assert_array_equal(pdb1.scale, [0])
+    assertion.eq(pdb1.atoms.shape, (1, 1))
+    assertion.eq(pdb1.bonds.shape, (1, 1))
+    assertion.isinstance(pdb1.atoms, np.recarray)
 
-    index = range(1)
-    assertion.assert_(PDBContainer, atoms, bonds, 1, 1, index)
+    index = range(5, 6)
+    pdb2 = PDBContainer(atoms, bonds, 1, 1, index)
+    np.testing.assert_array_equal(pdb2.scale, [5])
+
+    atom_count = np.array([1], dtype=np.int32)
+    pdb3 = PDBContainer(atoms, bonds, atom_count, 1, copy=False)
+    assertion.truth(np.shares_memory(pdb3.atom_count, atom_count))
+    assertion.is_(pdb3.atom_count.flags.writeable, False)
+
+    pdb4 = PDBContainer(atoms, bonds, atom_count.copy(), 1, copy=True)
+    assertion.is_(np.shares_memory(pdb4.atom_count, atom_count), False)
 
 
 @delete_finally(PDB_OUTPUT)
@@ -70,8 +84,8 @@ def test_to_molecules() -> None:
     os.mkdir(PDB_OUTPUT)
     mol_list = PDB.to_molecules()
     for i, mol in enumerate(mol_list):
-        filename = str(PDB_OUTPUT / f'mol{i}.pdb')
-        writepdb(mol, filename)
+        with open(PDB_OUTPUT / f'mol{i}.pdb', 'w') as f:
+            writepdb(mol, f)
 
 
 @delete_finally(HDF5_TMP)

@@ -20,7 +20,7 @@ def test_update_prop_dset() -> None:
     with h5py.File(HDF5_TMP, 'r+') as f:
         dset = f['ligand/properties/formula']
 
-        data1 = np.array(['a', 'b', 'c'], dtype=np.string_)
+        data1 = np.array(['a', 'b', 'c'], dtype=np.bytes_)
         update_prop_dset(dset, data1, index=slice(None, 3))
         assertion.eq(data1, dset[:3], post_process=np.all)
 
@@ -30,7 +30,7 @@ def test_update_prop_dset() -> None:
         idx.resize(n + 3, axis=0)
 
         # Test if the automatic resizing works
-        data2 = np.array(['d', 'e', 'f'], dtype=np.string_)
+        data2 = np.array(['d', 'e', 'f'], dtype=np.bytes_)
         update_prop_dset(dset, data2, index=slice(-3, None))
         assertion.eq(data2, dset[-3:], post_process=np.all)
         assertion.len_eq(dset, n + 3)

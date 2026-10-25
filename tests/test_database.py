@@ -1,5 +1,6 @@
 """Tests for the :class:`dataCAT.Database` class."""
 
+import os
 import sys
 import copy
 import shutil
@@ -12,14 +13,16 @@ import h5py
 import numpy as np
 import pandas as pd
 import pytest
+from rdkit import Chem
+from pymongo import MongoClient
 
-from scm.plams import readpdb
 from nanoutils import delete_finally
 from assertionlib import assertion
 from CAT.utils import get_formula
 from CAT.workflows import MOL, HDF5_INDEX, OPT, V_BULK, JOB_SETTINGS_CDFT
 
 from dataCAT import Database, OpenLig, OpenQD
+from dataCAT.testing_utils import _readpdb as readpdb
 
 PATH = Path('tests') / 'test_files'
 DB_PATH = PATH / 'database'
@@ -94,6 +97,12 @@ def test_from_hdf5() -> None:
     mol_list2 = DB.from_hdf5(idx2, 'ligand', rdmol=False)
     for mol, ref in zip(mol_list2, ref_tup[0:2]):
         assertion.eq(get_formula(mol), ref)
+
+    rdmol_list = DB.from_hdf5(idx1, 'ligand', rdmol=True)
+    assertion.len_eq(rdmol_list, len(ref_tup))
+    for rdmol, mol in zip(rdmol_list, mol_list1):
+        assertion.isinstance(rdmol, Chem.Mol)
+        assertion.eq(rdmol.GetNumAtoms(), len(mol.atoms))
 
 
 def test_from_csv() -> None:
@@ -186,6 +195,60 @@ def test_update_csv() -> None:
 
 
 @delete_finally(DB_PATH_UPDATE)
+def test_update_csv_new_and_old() -> None:
+    """Test :meth:`~dataCAT.Database.update_csv` with a mix of new and pre-existing structures."""
+    shutil.copytree(DB_PATH, DB_PATH_UPDATE)
+    db = Database(DB_PATH_UPDATE)
+
+    idx = pd.MultiIndex.from_tuples([('CC(=O)[O-]', 'O4'), ('C[O-]', 'O2'), ('CC[O-]', 'O3')])
+    mol_list = [
+        readpdb(PATH / 'CC[=O][O-]@O4.pdb'),
+        readpdb(PATH / 'CC[=O][O-]@O4.pdb'),
+        readpdb(PATH / 'CCC[=O][O-]@O5.pdb'),
+    ]
+    df = pd.DataFrame({MOL: mol_list}, index=idx)
+    df[HDF5_INDEX] = [-1, 0, 1]
+    df[OPT] = False
+    df[V_BULK] = np.arange(3, dtype=float)
+    df_index = df.index.copy()
+
+    # The new structure is assigned the largest hdf5 index (`3`), thus requiring the
+    # rows of `df` to be sorted (again) before exporting the properties to the hdf5 file
+    db.update_csv(df, database='ligand', columns=[MOL, V_BULK])
+    np.testing.assert_array_equal(df.index, df_index)
+    np.testing.assert_array_equal(df[HDF5_INDEX], [3, 0, 1])
+
+    with db.csv_lig(write=False) as df2:
+        np.testing.assert_allclose(df[V_BULK], df2.loc[df.index, V_BULK])
+        np.testing.assert_array_equal(df[HDF5_INDEX], df2.loc[df.index, HDF5_INDEX])
+
+    with db.hdf5('r') as f:
+        dset = f['ligand/properties/V_bulk']
+        np.testing.assert_array_equal(dset[[0, 1, 3]], [1.0, 2.0, 0.0])
+        assertion.len_eq(f['ligand/atoms'], 4)
+
+
+@delete_finally(DB_PATH_UPDATE)
+def test_update_csv_str() -> None:
+    """Test :meth:`~dataCAT.Database.update_csv` with a new column of strings."""
+    shutil.copytree(DB_PATH, DB_PATH_UPDATE)
+    db = Database(DB_PATH_UPDATE)
+
+    column = ('name', '')
+    idx = pd.MultiIndex.from_tuples([('C[O-]', 'O2'), ('CC[O-]', 'O3')])
+    df = pd.DataFrame({HDF5_INDEX: [0, 1], OPT: True, column: ['methoxide', 'ethoxide']}, index=idx)
+
+    db.update_csv(df, database='ligand', columns=[column])
+    with db.csv_lig(write=False) as df2:
+        assertion.eq(df2.loc[idx, column].tolist(), ['methoxide', 'ethoxide'])
+        assertion.truth(pd.isna(df2.loc[('CCC[O-]', 'O4'), column]))
+
+    with db.hdf5('r') as f:
+        dset = f['ligand/properties/name']
+        assertion.eq(dset[:2].astype(str).tolist(), ['methoxide', 'ethoxide'])
+
+
+@delete_finally(DB_PATH_UPDATE)
 def test_update_hdf5_settinga() -> None:
     """Test :meth:`~dataCAT.Database._update_hdf5_settings`."""
     shutil.copytree(DB_PATH, DB_PATH_UPDATE)
@@ -220,7 +283,132 @@ def test_update_hdf5_settinga() -> None:
                 pass
 
 
-@pytest.mark.skipif(DB.mongodb is None, reason="MongoDB server not found")
-def test_update_mbongodb() -> None:
-    """Test :meth:`~dataCAT.Database.update_mbongodb`."""
-    DB.update_mongodb('ligand')
+#: A prefix for all MongoDB document keys created by the tests below,
+#: ensuring that only documents created by the tests are removed afterwards.
+MONGO_PREFIX = 'dataCAT-test:'
+
+#: The names of the MongoDB collections and the keys of their first index.
+MONGO_KEYS = MappingProxyType({
+    'ligand_database': 'smiles',
+    'qd_database': 'core',
+})
+
+
+def _clear_mongodb(db: Database) -> None:
+    """Remove all MongoDB documents with :data:`MONGO_PREFIX`-prefixed keys."""
+    with MongoClient(**db.mongodb) as client:
+        for name, key in MONGO_KEYS.items():
+            client.cat_database[name].delete_many({key: {'$regex': f'^{MONGO_PREFIX}'}})
+
+
+@pytest.fixture
+def mongo_db():
+    """Yield a copy of the test database whose index keys have been prefixed with :data:`MONGO_PREFIX`."""  # noqa: E501
+    if DB.mongodb is None:
+        # Ensure that the tests are not silently skipped in CI
+        if os.environ.get('DATACAT_REQUIRE_MONGODB'):
+            pytest.fail("MongoDB server not found")
+        pytest.skip("MongoDB server not found")
+
+    shutil.copytree(DB_PATH, DB_PATH_UPDATE)
+    db = Database(DB_PATH_UPDATE)
+    for manager in (db.csv_lig, db.csv_qd):
+        with manager(write=True) as df:
+            df.index = df.index.map(lambda tup: tuple(f'{MONGO_PREFIX}{i}' for i in tup))
+
+    _clear_mongodb(db)
+    try:
+        yield db
+    finally:
+        _clear_mongodb(db)
+        shutil.rmtree(DB_PATH_UPDATE)
+
+
+def _get_mongo_docs(db: Database, name: str) -> dict:
+    """Return all :data:`MONGO_PREFIX`-prefixed documents of the **name** collection."""
+    key = MONGO_KEYS[name]
+    with MongoClient(**db.mongodb) as client:
+        collection = client.cat_database[name]
+        cursor = collection.find({key: {'$regex': f'^{MONGO_PREFIX}'}}, {'_id': False})
+        return {doc[key]: doc for doc in cursor}
+
+
+def test_update_mongodb_ligand(mongo_db: Database) -> None:
+    """Test :meth:`~dataCAT.Database.update_mongodb` with the ligand database."""
+    with mongo_db.csv_lig(write=False) as df:
+        n = len(df)
+
+    # The second call should silently skip all (now pre-existing) documents
+    mongo_db.update_mongodb('ligand')
+    mongo_db.update_mongodb('ligand')
+
+    docs = _get_mongo_docs(mongo_db, 'ligand_database')
+    assertion.len_eq(docs, n)
+
+    doc = docs[f'{MONGO_PREFIX}CC[O-]']
+    assertion.eq(doc['anchor'], f'{MONGO_PREFIX}O3')
+    assertion.eq(doc['formula'], {'': 'C2H5O1'})
+    assertion.eq(doc['hdf5 index'], {'': 1})
+    assertion.is_(doc['opt'][''], True)
+
+
+def test_update_mongodb_overwrite(mongo_db: Database) -> None:
+    """Test :meth:`~dataCAT.Database.update_mongodb` with :code:`overwrite=True`."""
+    smiles = f'{MONGO_PREFIX}CC[O-]'
+    mongo_db.update_mongodb('ligand')
+
+    with mongo_db.csv_lig(write=True) as df:
+        df.loc[(smiles, f'{MONGO_PREFIX}O3'), ('formula', '')] = 'bob'
+
+    mongo_db.update_mongodb('ligand', overwrite=False)
+    doc = _get_mongo_docs(mongo_db, 'ligand_database')[smiles]
+    assertion.eq(doc['formula'], {'': 'C2H5O1'})
+
+    mongo_db.update_mongodb('ligand', overwrite=True)
+    docs = _get_mongo_docs(mongo_db, 'ligand_database')
+    assertion.eq(docs[smiles]['formula'], {'': 'bob'})
+    with mongo_db.csv_lig(write=False) as df:
+        assertion.len_eq(docs, len(df))
+
+
+def test_update_mongodb_qd(mongo_db: Database) -> None:
+    """Test :meth:`~dataCAT.Database.update_mongodb` with the QD database."""
+    with mongo_db.csv_qd(write=False) as df:
+        n = len(df)
+
+    mongo_db.update_mongodb('qd')
+    mongo_db.update_mongodb('qd')
+
+    docs = _get_mongo_docs(mongo_db, 'qd_database')
+    assertion.len_eq(docs, 2)  # The index of all non-placeholder rows starts with the same core
+    with MongoClient(**mongo_db.mongodb) as client:
+        collection = client.cat_database.qd_database
+        query = {'core': {'$regex': f'^{MONGO_PREFIX}'}}
+        assertion.eq(collection.count_documents(query), n)
+        doc = collection.find_one({'ligand smiles': f'{MONGO_PREFIX}CC[O-]'})
+    assertion.eq(doc['core'], f'{MONGO_PREFIX}Cd68Cl26Se55')
+    assertion.eq(doc['hdf5 index'], {'': 1})
+
+
+def test_update_mongodb_df(mongo_db: Database) -> None:
+    """Test :meth:`~dataCAT.Database.update_mongodb` with a user-provided DataFrame."""
+    idx = pd.MultiIndex.from_tuples(
+        [(f'{MONGO_PREFIX}CO', 'O2'), (f'{MONGO_PREFIX}CCO', 'O3')], names=['smiles', 'anchor']
+    )
+    columns = pd.MultiIndex.from_tuples([('E_solv', 'water'), ('hdf5 index', '')])
+    df = pd.DataFrame([[-1.5, 0], [-2.5, 1]], index=idx, columns=columns)
+    df[('hdf5 index', '')] = df[('hdf5 index', '')].astype(np.int64)
+
+    mongo_db.update_mongodb({'ligand': df})
+    docs = _get_mongo_docs(mongo_db, 'ligand_database')
+    assertion.eq(docs[f'{MONGO_PREFIX}CCO']['E_solv'], {'water': -2.5})
+    assertion.eq(docs[f'{MONGO_PREFIX}CCO']['hdf5 index'], {'': 1})
+
+
+def test_update_mongodb_raise(mongo_db: Database) -> None:
+    """Test :meth:`~dataCAT.Database.update_mongodb` with invalid input."""
+    assertion.assert_(mongo_db.update_mongodb, 'bob', exception=ValueError)
+
+    db = Database(DB_PATH_UPDATE)
+    db._mongodb = None
+    assertion.assert_(db.update_mongodb, 'ligand', exception=ValueError)

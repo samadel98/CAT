@@ -22,21 +22,22 @@ from types import MappingProxyType
 from functools import partial
 from typing import (
     Optional, Sequence, List, Union, Any, Dict, TypeVar, Mapping,
-    overload, Tuple, Type, Iterable, TYPE_CHECKING
+    overload, Tuple, Type, Iterable, TypedDict, TYPE_CHECKING
 )
 
 import h5py
 import numpy as np
 import pandas as pd
-from pymongo import MongoClient
-from pymongo.errors import PyMongoError, DuplicateKeyError
+from pymongo import MongoClient, InsertOne, ReplaceOne
+from pymongo.errors import PyMongoError, BulkWriteError
 
 from rdkit.Chem import Mol
-from scm.plams import Settings, Molecule, from_rdmol
-from nanoutils import TypedDict
+from scm.plams import Settings, Molecule, to_rdmol
 from CAT.workflows import HDF5_INDEX, OPT, MOL
 
-from .create_database import create_csv, create_hdf5, create_mongodb, QD, Ligand, IDX_DTYPE
+from .create_database import (
+    create_csv, create_hdf5, create_mongodb, QD, Ligand, IDX_DTYPE, MONGO_COLLECTIONS
+)
 from .context_managers import OpenLig, OpenQD
 from .functions import df_to_mongo_dict, even_index, hdf5_availability
 from .pdb_array import PDBContainer
@@ -63,6 +64,10 @@ class JobRecipe(TypedDict):
 
     key: Union[str, type]
     value: Union[str, Settings]
+
+
+#: The MongoDB error code of a duplicate key error.
+_DUPLICATE_KEY_CODE = 11000
 
 
 def _to_int64_array(ar: np.ndarray) -> np.ndarray:
@@ -269,47 +274,49 @@ class Database:
         if self.mongodb is None:
             raise ValueError('Database.Mongodb is None')
 
-        # Open the MongoDB database
-        client = MongoClient(**self.mongodb)
-        mongo_db = client.cat_database
-
         if callable(getattr(database, 'items', None)):
-            database, db = next(iter(database.items()))  # type: ignore
-            dict_gen = df_to_mongo_dict(db)
-            idx_keys = db.index.names
-            collection = mongo_db.ligand_database if database == 'ligand' else mongo_db.qd_database
+            name, df = next(iter(database.items()))  # type: ignore
         else:
-            # Operate on either the ligand or quantum dot database
-            if database == 'ligand':
-                idx_keys = ('smiles', 'anchor')
-                collection = mongo_db.ligand_database
-                manager = self.csv_lig
-            elif database == 'qd':
-                idx_keys = ('core', 'core anchor', 'ligand smiles', 'ligand anchor')
-                collection = mongo_db.qd_database
-                manager = self.csv_lig
+            name = database
+            df = None
 
-            # Parse the ligand or qd dataframe
-            with manager(write=False) as db:
-                dict_gen = df_to_mongo_dict(db)
-
-        # Update the collection
-        # Try to insert al keys at once
         try:
-            collection.insert_many(dict_gen)
-        except DuplicateKeyError:
-            pass
-        else:
-            return
+            collection_name, idx_keys = MONGO_COLLECTIONS[name]
+        except (KeyError, TypeError):
+            raise ValueError(
+                f"database={name!r}; accepted values for are 'ligand' and 'qd'"
+            ) from None
 
-        # Simultaneous insertion failed, resort to plan B
-        for item in dict_gen:
+        # Parse the ligand or qd dataframe
+        if df is None:
+            manager = self.csv_lig if name == 'ligand' else self.csv_qd
+            with manager(write=False) as db:
+                docs = df_to_mongo_dict(db.ndframe, as_gen=False)
+        else:
+            idx_keys = tuple(df.index.names)
+            docs = df_to_mongo_dict(df, as_gen=False)
+        if not docs:
+            return None
+
+        # Insert all new documents; replace pre-existing ones if `overwrite=True`
+        requests: List[Union[InsertOne, ReplaceOne]]
+        if overwrite:
+            requests = [
+                ReplaceOne({k: doc[k] for k in idx_keys}, doc, upsert=True) for doc in docs
+            ]
+        else:
+            requests = [InsertOne(doc) for doc in docs]
+
+        with MongoClient(**self.mongodb) as client:
+            collection = client.cat_database[collection_name]
             try:
-                collection.insert_one(item)
-            except DuplicateKeyError:  # An item is already present in the collection
-                if overwrite:
-                    filter_ = {i: item[i] for i in idx_keys}
-                    collection.replace_one(filter_, item)
+                collection.bulk_write(requests, ordered=False)
+            except BulkWriteError as ex:
+                # Duplicate keys are expected (and skipped) if `overwrite=False`
+                write_errors = ex.details.get('writeErrors', [])
+                other_error = any(err.get('code') != _DUPLICATE_KEY_CODE for err in write_errors)
+                if other_error or ex.details.get('writeConcernErrors'):
+                    raise
 
     def update_csv(self, df: pd.DataFrame,
                    index: Union[None, slice, pd.Series] = None,
@@ -352,7 +359,6 @@ class Database:
         with manager(write=True) as db:
             # Update **db.index**
             db.ndframe = even_index(db.ndframe, df.loc[df_index])
-            df.sort_values(by=[HDF5_INDEX], inplace=True)
 
             # Filter columns
             export_mol = False
@@ -379,12 +385,14 @@ class Database:
                 )
 
             # Update **db.values**
+            # Use `loc`-based assignments for the integer and boolean columns, as
+            # `DataFrame.update()` can upcast them to float or object (pandas < 2.0)
             db.update(df.loc[df_index, df_columns], overwrite=overwrite)
             if export_mol:
-                db.update(hdf5_series, overwrite=True)
-                df.update(hdf5_series, overwrite=True)
+                db.loc[hdf5_series.index, HDF5_INDEX] = hdf5_series.to_numpy()
                 if status == 'optimized':
-                    db.update(df.loc[df_index, OPT], overwrite=True)
+                    opt_series = df.loc[df_index, OPT]
+                    db.loc[opt_series.index, OPT] = opt_series.to_numpy()
 
         # Update the hdf5 file
         with self.hdf5('r+') as f:
@@ -392,13 +400,14 @@ class Database:
             name = 'ligand' if manager == self.csv_lig else 'qd'
             group = f[f'{name}/properties']
 
-            # Define the indices
-            hdf5_index = df[HDF5_INDEX].values
-
             # "Fix" for rare bug wherein the index dtype is incorrect
-            if hdf5_index.dtype.kind != "i":
-                warnings.warn(f"Invalid {HDF5_INDEX!r} dtype: {hdf5_index.dtype}")
-                hdf5_index = df[HDF5_INDEX] = _to_int64_array(hdf5_index)
+            if df[HDF5_INDEX].dtype.kind != "i":
+                warnings.warn(f"Invalid {HDF5_INDEX!r} dtype: {df[HDF5_INDEX].dtype}")
+                df[HDF5_INDEX] = _to_int64_array(df[HDF5_INDEX].values)
+
+            # Define the indices; h5py requires them to be sorted
+            df_sorted = df.sort_values(by=[HDF5_INDEX])
+            hdf5_index = df_sorted[HDF5_INDEX].values
 
             # Define the properties
             lvl0_ignore = {OPT[0], HDF5_INDEX[0], MOL[0]}
@@ -407,7 +416,7 @@ class Database:
 
             dct = {k: df_columns.get_loc_level(k)[1] for k in lvl0}
             for n, name_seq in dct.items():
-                data = df[n].values
+                data = df_sorted[n].to_numpy()
                 if data.dtype == object:
                     dtype = h5py.string_dtype(encoding='utf-8')
                 else:
@@ -442,8 +451,12 @@ class Database:
                 continue
 
             # Ensure that **db** has the same keys as **df**
+            dtype = df[i].dtype
+            if isinstance(dtype, pd.api.extensions.ExtensionDtype):
+                db[i] = pd.Series(dtype.na_value, index=db.index, dtype=dtype)
+                continue
             try:
-                db[i] = np.array((None), dtype=df[i].dtype)
+                db[i] = np.array((None), dtype=dtype)
             except TypeError:  # e.g. if csv[i] consists of the datatype np.int64
                 db[i] = -1
         return columns.drop(drop_idx)  # type: ignore
@@ -520,7 +533,7 @@ class Database:
         names = ('atoms', 'bonds', 'atom_count', 'bond_count')
         message = f"datasets={[group[n].name for n in names]!r}; overwrite=False"
         update_hdf5_log(group['logger'], index=ret.values, message=message)
-        df.update(ret, overwrite=True)
+        df.loc[new_index, HDF5_INDEX] = ret.to_numpy()
         if opt:
             df.loc[new_index, OPT] = True
         return ret
@@ -587,7 +600,7 @@ class Database:
         # Update the *hdf5 index* column in **df**
         with manager(write=False) as db:
             df.update(db.ndframe, overwrite=True)
-            df[HDF5_INDEX] = df[HDF5_INDEX].astype(int, copy=False)
+            df[HDF5_INDEX] = df[HDF5_INDEX].astype(int)
 
         # **df** has been updated and **get_mol** = *False*
         if not get_mol:
@@ -617,13 +630,13 @@ class Database:
             Optional: A Series of PLAMS molecules if **inplace** is :data:`False`.
 
         """
-        # Sort and find all valid HDF5 indices
-        df.sort_values(by=[HDF5_INDEX], inplace=True)
+        # Sort and find all valid HDF5 indices; h5py requires them to be sorted
+        df_sorted = df.sort_values(by=[HDF5_INDEX])
         if 'no_opt' in database:
-            df_slice = df[HDF5_INDEX] >= 0
+            df_slice = df_sorted[HDF5_INDEX] >= 0
         else:
-            df_slice = df[OPT] == True  # noqa
-        idx = df[HDF5_INDEX][df_slice].values
+            df_slice = df_sorted[OPT] == True  # noqa
+        idx = df_sorted[HDF5_INDEX][df_slice].values
 
         # If no HDF5 indices are availble in **df** then abort the function
         if not df_slice.any():
@@ -633,13 +646,14 @@ class Database:
 
         # Update **df** with preexisting molecules from **self**, returning *None*
         if inplace:
-            self.from_hdf5(idx, database=database, mol_list=df.loc[df_slice, MOL], rdmol=False)
+            mol_list = df_sorted.loc[df_slice, MOL]
+            self.from_hdf5(idx, database=database, mol_list=mol_list, rdmol=False)
             return None
 
         # Create and return a new series of PLAMS molecules
         else:
             mol_list = self.from_hdf5(idx, database=database, rdmol=False)
-            return pd.Series(mol_list, index=df[df_slice].index, name=MOL)
+            return pd.Series(mol_list, index=df_sorted[df_slice].index, name=MOL)
 
     def from_hdf5(self, index: Union[slice, Sequence[int]],
                   database: Union[Ligand, QD] = 'ligand', rdmol: bool = True,
@@ -672,7 +686,7 @@ class Database:
             mol.properties.is_opt = is_opt
 
         if rdmol:
-            return [from_rdmol(mol) for mol in mol_list_]
+            return [to_rdmol(mol) for mol in mol_list_]
         return mol_list_
 
     def hdf5_availability(self, timeout: float = 5.0,

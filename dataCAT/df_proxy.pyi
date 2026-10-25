@@ -1,12 +1,6 @@
-import sys
 import pandas as pd
 from pandas.core.generic import NDFrame
-from typing import Any, ClassVar, Dict, FrozenSet, NoReturn, Tuple, Type, TypeVar, List
-
-if sys.version_info >= (3, 8):
-    from typing import final
-else:
-    from typing_extensions import final
+from typing import Any, ClassVar, Dict, FrozenSet, NoReturn, Tuple, Type, TypeVar, List, final
 
 __all__: List[str] = ...
 

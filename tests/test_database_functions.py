@@ -7,9 +7,9 @@ import pandas as pd
 
 from rdkit import Chem
 from assertionlib import assertion
-import scm.plams.interfaces.molecule.rdkit as molkit
 
 from dataCAT.functions import get_nan_row, as_pdb_array, from_pdb_array, even_index
+from dataCAT.testing_utils import _readpdb as readpdb
 
 PATH = join('tests', 'test_files')
 
@@ -30,7 +30,7 @@ def test_get_nan_row() -> None:
 
 def test_as_pdb_array() -> None:
     """Test :func:`dataCAT.functions.as_pdb_array`."""
-    mol_list = [molkit.readpdb(join(PATH, 'Methanol.pdb'))]
+    mol_list = [readpdb(join(PATH, 'Methanol.pdb'))]
 
     out1 = as_pdb_array(mol_list, warn=False)
     ref1 = np.array(
@@ -60,7 +60,7 @@ def test_as_pdb_array() -> None:
 
 def test_from_pdb_array() -> None:
     """Test :func:`dataCAT.functions.as_pdb_array`."""
-    mol = molkit.readpdb(join(PATH, 'Methanol.pdb'))
+    mol = readpdb(join(PATH, 'Methanol.pdb'))
 
     pdb_ar = as_pdb_array([mol], warn=False)[0]
     out1 = from_pdb_array(pdb_ar, warn=False)

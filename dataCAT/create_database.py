@@ -20,14 +20,14 @@ from os import PathLike
 from os.path import join, isfile
 from types import MappingProxyType
 from logging import Logger
-from typing import Dict, Any, Union, AnyStr, Mapping, Optional, Tuple, overload
+from typing import Dict, Any, Union, AnyStr, Mapping, Optional, Tuple, Literal, overload
 
 import h5py
 import numpy as np
 import pandas as pd
 from pymongo import MongoClient, ASCENDING
 
-from nanoutils import Literal, PathType
+from nanoutils import PathType
 from CAT.logger import logger
 
 from .dtype import BACKUP_IDX_DTYPE, LIG_IDX_DTYPE, QD_IDX_DTYPE, FORMULA_DTYPE, LIG_COUNT_DTYPE
@@ -131,6 +131,13 @@ IDX_DTYPE: Mapping[str, np.dtype] = MappingProxyType({
     'ligand_no_opt': LIG_IDX_DTYPE,
     'qd': QD_IDX_DTYPE,
     'qd_no_opt': QD_IDX_DTYPE
+})
+
+
+#: The names of the MongoDB collections and their (unique) index keys.
+MONGO_COLLECTIONS: Mapping[str, Tuple[str, Tuple[str, ...]]] = MappingProxyType({
+    'ligand': ('ligand_database', ('smiles', 'anchor')),
+    'qd': ('qd_database', ('core', 'core anchor', 'ligand smiles', 'ligand anchor')),
 })
 
 
@@ -298,31 +305,20 @@ def create_mongodb(host: str = 'localhost', port: int = 27017, **kwargs: Any) ->
 
     """  # noqa
     # Open the client
-    client = MongoClient(host, port, serverSelectionTimeoutMS=1000, **kwargs)
-    client.server_info()  # Raises an ServerSelectionTimeoutError error if the server is inaccesible
+    client_kwargs = {'serverSelectionTimeoutMS': 1000, **kwargs}
+    with MongoClient(host, port, **client_kwargs) as client:
+        # Raises an ServerSelectionTimeoutError error if the server is inaccesible
+        client.server_info()
 
-    # Open the database
-    db = client.cat_database
+        # Open the database
+        db = client.cat_database
 
-    # Open and set the index of the ligand collection
-    lig_collection = db.ligand_database
-    lig_key = 'smiles_1_anchor_1'
-    if lig_key not in lig_collection.index_information():
-        lig_collection.create_index([
-            ('smiles', ASCENDING),
-            ('anchor', ASCENDING)
-        ], unique=True)
-
-    # Open and set the index of the QD collection
-    qd_collection = db.QD_database
-    qd_key = 'core_1_core anchor_1_ligand smiles_1_ligand anchor_1'
-    if qd_key not in qd_collection.index_information():
-        qd_collection.create_index([
-            ('core', ASCENDING),
-            ('core anchor', ASCENDING),
-            ('ligand smiles', ASCENDING),
-            ('ligand anchor', ASCENDING)
-        ], unique=True)
+        # Open the collections and set their (unique) indices
+        for collection_name, idx_keys in MONGO_COLLECTIONS.values():
+            collection = db[collection_name]
+            idx_name = '_'.join(f'{k}_1' for k in idx_keys)
+            if idx_name not in collection.index_information():
+                collection.create_index([(k, ASCENDING) for k in idx_keys], unique=True)
 
     # Return all provided keyword argument
     ret = {'host': host, 'port': port}

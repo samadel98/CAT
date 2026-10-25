@@ -13,13 +13,11 @@ API
 """  # noqa: E501
 
 from itertools import chain
-from typing import NoReturn, Tuple, Dict, Any, FrozenSet, TypeVar, Type, ClassVar, cast
+from typing import NoReturn, Tuple, Dict, Any, FrozenSet, TypeVar, Type, ClassVar, cast, final
 from textwrap import indent
 
 import pandas as pd
 from pandas.core.generic import NDFrame
-
-from nanoutils import final
 
 __all__ = ['DFProxy']
 

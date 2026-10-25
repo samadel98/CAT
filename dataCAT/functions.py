@@ -24,7 +24,7 @@ from types import MappingProxyType
 from functools import wraps
 from typing import (
     Collection, Union, Sequence, Tuple, List, Generator, Mapping, Any, cast,
-    Hashable, Optional, Type, TypeVar, Callable, TYPE_CHECKING
+    Hashable, Optional, Type, TypeVar, Callable, SupportsIndex, TYPE_CHECKING
 )
 
 import h5py
@@ -36,7 +36,7 @@ import scm.plams.interfaces.molecule.rdkit as molkit
 from rdkit import Chem
 from rdkit.Chem import Mol
 
-from nanoutils import SupportsIndex, PathType
+from nanoutils import PathType
 
 if TYPE_CHECKING:
     from .pdb_array import PDBContainer, IndexLike
@@ -280,7 +280,7 @@ def int_to_slice(int_like: SupportsIndex, seq_len: int) -> slice:
         >>> from dataCAT.functions import int_to_slice
 
         >>> array = np.ones(10)
-        >>> array[0]
+        >>> print(array[0])
         1.0
 
         >>> idx = int_to_slice(0, len(array))

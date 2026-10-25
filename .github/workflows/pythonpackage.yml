@@ -14,49 +14,69 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
     cancel-in-progress: true
 
+env:
+    # The CAT branch, tag or commit to test against
+    CAT_URL: git+https://github.com/samadel98/CAT@master
+
 jobs:
     build:
         name: ${{ matrix.os }} (py ${{ matrix.version }}${{ matrix.special }})
         runs-on: ${{ matrix.os }}
+        continue-on-error: ${{ matrix.special == '; pre-release' }}
         strategy:
             fail-fast: false
             matrix:
-                os: [ubuntu-latest, macos-latest]
-                version: ["3.7", "3.8", "3.9", "3.10"]
+                os: [ubuntu-latest]
+                version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
                 special: [""]
                 include:
+                    -   os: macos-latest
+                        special: ""
+                        version: "3.10"
+                    -   os: macos-latest
+                        special: ""
+                        version: "3.14"
+                    -   os: ubuntu-latest
+                        special: "; minimum"
+                        version: "3.10"
                     -   os: ubuntu-latest
                         special: "; pre-release"
-                        version: "3.10"
+                        version: "3.14"
 
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v5
 
             -   name: Set up Python
-                uses: actions/setup-python@v4
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.version }}
 
             -   name: Install dependencies
+                shell: bash
                 run: |
                     case "${{ matrix.special }}" in
+                        "; minimum")
+                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" -c .github/constraints-minimum.txt ;;
                         "; pre-release")
-                            pip install -e .[test] --pre
-                            pip install git+https://github.com/SCM-NV/PLAMS@master --upgrade
-                            pip install git+https://github.com/SCM-NV/qmflows@master --upgrade
-                            pip install git+https://github.com/nlesc-nano/CAT@master --upgrade
-                            ;;
+                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" --pre --upgrade ;;
                         *)
-                            pip install -e .[test] ;;
+                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" ;;
                     esac
 
-            -   name: Install MongoDB
-                if: matrix.os == 'ubuntu-latest'
-                uses: supercharge/mongodb-github-action@1.8.0
-
-            -   name: Info MongDB
-                if: matrix.os == 'ubuntu-latest'
-                run: mongo --version
+            -   name: Start MongoDB
+                if: runner.os == 'Linux'
+                # MongoDB 8 refuses to start on the Linux >= 6.19 kernels of the
+                # current runner images (SERVER-121912), hence the use of MongoDB 7
+                run: |
+                    docker run --detach --name mongodb --publish 27017:27017 mongo:7
+                    for i in $(seq 1 30); do
+                        docker exec mongodb mongosh --quiet --eval "db.runCommand({ping: 1}).ok" && break
+                        sleep 1
+                    done
+                    if ! docker exec mongodb mongosh --quiet --eval "db.version()"; then
+                        docker logs mongodb
+                        exit 1
+                    fi
 
             -   name: Python info
                 run: |
@@ -67,28 +87,30 @@ jobs:
                 run: pip list
 
             -   name: Run tests
+                env:
+                    DATACAT_REQUIRE_MONGODB: ${{ runner.os == 'Linux' && '1' || '' }}
                 run: pytest -m "not slow"
 
             -   name: Run codecov
-                uses: codecov/codecov-action@v3
+                uses: codecov/codecov-action@v5
                 with:
-                    file: ./coverage.xml
+                    files: ./coverage.xml
                     name: codecov-umbrella
+                    token: ${{ secrets.CODECOV_TOKEN }}
+                    fail_ci_if_error: false
 
     Linting:
         runs-on: ubuntu-latest
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v5
 
             -   name: Set up Python on ubuntu-latest
-                uses: actions/setup-python@v4
+                uses: actions/setup-python@v6
                 with:
                     python-version: '3.x'
 
             -   name: Install dependencies
-                run: |
-                    pip install -e .
-                    pip install "flake8>=3.8.0" "pydocstyle>=5.0.0" mypy nano-CAT
+                run: pip install -e .[lint] "nlesc-CAT @ $CAT_URL"
 
             -   name: Python info
                 run: |
@@ -99,7 +121,7 @@ jobs:
                 run: pip list
 
             -   name: Run flake8
-                run: flake8 dataCAT tests
+                run: flake8 dataCAT tests conftest.py
 
             -   name: Run pydocstyle
                 run: pydocstyle dataCAT

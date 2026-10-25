@@ -13,7 +13,8 @@ from dataCAT.df_proxy import _DFMeta
 _DF = pd.DataFrame(np.random.rand(3, 10))
 DF = DFProxy(_DF)
 
-IGNORE = frozenset({'sparse', 'style'})
+# Accessors which (depending on the pandas version) return a new instance upon every access
+IGNORE = frozenset({'sparse', 'style', 'plot'})
 
 
 def test_dfproxy() -> None:

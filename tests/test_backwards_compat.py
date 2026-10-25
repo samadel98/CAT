@@ -5,11 +5,12 @@ from pathlib import Path
 
 import numpy as np
 
-from scm.plams import readpdb
 from nanoutils import delete_finally
 from assertionlib import assertion
+from CAT.utils import get_formula
 from dataCAT import Database, PDBContainer
 from dataCAT.dtype import LIG_IDX_DTYPE
+from dataCAT.testing_utils import _readpdb as readpdb
 
 PATH = Path('tests') / 'test_files'
 
@@ -37,7 +38,7 @@ def test_create_database_3() -> None:
 
     # Compare molecules
     for mol1, mol2 in zip(mol_list, mol_list_ref):
-        msg = f'{mol1.get_formula()} & {mol2.get_formula()}'
+        msg = f'{get_formula(mol1)} & {get_formula(mol2)}'
         np.testing.assert_allclose(mol1, mol2, rtol=0, atol=10**-2, err_msg=msg)
         np.testing.assert_array_equal(mol1.bond_matrix(), mol2.bond_matrix(), err_msg=msg)
 

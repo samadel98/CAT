@@ -75,15 +75,14 @@ import textwrap
 from types import MappingProxyType
 from itertools import repeat, chain
 from typing import (
-    List, Iterable, Union, Type, TypeVar, Optional, Dict, Any,
-    overload, Sequence, Mapping, Tuple, Generator, ClassVar, TYPE_CHECKING
+    List, Iterable, Union, Type, TypeVar, Optional, Dict, Any, Literal, SupportsIndex,
+    TypedDict, overload, Sequence, Mapping, Tuple, Generator, ClassVar, TYPE_CHECKING
 )
 
 import h5py
 import numpy as np
 from scm.plams import Molecule, Atom, Bond
 from rdkit import Chem, Geometry
-from nanoutils import SupportsIndex, TypedDict, Literal
 from assertionlib import assertion
 
 from .dtype import ATOMS_DTYPE, BONDS_DTYPE, ATOM_COUNT_DTYPE, BOND_COUNT_DTYPE, BACKUP_IDX_DTYPE
@@ -95,6 +94,9 @@ if TYPE_CHECKING:
 __all__ = ['PDBContainer']
 
 ST = TypeVar('ST', bound='PDBContainer')
+
+#: The value of the ``copy`` parameter of :func:`numpy.array` for only copying when needed.
+_COPY_IF_NEEDED = None if np.lib.NumpyVersion(np.__version__) >= '2.0.0' else False
 
 _AtomTuple = Tuple[
     bool,  # IsHeteroAtom
@@ -169,7 +171,7 @@ def _get_atom_info(at: Atom, i: int) -> _AtomTuple:
 
     pdb = prop.get('pdb_info', {})
     return (
-        pdb.get('IsHeteroAtom', False),  # type: ignore
+        pdb.get('IsHeteroAtom', False),
         pdb.get('SerialNumber', i),
         pdb.get('Name', symbol),
         pdb.get('ResidueName', 'LIG'),
@@ -509,20 +511,21 @@ class PDBContainer:
                 ('bond_count', bond_count)
             ]
 
+            _copy = True if copy else _COPY_IF_NEEDED
             for name, _array in items:
                 ndmin = cls.NDIM[name]
                 dtype = cls.DTYPE[name]
 
-                array = np.array(_array, dtype=dtype, ndmin=ndmin, copy=copy)
+                array = np.array(_array, dtype=dtype, ndmin=ndmin, copy=_copy)
                 if name in rec_set:
                     array = array.view(np.recarray)
                 setattr(self, f'_{name}', array)
 
             if scale is None:
-                self._scale: np.recarray = np.array(scale, ndmin=1, copy=copy).view(np.recarray)
-            else:
                 dtype = cls.DTYPE['scale']
-                self._scale = np.arange(len(array), dtype=dtype).view(np.recarray)
+                self._scale: np.recarray = np.arange(len(array), dtype=dtype).view(np.recarray)
+            else:
+                self._scale = np.array(scale, ndmin=1, copy=_copy).view(np.recarray)
 
             len_set = {len(ar) for ar in self.values()}
             if len(len_set) != 1:
@@ -548,8 +551,11 @@ class PDBContainer:
                 dtype = '...'
             else:
                 dtype = str(v.dtype)
-            return (f'{k:{wdith}} = {v.__class__.__module__}.{v.__class__.__name__}'
-                    f'(..., shape={v.shape}, dtype={dtype})')
+
+            # NumPy >= 2.0 reports `numpy.rec` as the module of `numpy.recarray`
+            cls = type(v)
+            module = 'numpy' if cls.__module__.startswith('numpy') else cls.__module__
+            return f'{k:{wdith}} = {module}.{cls.__name__}(..., shape={v.shape}, dtype={dtype})'
 
         ret = ',\n'.join(_str(k, v) for k, v in self.items())
         indent = 4 * ' '
@@ -734,12 +740,12 @@ class PDBContainer:
 
             >>> pdb = PDBContainer(...)  # doctest: +SKIP
             >>> for value in pdb.values():
-            ...     print(object.__repr__(value))  # doctest: +ELLIPSIS
-            <numpy.recarray object at ...>
-            <numpy.recarray object at ...>
-            <numpy.ndarray object at ...>
-            <numpy.ndarray object at ...>
-            <numpy.recarray object at ...>
+            ...     print(type(value).__name__)
+            recarray
+            recarray
+            ndarray
+            ndarray
+            recarray
 
         Yields
         ------
@@ -765,12 +771,12 @@ class PDBContainer:
 
             >>> pdb = PDBContainer(...)  # doctest: +SKIP
             >>> for name, value in pdb.items():
-            ...     print(name, '=', object.__repr__(value))  # doctest: +ELLIPSIS
-            atoms = <numpy.recarray object at ...>
-            bonds = <numpy.recarray object at ...>
-            atom_count = <numpy.ndarray object at ...>
-            bond_count = <numpy.ndarray object at ...>
-            scale = <numpy.recarray object at ...>
+            ...     print(name, '=', type(value).__name__)
+            atoms = recarray
+            bonds = recarray
+            atom_count = ndarray
+            bond_count = ndarray
+            scale = recarray
 
         Yields
         ------
@@ -1193,7 +1199,7 @@ class PDBContainer:
 
         # Create the group
         grp = file.create_group(name, track_order=True)
-        grp.attrs['__doc__'] = np.string_(HDF5_DOCSTRING.format(cls_name=cls_name))
+        grp.attrs['__doc__'] = np.bytes_(HDF5_DOCSTRING.format(cls_name=cls_name))
 
         # Create the datasets
         NDIM = cls.NDIM
@@ -1205,7 +1211,7 @@ class PDBContainer:
             dtype = DTYPE[key]
 
             dset = grp.create_dataset(key, shape=shape, maxshape=maxshape, dtype=dtype, **kwargs)
-            dset.attrs['__doc__'] = np.string_(f"A dataset representing `{cls_name}.atoms`.")
+            dset.attrs['__doc__'] = np.bytes_(f"A dataset representing `{cls_name}.atoms`.")
 
         # Set the index
         scale_name = cls.SCALE_NAME
@@ -1497,7 +1503,7 @@ class PDBContainer:
 
         """
         idx1, idx2 = self._get_index(value)
-        i = np.in1d(idx1, idx2, assume_unique=True, invert=True)
+        i = np.isin(idx1, idx2, assume_unique=True, invert=True)
         return self[i]
 
     def symmetric_difference(self: ST, value: ST) -> ST:
@@ -1605,7 +1611,7 @@ class PDBContainer:
 
         idx1 = self.scale
         idx2 = value.scale.astype(idx1.dtype, copy=False)
-        i = np.in1d(idx2, idx1, assume_unique=True, invert=True)
+        i = np.isin(idx2, idx1, assume_unique=True, invert=True)
 
         ret = value[i]
         return self.concatenate(ret)
