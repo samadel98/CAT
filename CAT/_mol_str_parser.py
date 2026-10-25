@@ -16,6 +16,7 @@ API
 
 # flake8: noqa: E501
 
+import sys
 import enum
 import textwrap
 from typing import Any, Callable
@@ -35,6 +36,12 @@ else:
     RDKIT_VERSION = Version(rdkit.__version__)
 
 __all__ = ["FormatEnum", "str_to_rdmol"]
+
+if sys.version_info >= (3, 11):
+    _member = enum.member
+else:
+    def _member(value: Any) -> Any:
+        return value
 
 SMILES_PARAMS = Chem.SmilesParserParams()
 SMILES_PARAMS.removeHs = False
@@ -61,22 +68,22 @@ def str_to_rdmol(
 class FormatEnum(enum.Enum):
     """An enum with various rdkit-based string-parsing options."""
 
-    FASTA = PartialPrepend(str_to_rdmol, Chem.MolFromFASTA, "FASTA string", sanitize=False)
-    HELM = PartialPrepend(str_to_rdmol, Chem.MolFromHELM, "HELM string", sanitize=False)
-    INCHI = PartialPrepend(str_to_rdmol, Chem.MolFromInchi, "InChi string", sanitize=False, removeHs=False)
-    MOL2 = PartialPrepend(str_to_rdmol, Chem.MolFromMol2Block, "Mol2 block", sanitize=False, removeHs=False)
-    MOL2_FILE = PartialPrepend(str_to_rdmol, Chem.MolFromMol2File, "Mol2 file", sanitize=False, removeHs=False)
-    MOL = PartialPrepend(str_to_rdmol, Chem.MolFromMolBlock, "Mol block", sanitize=False, removeHs=False)
-    MOL_FILE = PartialPrepend(str_to_rdmol, Chem.MolFromMolFile, "Mol file", sanitize=False, removeHs=False)
-    PDB = PartialPrepend(str_to_rdmol, Chem.MolFromPDBBlock, "PDB block", sanitize=False, removeHs=False)
-    PDB_FILE = PartialPrepend(str_to_rdmol, Chem.MolFromPDBFile, "PDB file", sanitize=False, removeHs=False)
-    SEQUENCE = PartialPrepend(str_to_rdmol, Chem.MolFromSequence, "sequence string", sanitize=False)
-    SMARTS = PartialPrepend(str_to_rdmol, Chem.MolFromSmarts, "SMARTS string")
-    SMILES = PartialPrepend(str_to_rdmol, Chem.MolFromSmiles, "SMILES string", params=SMILES_PARAMS)
-    TPL = PartialPrepend(str_to_rdmol, Chem.MolFromTPLBlock, "TPL block", sanitize=False)
-    TPL_FILE = PartialPrepend(str_to_rdmol, Chem.MolFromTPLFile, "TPL file", sanitize=False)
+    FASTA = _member(PartialPrepend(str_to_rdmol, Chem.MolFromFASTA, "FASTA string", sanitize=False))
+    HELM = _member(PartialPrepend(str_to_rdmol, Chem.MolFromHELM, "HELM string", sanitize=False))
+    INCHI = _member(PartialPrepend(str_to_rdmol, Chem.MolFromInchi, "InChi string", sanitize=False, removeHs=False))
+    MOL2 = _member(PartialPrepend(str_to_rdmol, Chem.MolFromMol2Block, "Mol2 block", sanitize=False, removeHs=False))
+    MOL2_FILE = _member(PartialPrepend(str_to_rdmol, Chem.MolFromMol2File, "Mol2 file", sanitize=False, removeHs=False))
+    MOL = _member(PartialPrepend(str_to_rdmol, Chem.MolFromMolBlock, "Mol block", sanitize=False, removeHs=False))
+    MOL_FILE = _member(PartialPrepend(str_to_rdmol, Chem.MolFromMolFile, "Mol file", sanitize=False, removeHs=False))
+    PDB = _member(PartialPrepend(str_to_rdmol, Chem.MolFromPDBBlock, "PDB block", sanitize=False, removeHs=False))
+    PDB_FILE = _member(PartialPrepend(str_to_rdmol, Chem.MolFromPDBFile, "PDB file", sanitize=False, removeHs=False))
+    SEQUENCE = _member(PartialPrepend(str_to_rdmol, Chem.MolFromSequence, "sequence string", sanitize=False))
+    SMARTS = _member(PartialPrepend(str_to_rdmol, Chem.MolFromSmarts, "SMARTS string"))
+    SMILES = _member(PartialPrepend(str_to_rdmol, Chem.MolFromSmiles, "SMILES string", params=SMILES_PARAMS))
+    TPL = _member(PartialPrepend(str_to_rdmol, Chem.MolFromTPLBlock, "TPL block", sanitize=False))
+    TPL_FILE = _member(PartialPrepend(str_to_rdmol, Chem.MolFromTPLFile, "TPL file", sanitize=False))
     if RDKIT_VERSION >= Version("2020.03.3"):
-        SVG = PartialPrepend(str_to_rdmol, Chem.MolFromRDKitSVG, "SVG string", sanitize=False, removeHs=False)
+        SVG = _member(PartialPrepend(str_to_rdmol, Chem.MolFromRDKitSVG, "SVG string", sanitize=False, removeHs=False))
     if RDKIT_VERSION >= Version("2020.09.1"):
-        PNG = PartialPrepend(str_to_rdmol, Chem.MolFromPNGString, "PNG string")
-        PNG_FILE = PartialPrepend(str_to_rdmol, Chem.MolFromPNGFile, "PNG file")
+        PNG = _member(PartialPrepend(str_to_rdmol, Chem.MolFromPNGString, "PNG string"))
+        PNG_FILE = _member(PartialPrepend(str_to_rdmol, Chem.MolFromPNGFile, "PNG file"))
