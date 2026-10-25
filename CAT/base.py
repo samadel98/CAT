@@ -61,14 +61,14 @@ try:
         from nanoCAT.cone_angle import init_cone_angle
         from nanoCAT.bulk.mol_graph2 import init_branch_distance
 
-    NANO_CAT: Optional[ImportError] = None
-except ImportError as ex:
+    NANO_CAT: Optional[Exception] = None
+except Exception as ex:  # A broken Nano-CAT install should not break `import CAT`
     NANO_CAT = ex
 
 try:
     import dataCAT
-    DATA_CAT: Optional[ImportError] = None
-except ImportError as ex:
+    DATA_CAT: Optional[Exception] = None
+except Exception as ex:  # A broken Data-CAT install should not break `import CAT`
     DATA_CAT = ex
 
 __all__ = ['prep']

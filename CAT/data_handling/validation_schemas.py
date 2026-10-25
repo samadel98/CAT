@@ -83,7 +83,7 @@ from scm.plams.interfaces.thirdparty.dftbplus import DFTBPlusJob
 
 try:
     from dataCAT import Database
-except ImportError:
+except Exception:  # A broken Data-CAT install should not break `import CAT`
     Database = None
 
 from .str_to_func import str_to_func
