@@ -11,6 +11,11 @@ the input settings for **CAT**. Aliases are insensitive towards capitalization
 A comprehensive list of :class:`plams.Job<scm.plams.core.basejob.Job>` subclasses and their respective
 aliases (*i.e.* :class:`str`) is presented below.
 
+.. note::
+    PLAMS 2024 removed |ADFJob|, |UFFJob|, |BANDJob|, |DFTBJob|, |MOPACJob| and |ReaxFFJob|,
+    as these engines now all run via |AMSJob|.
+    Their aliases are only available with older PLAMS versions.
+
 Aliases
 ~~~~~~~
 
