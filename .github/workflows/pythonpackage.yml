@@ -9,6 +9,9 @@ on:
             - master
     pull_request:
     workflow_dispatch:
+    schedule:
+        # Weekly, to catch breaking releases of dependencies
+        -   cron: '0 5 * * 1'
 
 permissions:
     contents: read

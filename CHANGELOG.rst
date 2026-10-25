@@ -38,6 +38,8 @@ Unreleased
   are read from the database, with pandas 3.
 * Fix the ``optional.ligand.branch_distance`` workflow creating a ``branch_distance`` folder in the
   current directory instead of the ligand folder.
+* Add a weekly scheduled run of the tests, and an integration test that runs CAT end to end with
+  the Nano-CAT, Data-CAT and Auto-FOX forks (``.github/workflows/integration.yml``).
 
 
 1.1.1
