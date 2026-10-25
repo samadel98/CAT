@@ -103,25 +103,30 @@ class BranchGraph:
 
 
 def get_branching_graph(mol: Molecule, anchor: Atom) -> BranchGraph:
-    """Construct a :class:`BranchGraph` for the given molecule and anchor atom."""
+    """Construct a :class:`BranchGraph` for the given molecule and anchor atom.
+
+    **mol** itself is not modified.
+
+    """
+    # Splitting a molecule reorders its hydrogens and moves its fragments: use a copy,
+    # with its atoms numbered as in **mol**
+    anchor_idx = mol.index(anchor) - 1
+    mol = mol.copy()
+    anchor = mol.atoms[anchor_idx]
+    atom_idx = {id(at): i for i, at in enumerate(mol.atoms)}
+
     mat = degree_of_separation(mol).astype(np.int64)
     bonds = split_mol(mol, anchor)
-    anchor_idx = mol.index(anchor) - 1
-    try:
-        mol.set_atoms_id(start=0)
-        branch_start = [anchor_idx]
-        for at1, at2 in bonds:
-            dist1 = mat[anchor_idx, at1.id]
-            dist2 = mat[anchor_idx, at2.id]
-            branch_start.append(at1.id if dist1 <= dist2 else at2.id)
+    branch_start = [anchor_idx]
+    for at1, at2 in bonds:
+        i, j = atom_idx[id(at1)], atom_idx[id(at2)]
+        branch_start.append(i if mat[anchor_idx, i] <= mat[anchor_idx, j] else j)
 
-        branches = []
-        with SplitMol(mol, bonds) as frag_tup:
-            for mol_frag in frag_tup:
-                frag = np.fromiter([getattr(at, "id", -1) for at in mol_frag], dtype=np.int64)
-                branches.append(frag[frag >= 0])
-    finally:
-        mol.unset_atoms_id()
+    branches = []
+    with SplitMol(mol, bonds) as frag_tup:
+        for mol_frag in frag_tup:
+            frag = np.fromiter([atom_idx.get(id(at), -1) for at in mol_frag], dtype=np.int64)
+            branches.append(frag[frag >= 0])
     return BranchGraph(
         degree_of_separation=mat,
         branches=branches,
