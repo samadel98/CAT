@@ -9,6 +9,9 @@ on:
             - master
     pull_request:
     workflow_dispatch:
+    schedule:
+        # Weekly, to catch breaking releases of dependencies and changes in the CAT fork
+        -   cron: '0 5 * * 1'
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
