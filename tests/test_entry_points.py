@@ -15,6 +15,8 @@ from packaging.version import Version
 from CAT.data_handling.entry_points import main
 from CAT.test_utils import assert_mol_allclose
 
+from rdkit_references import RDKIT_REF_PATH
+
 if sys.version_info >= (3, 7):
     from builtins import dict as OrderedDict
 else:
@@ -25,12 +27,46 @@ PATH = Path('tests') / 'test_files'
 LIG_PATH = PATH / 'ligand'
 QD_PATH = PATH / 'qd'
 DB_PATH = PATH / 'database'
-PATH_REF = PATH / 'ligand_ref'
+PATH_REF = RDKIT_REF_PATH / 'ligand_ref'
+
+#: Ligands whose geometry depends on the platform (or even the machine), per :data:`sys.platform`
+XFAIL_PLATFORM = {
+    "linux": {
+        "CCCCCCCCP[CCCCCCCC]CCCCCCCC@P25.xyz",
+        "CCCCCCCCP[=O][CCCCCCCC]CCCCCCCC@O26.xyz",
+        "O=C[[O-]]c1ccc[S[=O][=O]CCCC[F][F]F]o1@O15.xyz",
+        "O=C[COc1ccc[Cl]cc1Cl]Nc1cc[C[=O][O-]]ccc1F@O21.xyz",
+    },
+    "win32": {
+        "CCCCCCCCP[CCCCCCCC]CCCCCCCC@P25.xyz",
+        "CCCCCCCCP[=O][CCCCCCCC]CCCCCCCC@O26.xyz",
+        "O=C[COc1ccc[Cl]cc1Cl]Nc1cc[C[=O][O-]]ccc1F@O21.xyz",
+    },
+    "darwin": {
+        "O=C[[O-]]c1ccc[S[=O][=O]CCCC[F][F]F]o1@O15.xyz",
+        "O=C[COc1ccc[Cl]cc1Cl]Nc1cc[C[=O][O-]]ccc1F@O21.xyz",
+    },
+}
+if RDKIT_REF_PATH != PATH:
+    # The newer references were made on Linux
+    XFAIL_PLATFORM["win32"] |= {
+        "CCCCCCCCC[CCCCCC]C[=O]O@O17.xyz",
+        # Same geometry, but the atoms of the benzene ring are in a different order
+        "O=C[O]c1ccccc1@O8.xyz",
+    }
+    XFAIL_PLATFORM["darwin"] |= {
+        "CCCCCCCCC[CCCCCC]C[=O]O@O17.xyz",
+        "cis-CCCCCCCCC=CCCCCCCCC[=O]O@O19.xyz",
+        "CCCCCCCCP[=O][CCCCCCCC]CCCCCCCC@O26.xyz",
+        "CCCCCCCCPCCCCCCCC@P17.xyz",
+        "CCCCCCCCP[CCCCCCCC]CCCCCCCC@P25.xyz",
+    }
 
 
 class TestMain:
     @pytest.fixture(scope="class", autouse=True)
-    def run_cat(self) -> Generator[None, None, None]:
+    @classmethod
+    def run_cat(cls) -> Generator[None, None, None]:
         # Setup
         filename = str(PATH / 'input2.yaml')
         main([filename])
@@ -66,24 +102,8 @@ class TestMain:
         mol = Molecule(LIG_PATH / filename)
         mol_ref = Molecule(PATH_REF / filename)
 
-        xfail_linux = {
-            "CCCCCCCCP[CCCCCCCC]CCCCCCCC@P25.xyz",
-            "CCCCCCCCP[=O][CCCCCCCC]CCCCCCCC@O26.xyz",
-        }
-        xfail_windows = xfail_linux | {
-            "O=C[COc1ccc[Cl]cc1Cl]Nc1cc[C[=O][O-]]ccc1F@O21.xyz",
-        }
-        xfail_unix = {
-            "O=C[[O-]]c1ccc[S[=O][=O]CCCC[F][F]F]o1@O15.xyz",
-            "O=C[COc1ccc[Cl]cc1Cl]Nc1cc[C[=O][O-]]ccc1F@O21.xyz",
-        }
-        if filename in xfail_linux and sys.platform.startswith("linux"):
-            pytest.xfail("platform dependant geometry")
-        elif filename in xfail_windows and sys.platform == "win32":
-            pytest.xfail("platform dependant geometry")
-        elif filename in xfail_unix and (
-            sys.platform.startswith("linux") or sys.platform == "darwin"
-        ):
+        platform = "linux" if sys.platform.startswith("linux") else sys.platform
+        if filename in XFAIL_PLATFORM.get(platform, ()):
             pytest.xfail("platform dependant geometry")
 
         # Coordinates

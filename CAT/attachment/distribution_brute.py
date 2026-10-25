@@ -18,7 +18,8 @@ from typing import Union, Callable
 import numpy as np
 
 from scm.plams import Molecule
-from nanoutils import array_combinations
+from .._nanoutils import array_combinations
+from .._compat import COPY_IF_NEEDED
 
 from .distribution import OPERATION_MAPPING
 
@@ -79,8 +80,8 @@ def brute_uniform_idx(mol: Union[Molecule, np.ndarray],
                          "accepted values: ('min', 'max')") from ex
 
     # Find the n atoms in mol2 closest to each atom in mol1
-    idx = np.array(idx, ndmin=1, copy=False)
-    xyz = np.array(mol, ndmin=2, copy=False)
+    idx = np.array(idx, ndmin=1, copy=COPY_IF_NEEDED)
+    xyz = np.array(mol, ndmin=2, copy=COPY_IF_NEEDED)
     if not (0 < n <= idx.shape[-1]):
         raise ValueError("'n' should be larger than 0 and smaller than or equal to the last axis of"
                          f" 'idx' ({repr(idx.shape[-1])}); observed value: {repr(n)}")
@@ -91,7 +92,7 @@ def brute_uniform_idx(mol: Union[Molecule, np.ndarray],
 
     # Construct a weighted distance matrix
     dist = np.triu(np.linalg.norm(xyz2[..., None, :] - xyz2[..., None, :, :], axis=-1))
-    dist.shape = len(idx), -1, n**2
+    dist = dist.reshape(len(idx), -1, n**2)
     dist_weight = weight(dist).sum(axis=-1)
 
     # Slice and return

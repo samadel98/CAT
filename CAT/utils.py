@@ -50,7 +50,8 @@ from typing import (
 import numpy as np
 from scipy.spatial import cKDTree
 
-from nanoutils import as_nd_array
+from ._nanoutils import as_nd_array
+from ._compat import COPY_IF_NEEDED
 from rdkit.Chem import Mol
 from scm.plams.core.basejob import Job
 from scm.plams.interfaces.thirdparty.orca import ORCAJob
@@ -443,8 +444,8 @@ def get_nearest_neighbors(center: Union[Molecule, np.ndarray],
     if center is neighbor:
         xyz1 = xyz2 = np.asarray(center)
     else:
-        xyz1 = np.array(center, ndmin=2, copy=False)
-        xyz2 = np.array(neighbor, ndmin=2, copy=False)
+        xyz1 = np.array(center, ndmin=2, copy=COPY_IF_NEEDED)
+        xyz2 = np.array(neighbor, ndmin=2, copy=COPY_IF_NEEDED)
 
     if isinstance(k, abc.Iterable):
         k = as_nd_array(k, dtype=int)

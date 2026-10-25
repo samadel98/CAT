@@ -1,0 +1,13 @@
+ VIB|                        NORMAL MODES - THERMOCHEMICAL DATA
+ VIB|          [q = gamma only, rigid-rotor harmonic oscillator (RRHO) model]
+
+ VIB|    Symmetry number:                                                      1
+ VIB|    Temperature [K]:                                                 273.15
+ VIB|    Pressure [Pa]:                                                101325.00
+
+ VIB|    Electronic energy (U) [kJ/mol]:                         -45205.94680154
+ VIB|    Zero-point correction [kJ/mol]:                             50.86231234
+ VIB|    Entropy [kJ/(mol K)]:                                        0.17688331
+ VIB|    Enthalpy correction (H-U) [kJ/mol]:                         58.81492052
+ VIB|    Gibbs energy correction [kJ/mol]:                           10.49924304
+ VIB|    Heat capacity [kJ/(mol*K)]:                                  0.02921854

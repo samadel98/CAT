@@ -1,5 +1,5 @@
-.. image:: https://github.com/nlesc-nano/CAT/workflows/Build%20with%20Conda/badge.svg
-   :target: https://github.com/nlesc-nano/CAT/actions?query=workflow%3A%22Build+with+Conda%22
+.. image:: https://github.com/samadel98/CAT/actions/workflows/pythonpackage.yml/badge.svg?branch=master
+   :target: https://github.com/samadel98/CAT/actions/workflows/pythonpackage.yml?query=branch%3Amaster
 .. image:: https://readthedocs.org/projects/cat/badge/?version=latest
    :target: https://cat.readthedocs.io/en/latest/
 .. image:: https://zenodo.org/badge/169708827.svg
@@ -9,18 +9,16 @@
 
 |
 
-.. image:: https://img.shields.io/badge/python-3.6-blue.svg
-   :target: https://docs.python.org/3.6/
-.. image:: https://img.shields.io/badge/python-3.7-blue.svg
-   :target: https://docs.python.org/3.7/
-.. image:: https://img.shields.io/badge/python-3.8-blue.svg
-   :target: https://docs.python.org/3.8/
-.. image:: https://img.shields.io/badge/python-3.9-blue.svg
-   :target: https://docs.python.org/3.9/
 .. image:: https://img.shields.io/badge/python-3.10-blue.svg
    :target: https://docs.python.org/3.10/
 .. image:: https://img.shields.io/badge/python-3.11-blue.svg
    :target: https://docs.python.org/3.11/
+.. image:: https://img.shields.io/badge/python-3.12-blue.svg
+   :target: https://docs.python.org/3.12/
+.. image:: https://img.shields.io/badge/python-3.13-blue.svg
+   :target: https://docs.python.org/3.13/
+.. image:: https://img.shields.io/badge/python-3.14-blue.svg
+   :target: https://docs.python.org/3.14/
 
 ########################
 Compound Attachment Tool
@@ -31,9 +29,12 @@ Further information is provided in the documentation_.
 
 Package installation
 --------------------
-**CAT** can be installed via pip as following:
+**CAT** requires Python 3.10 or later and can be installed from this repository with pip:
 
-- **CAT**: ``pip install nlesc-CAT --upgrade``
+- **CAT**: ``pip install git+https://github.com/samadel98/CAT``
+
+  - ``pip install nlesc-CAT`` installs the last release on PyPI (1.1.0, from 2022),
+    which predates the fixes in this repository (*e.g.* NumPy 2, pandas 2 and Python 3.13 support).
 
 Note that, while not strictly necessary, it is recommended to first create a conda environment:
 

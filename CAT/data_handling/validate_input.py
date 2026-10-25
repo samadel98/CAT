@@ -52,7 +52,7 @@ from ..logger import logger
 try:
     from dataCAT import Database
     DATA_CAT = True
-except ImportError:
+except Exception:  # A broken Data-CAT install should not break `import CAT`
     DATA_CAT = False
 
 __all__ = ['validate_input']

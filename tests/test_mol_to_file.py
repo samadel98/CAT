@@ -1,7 +1,7 @@
 """Tests for :mod:`CAT.data_handling.mol_to_file`."""
 
 from os import mkdir
-from os.path import (join, isdir)
+from os.path import (join, isdir, isfile)
 from shutil import rmtree
 
 from scm.plams import Molecule
@@ -33,16 +33,16 @@ def test_mol_to_file() -> None:
 
     mol_to_file(mol_list, **kwargs)
     for file in ref:
-        assertion.isfile(file)
+        assert isfile(file)
 
     rmtree(PATH)
     mkdir(PATH)
     kwargs['mol_format'] = kwargs['mol_format'][0:2]
     mol_to_file(mol_list, **kwargs)
     for file in ref[:2]:
-        assertion.isfile(file)
+        assert isfile(file)
     for file in ref[2:]:
-        assertion.isfile(file, invert=True)
+        assert not isfile(file)
 
     kwargs['path'] = join(PATH, 'bob')
     assertion.assert_(mol_to_file, mol_list, exception=FileNotFoundError, **kwargs)

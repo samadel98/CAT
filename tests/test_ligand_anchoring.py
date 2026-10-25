@@ -29,6 +29,8 @@ from CAT.attachment.ligand_anchoring import (
 from CAT.attachment.ligand_opt import optimize_ligand
 from CAT.data_handling.anchor_parsing import parse_anchors, INVALID_SMILES_ATOMS
 
+from rdkit_references import RDKIT_REF_PATH
+
 if sys.version_info >= (3, 7):
     from builtins import dict as OrderedDict
 else:
@@ -52,7 +54,8 @@ class TestGetFunctionalGroups:
         return atoms_ar, bonds_ar
 
     @pytest.fixture(scope="class", autouse=True, name="group")
-    def get_h5py_file(self) -> Generator[h5py.Group, None, None]:
+    @classmethod
+    def get_h5py_file(cls) -> Generator[h5py.Group, None, None]:
         with h5py.File(PATH / "test_ligand_anchoring.hdf5", "r") as f:
             yield f["TestGetFunctionalGroups"]
 
@@ -143,8 +146,9 @@ class TestFindSubstructure:
         return atoms_ar, bonds_ar
 
     @pytest.fixture(scope="class", autouse=True, name="group")
-    def get_h5py_group(self) -> Generator[h5py.Group, None, None]:
-        with h5py.File(PATH / "test_ligand_anchoring.hdf5", "r") as f:
+    @classmethod
+    def get_h5py_group(cls) -> Generator[h5py.Group, None, None]:
+        with h5py.File(RDKIT_REF_PATH / "test_ligand_anchoring.hdf5", "r") as f:
             yield f["TestFindSubstructure"]
 
     OPTIONS_DICT = OrderedDict({
@@ -173,7 +177,7 @@ class TestFindSubstructure:
 
         # Analyze the results
         atoms, bonds = self.get_symbols_and_bonds(mol_out)
-        coords = np.array(mol)
+        coords = mol.as_array()
         atoms_ref = group[f'test_options/{kwargs_id}/atoms'][...]
         coords_ref = group[f'test_options/{kwargs_id}/coords'][...]
         bonds_ref = group[f'test_options/{kwargs_id}/bonds'][...]

@@ -22,10 +22,10 @@ from CAT.utils import get_template
 
 try:
     from nanoCAT.ff.cp2k_utils import set_cp2k_param
-except ImportError as ex:
-    NANO_CAT: Optional[ImportError] = ex
+except Exception as ex:  # A broken Nano-CAT install should not break `import CAT`
+    NANO_CAT: Optional[Exception] = ex
 else:
-    NANO_CAT: Optional[ImportError] = None
+    NANO_CAT: Optional[Exception] = None
 
 __all__ = ['validate_ff', 'update_ff_jobs']
 

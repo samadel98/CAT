@@ -5,6 +5,24 @@ Change Log
 All notable changes to this project will be documented in this file.
 This project adheres to `Semantic Versioning <http://semver.org/>`_.
 
+Unreleased
+**********
+* Drop support for Python 3.6 - 3.9; Python 3.10 is now the minimum.
+* Add support for Python 3.12, 3.13 and 3.14, NumPy 2, and pandas 2 and 3.
+* Raise the minimum versions of NumPy (1.21.2), SciPy (1.7.2), pandas (1.4.0), PyYAML (6.0),
+  QMFlows (0.13.0), RDKit (2022.03.3), Nano-Utils (2.3.2) and packaging (17.1).
+* Cap PLAMS below 2024, as no QMFlows release supports the newer PLAMS versions.
+* Fix ``import CAT`` raising an ``AttributeError`` on Python 3.13.
+* Fix ``import CAT`` failing when a broken Nano-CAT or Data-CAT version is installed.
+* Fix the input validation with schema >= 0.7.6.
+* Fix the default job of the ``optional.ligand.cdft`` workflow.
+* Fix reading the energy of CP2K 2026 frequency analyses.
+* Fix string-defined weight functions that use modules other than NumPy (*e.g.*
+  ``scipy.special.expit(x)``) on Python 3.13.
+* Move the package metadata to ``pyproject.toml``.
+* Add reference geometries made with RDKit 2026.09 to the tests.
+
+
 1.1.1
 *****
 * *placeholder*.

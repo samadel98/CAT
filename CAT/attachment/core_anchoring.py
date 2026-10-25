@@ -103,7 +103,7 @@ def _get_core_vectors(
     anchor_tup: AnchorTup,
 ) -> "NDArray[f8]":
     """Return a 2D array with all core (unit) vectors."""
-    core_ar = np.array(core)
+    core_ar = core.as_array()
 
     # Put the (effective) coordinates of the anchors into an (n, 3) array
     if anchor_tup.kind == KindEnum.FIRST:

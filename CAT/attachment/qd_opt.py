@@ -33,7 +33,7 @@ from ..data_handling.mol_to_file import mol_to_file
 
 try:
     from nanoCAT.qd_opt_ff import qd_opt_ff
-except ImportError as ex:
+except Exception as ex:  # A broken Nano-CAT install should not break `import CAT`
     def qd_opt_ff(*args: Any, ex: Exception = ex, **kwargs: Any) -> NoReturn: raise ex
 
 __all__ = ['init_qd_opt']

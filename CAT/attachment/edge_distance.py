@@ -24,7 +24,8 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import ConvexHull
 from scm.plams import Molecule
-from nanoutils import array_combinations
+from .._nanoutils import array_combinations
+from .._compat import COPY_IF_NEEDED
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -134,15 +135,14 @@ def edge_dist(
         Compute distance between each pair of the two collections of inputs.
 
     """  # noqa
-    xyz = np.array(xyz, dtype=np.float64, ndmin=2, copy=False)
+    xyz = np.array(xyz, dtype=np.float64, ndmin=2, copy=COPY_IF_NEEDED)
     xyz_len = len(xyz)
 
     # Create an array with all index-pairs forming the polyhedron edges
     if edges is None:
         xyz_convex = to_convex(xyz, n=n) if not np.allclose(n, 0.0) else xyz
         hull = ConvexHull(xyz_convex)
-        idx = array_combinations(hull.simplices, r=2)
-        idx.shape = -1, 2
+        idx = array_combinations(hull.simplices, r=2).reshape(-1, 2)
     else:
         idx = np.asarray(edges, dtype=np.int64)
     i, j = idx.T

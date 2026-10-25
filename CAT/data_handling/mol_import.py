@@ -445,7 +445,7 @@ def set_qd(qd: Molecule, mol_dict: Settings) -> Molecule:
     core_idx_max = 1 + len(core_idx)
     _anchor_idx = ligand_rdmol.GetSubstructMatch(anchor_rdmol)[0]
     start = core_idx_max + _anchor_idx
-    stop = core_idx_max + _anchor_idx + np.product(lig_idx.shape)
+    stop = core_idx_max + _anchor_idx + np.prod(lig_idx.shape)
     step = len(ligand)
     anchor_idx = list(range(start, stop, step))
 

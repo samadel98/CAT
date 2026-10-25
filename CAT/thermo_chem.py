@@ -70,7 +70,9 @@ def get_entropy(mol: Molecule,
         [-sum(m*x*y), sum(m*(x**2 + z**2)), -sum(m*y*z)],
         [-sum(m*x*z), -sum(m*y*z), sum(m*(x**2 + y**2))]
     ])
-    inertia_product = np.product(np.linalg.eig(inertia)[0])
+    # The inertia tensor is symmetric, so its eigenvalues are real
+    # (NumPy >= 2 `np.linalg.eig` returns them as complex numbers)
+    inertia_product = np.prod(np.linalg.eigvalsh(inertia))
     q_rot = pi**0.5 * ((8 * pi**2 * kT) / h**2)**1.5 * inertia_product**0.5
 
     # Calculate the translational, rotational and vibrational entropy (divided by R)

@@ -21,6 +21,8 @@ from scipy.spatial import ConvexHull, cKDTree
 
 from scm.plams import Molecule
 
+from .._compat import COPY_IF_NEEDED
+
 try:
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
@@ -61,11 +63,11 @@ def get_surface_vec(mol: Union[Molecule, np.ndarray],
         Convex hulls in N dimensions.
 
     """  # noqa
-    xyz = np.array(mol, dtype=float, ndmin=2, copy=False)
+    xyz = np.array(mol, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
     if anchor is None:
         anchor = xyz
     else:
-        anchor = np.array(anchor, dtype=float, ndmin=2, copy=False)
+        anchor = np.array(anchor, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
 
     # Construct the convex hull and extract the vertices
     hull = ConvexHull(xyz)
@@ -111,9 +113,9 @@ def plot_vectors(vec: np.ndarray,
         raise PLT
 
     # Parse arguments
-    vec = np.array(vec, ndmin=2, dtype=float, copy=False)
+    vec = np.array(vec, ndmin=2, dtype=float, copy=COPY_IF_NEEDED)
     if xyz is not None:
-        xyz = np.array(xyz, ndmin=2, dtype=float, copy=False)
+        xyz = np.array(xyz, ndmin=2, dtype=float, copy=COPY_IF_NEEDED)
     else:
         xyz = np.array(0.0, ndmin=2)
 

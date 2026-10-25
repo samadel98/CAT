@@ -48,11 +48,13 @@ class SettingsSeries(pd.Series):
 
     _metadata = ['settings']
 
-    def __init__(self, data=None, index=None, dtype=None, name=None, copy=False, fastpath=False,
+    def __init__(self, data=None, index=None, dtype=None, name=None, copy=None, fastpath=False,
                  settings: Optional[dict] = None) -> None:
         """Initialize the :class:`.SettingsSeries` construction."""
         self.settings = self._sanitize_settings(settings)
-        super().__init__(data, index, dtype, name, copy, fastpath)
+        # pandas >= 3.0 removed `fastpath`; only pandas < 2.0 passes it internally
+        kwargs = {"fastpath": True} if fastpath else {}
+        super().__init__(data, index=index, dtype=dtype, name=name, copy=copy, **kwargs)
 
     @property
     def _constructor(self) -> Callable[..., 'SettingsSeries']:
@@ -98,11 +100,11 @@ class SettingsDataFrame(pd.DataFrame):
 
     _metadata = ['settings']
 
-    def __init__(self, data=None, index=None, columns=None, dtype=None, copy=False,
+    def __init__(self, data=None, index=None, columns=None, dtype=None, copy=None,
                  settings: Optional[dict] = None) -> None:
         """Initialize the :class:`.SettingsDataFrame` construction."""
         self.settings = self._sanitize_settings(settings)
-        super().__init__(data, index, columns, dtype, copy)
+        super().__init__(data, index=index, columns=columns, dtype=dtype, copy=copy)
 
     @property
     def _constructor(self) -> Callable[..., 'SettingsDataFrame']:

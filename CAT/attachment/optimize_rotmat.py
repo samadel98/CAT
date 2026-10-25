@@ -20,6 +20,8 @@ from packaging.version import Version
 
 from scm.plams import rotation_matrix, Atom
 
+from .._compat import COPY_IF_NEEDED
+
 if Version(scipy.__version__) >= Version("1.1.0"):
     from scipy.optimize import Bounds
     BOUNDS = Bounds(-1, 1, keep_feasible=True)
@@ -82,7 +84,7 @@ def optimize_rotmat(mol: np.ndarray, anchor: int = 0,
     else:
         raise TypeError("The passed anchor is neither an 'int' nor 'Atom'; "
                         f"observed type: {repr(type(anchor))}")
-    xyz = np.array(mol, dtype=float, ndmin=2, copy=False)
+    xyz = np.array(mol, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
 
     # Create a first guess for the starting
     vec1 = xyz.mean(axis=0) - xyz[i]

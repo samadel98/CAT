@@ -18,7 +18,7 @@ from CAT.utils import AllignmentTup, AllignmentEnum
 
 try:
     from dataCAT import Database
-except ImportError:
+except Exception:  # Data-CAT 0.7.2 raises an `AttributeError` on NumPy 2
     HAS_DATACAT = False
 else:
     HAS_DATACAT = True

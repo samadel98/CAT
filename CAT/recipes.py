@@ -22,7 +22,7 @@ try:
     __all__ = _recipes.__all__.copy()
     del _recipes
 
-except ImportError as ex:
+except Exception as ex:  # A broken Nano-CAT install should not break `import CAT.recipes`
     import warnings as _warnings
 
     __all__ = []
