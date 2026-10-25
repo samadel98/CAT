@@ -1,0 +1,113 @@
+# Minimum requirements for the build system to execute.
+[build-system]
+requires = [
+    "setuptools>=77.0",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Nano-CAT"
+dynamic = [
+    "version",
+    "readme",
+]
+description = "A collection of tools for the analysis of nanocrystals."
+license = "LGPL-3.0-or-later"
+license-files = ["LICENSE.md", "NOTICE"]
+authors = [
+    { name = "Bas van Beek", email = "b.f.van.beek@vu.nl" },
+]
+keywords = [
+    "quantum-mechanics",
+    "molecular-mechanics",
+    "science",
+    "chemistry",
+    "python-3",
+    "automation",
+    "scientific-workflows",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "Nano-Utils>=2.3.1",
+    "numpy>=1.21.2",
+    "numpy>=2.1; python_version>='3.13'",  # NumPy 1.x has no wheels for Python >= 3.13
+    "scipy>=1.7.2",
+    "pandas>=1.4.0",
+    "pyyaml>=6.0",
+    "AssertionLib>=2.3",
+    "noodles>=0.3.3",
+    "more-itertools>=1.0",
+    "plams>=1.5.1,<2024",  # PLAMS 2025 removed `ADFJob` (used by QMFlows)
+    "qmflows>=0.12.0",
+    "nlesc-CAT>=0.11.1",
+    "Auto-FOX>=0.10.0",
+    "rdkit>=2022.3.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/samadel98/nano-CAT"
+"Bug Tracker" = "https://github.com/samadel98/nano-CAT/issues"
+Documentation = "https://cat.readthedocs.io/en/latest/"
+
+[project.optional-dependencies]
+lint = [
+    "flake8",
+    "Flake8-pyproject>=1.2.2",
+]
+test = [
+    "pytest>=6.2.5",
+    "pytest-cov",
+]
+
+[tool.setuptools.packages.find]
+include = ["nanoCAT*"]
+
+[tool.setuptools.package-data]
+nanoCAT = [
+    "py.typed",
+    "*.pyi",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "nanoCAT.__version__.__version__" }
+readme = { file = ["README.rst"], content-type = "text/x-rst" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: slow tests that need CP2K or MATCH; skip them with `pytest -m 'not slow'`",
+]
+addopts = "--tb=short --cov --cov-report xml --cov-report term --cov-report html"
+filterwarnings = [
+    "ignore::DeprecationWarning:numpy.distutils.*",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["nanoCAT"]
+
+[tool.flake8]
+max-line-length = 100
+ignore = [
+    "E226",
+    "E704",
+    "E711",
+    "E731",
+    "W503",
+    "W504",
+]
