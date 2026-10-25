@@ -6,9 +6,24 @@ All notable changes to this project will be documented in this file.
 This project adheres to `Semantic Versioning <http://semver.org/>`_.
 
 
-0.7.3
+0.8.0
 *****
-* *placeholder*.
+* Drop support for Python 3.7, 3.8 and 3.9; add support for Python 3.11 up to and including 3.14.
+* Add support for NumPy 2, pandas 2 & 3, h5py >= 3.6 and pymongo 4.
+* Replace ``setup.py`` with a ``pyproject.toml``-based build.
+* Fix ``Database.update_mongodb()`` raising a ``BulkWriteError`` when re-exporting pre-existing documents.
+* Fix ``Database.update_mongodb("qd")`` exporting the ligand database instead of the QD database.
+* Fix the unique index of the QD MongoDB collection being created for ``QD_database``,
+  while the documents were exported to ``qd_database``.
+  The index is now created for the latter.
+* Close all ``pymongo.MongoClient`` instances after use.
+* Fix ``Database.from_hdf5(..., rdmol=True)`` returning PLAMS instead of RDKit molecules.
+* Fix ``Database.update_csv()`` failing to export properties when new and pre-existing structures are mixed.
+* ``Database.update_csv()`` and ``Database.from_csv()`` no longer sort the passed DataFrame inplace.
+* Fix new string-based columns being filled with ``-1`` rather than ``NaN`` with pandas >= 3.0.
+* Fix the ``hdf5 index`` column being upcasted to a floating point dtype with pandas < 2.0.
+* Fix ``PDBContainer()`` ignoring the passed **scale** and creating an invalid one if ``scale=None``.
+* ``create_prop_dset()`` now explicitly defaults to the ``float32`` dtype.
 
 
 0.7.2
