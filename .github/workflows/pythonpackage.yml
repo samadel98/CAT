@@ -9,6 +9,9 @@ on:
             - master
     pull_request:
     workflow_dispatch:
+    schedule:
+        # Weekly, to catch breaking releases of dependencies and changes in the other forks
+        -   cron: '0 5 * * 1'
 
 permissions:
     contents: read
@@ -26,7 +29,9 @@ env:
     CP2K_VERSION: '2026.2'
     # The CAT and Auto-FOX releases on PyPI predate NumPy 2 and pandas 2 support,
     # so test against the forks
-    CAT_URL: 'git+https://github.com/samadel98/CAT@master'
+    # TODO: switch back to `CAT@master` once samadel98/CAT#2 is merged
+    # (its pandas 3 fix is needed for the branch distance tests)
+    CAT_URL: 'git+https://github.com/samadel98/CAT@claude/project-thread-1zvsuz'
     FOX_URL: 'git+https://github.com/samadel98/auto-FOX@master'
 
 jobs:
