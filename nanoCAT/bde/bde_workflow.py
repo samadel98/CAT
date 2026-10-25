@@ -58,7 +58,7 @@ def init_bde(qd_df: SettingsDataFrame) -> None:
 
     # Create columns
     columns = _construct_columns(workflow, qd_df[MOL])
-    import_columns = {(i, j): (np.nan if i != 'label' else None) for i, j in columns}
+    import_columns = {(i, j): (np.nan if i != 'BDE label' else None) for i, j in columns}
 
     # Pull from the database; push unoptimized structures
     idx = workflow.from_db(qd_df, columns=import_columns)
@@ -143,9 +143,10 @@ def start_bde(
         ddG = get_bde_ddG(qd_complete, XYn, qd_list, job2, s2)
         dG = dE + ddG
 
-        # Append the to-be returned list
-        value = np.concatenate([labels, dE, ddG, dG] if job2 else [labels, dE])
-        ret_append(value)  # value is now, unfortunetly, a str array
+        # Append the to-be returned list; use an object array so that
+        # the energies are not converted into strings
+        value = np.concatenate([labels, dE, ddG, dG] if job2 else [labels, dE], dtype=object)
+        ret_append(value)
 
         # Update the list with all .in files
         try:
