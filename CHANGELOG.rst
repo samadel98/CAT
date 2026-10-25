@@ -13,6 +13,7 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Replace the ``rdkit-pypi`` dependency with ``rdkit`` and cap PLAMS below 2024.
 * Move the package metadata from ``setup.py`` to ``pyproject.toml``.
 * Test against the CAT and Auto-FOX forks and CP2K 2026.2.
+* Give the fast-bulkiness tests reference geometries for RDKit 2026.09, used for RDKit 2024.03 and later.
 
 
 0.7.2

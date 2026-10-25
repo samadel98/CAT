@@ -15,6 +15,7 @@ from scm.plams import Molecule
 from scipy.spatial.distance import cdist
 from nanoCAT.recipes import bulk_workflow, fast_bulk_workflow
 from CAT.utils import get_formula
+from rdkit_references import RDKIT_REF_PATH, RDKIT_OLD_REF
 
 if TYPE_CHECKING:
     import _pytest
@@ -27,7 +28,7 @@ SMILES = pd.read_csv(PATH / "bulk_input.csv")["smiles"]
 FAST_BULK_REF = pd.read_csv(PATH / "bulk.csv", index_col=0)
 FAST_BULK_REF.columns = FAST_BULK_REF.columns.astype(np.int64)
 
-MOL_ARRAY_REF: NDArray[V] = np.load(PATH / "mol_array.npy")
+MOL_ARRAY_REF: NDArray[V] = np.load(RDKIT_REF_PATH / "mol_array.npy")
 BOND_ARRAY_REF: NDArray[V] = np.load(PATH / "bond_array.npy")
 
 
@@ -107,16 +108,20 @@ class TestFastBulkWorkflow:
                 ex_dict[name] = ex
         self.assert_ex_dict(ex_dict, i)
 
-    @pytest.mark.xfail(sys.platform != "darwin", reason="Platform dependant (?)")
+    @pytest.mark.xfail(
+        RDKIT_OLD_REF and sys.platform != "darwin", reason="Platform dependant (?)"
+    )
     def test_mol_atoms(self, output: Output) -> None:
         """Validate the Cartesian coordinates of the output molecules."""
         ex_dict = {}
         for i, mol in enumerate(output.mol):
             name = mol.properties.get("smiles", f"mol {i}")
             try:
+                # The coordinates pass through an RDKit MolBlock, which rounds them to 4 decimals
                 np.testing.assert_allclose(
                     actual=cdist(mol, mol),
                     desired=MOL_ARRAY_REF["dist_mat"][i, :len(mol), :len(mol)],
+                    atol=1e-3,
                     err_msg=f"{name} coordinates\n",
                 )
                 np.testing.assert_array_equal(

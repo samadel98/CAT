@@ -81,8 +81,10 @@ jobs:
                 if: matrix.special == '; slow'
                 run: cp2k.popt --version
 
+            # The reference geometries of the tests were made with RDKit 2026.09
+            # (see tests/rdkit_references.py)
             -   name: Install dependencies
-                run: pip install -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}"
+                run: pip install -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*"
 
             -   name: Info Python
                 run: |
