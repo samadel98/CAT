@@ -5,11 +5,14 @@ from os.path import (join, isdir, isfile)
 from pathlib import Path
 from shutil import rmtree
 
-from scm.plams import Molecule
+import pytest
+from scm.plams import Molecule, readpdb, writepdb
 from assertionlib import assertion
 from nanoutils import delete_finally
 
-from CAT.data_handling.mol_to_file import mol_to_file, shorten_filename, MAX_FILENAME_BYTES
+from CAT.data_handling.mol_to_file import (
+    mol_to_file, write_pdb, shorten_filename, MAX_FILENAME_BYTES
+)
 
 _PATH = join('tests', 'test_files')
 PATH = join(_PATH, 'mol_to_file')
@@ -95,3 +98,16 @@ def test_shorten_filename() -> None:
     assert shorten_filename(name + 'C', ext_len=3) != name + 'C'
     assert len(shorten_filename('C' * 1000, ext_len=3)) == MAX_FILENAME_BYTES - 4
     assert shorten_filename('C' * 1000) != shorten_filename('C' * 999 + 'O')
+
+
+@pytest.mark.parametrize("filename", [
+    join(_PATH, 'Methanol.pdb'),
+    join(_PATH, 'core', 'Cd68Cl26Se55__26_CC[O-]@O3.pdb'),
+    join(_PATH, 'core', 'Cd68Cl26Se55__26_O=C[O-]@O2O3.pdb'),
+])
+def test_write_pdb(filename: str, tmp_path: Path) -> None:
+    """Test that :func:`write_pdb` writes the same files as PLAMS' ``writepdb``."""
+    mol = readpdb(filename)
+    write_pdb(mol, tmp_path / 'cat.pdb')
+    writepdb(mol, str(tmp_path / 'plams.pdb'))
+    assert (tmp_path / 'cat.pdb').read_text() == (tmp_path / 'plams.pdb').read_text()

@@ -5,11 +5,13 @@ Index
 .. currentmodule:: CAT.data_handling.mol_to_file
 .. autosummary::
     mol_to_file
+    write_pdb
     shorten_filename
 
 API
 ---
 .. autofunction:: mol_to_file
+.. autofunction:: write_pdb
 .. autofunction:: shorten_filename
 
 """
@@ -21,17 +23,55 @@ from types import MappingProxyType
 from typing import Iterable, Container, Union, Callable
 from os.path import join, isdir, isfile, exists
 
-from scm.plams import Molecule, writepdb
+from rdkit import Chem, Geometry
+from scm.plams import Molecule
+from scm.plams.interfaces.molecule.rdkit import set_PDBresidueInfo
 
 from ..logger import logger
 
-__all__ = ['mol_to_file', 'shorten_filename']
+__all__ = ['mol_to_file', 'write_pdb', 'shorten_filename']
 
 MolExportFunc = Callable[[Molecule, Union[str, bytes, os.PathLike]], None]
 
+
+def write_pdb(mol: Molecule, filename: Union[str, bytes, os.PathLike]) -> None:
+    """Write **mol** to a .pdb file.
+
+    Produces the same file as PLAMS' :func:`~scm.plams.interfaces.molecule.rdkit.writepdb`,
+    but only converts the atomic properties that a .pdb file holds (charges and residue info)
+    rather than pickling all of them, which makes it several times faster for quantum dots.
+
+    """
+    rdmol = Chem.RWMol()
+    atom_idx = {}
+    for i, at in enumerate(mol.atoms):
+        rd_atom = Chem.Atom(int(at.atnum))
+        props = at.properties.rdkit if 'rdkit' in at.properties else at.properties
+        if 'charge' in props:
+            rd_atom.SetFormalCharge(int(props.charge))
+        if 'pdb_info' in props:
+            set_PDBresidueInfo(rd_atom, props.pdb_info)
+        rdmol.AddAtom(rd_atom)
+        atom_idx[id(at)] = i
+
+    for bond in mol.bonds:
+        order = bond.order
+        bond_type = Chem.BondType.AROMATIC if 1.4 < order < 1.6 else Chem.BondType(int(order))
+        rdmol.AddBond(atom_idx[id(bond.atom1)], atom_idx[id(bond.atom2)], bond_type)
+    Chem.SanitizeMol(rdmol)
+
+    conf = Chem.Conformer(len(mol))
+    for i, at in enumerate(mol.atoms):
+        conf.SetAtomPosition(i, Geometry.Point3D(*at.coords))
+    rdmol.AddConformer(conf, assignId=True)
+
+    with open(filename, 'w') as f:
+        f.write(Chem.MolToPDBBlock(rdmol))
+
+
 #: A mapping of file extensions to a Callable for Molecule exporting
 EXPORT_MAPPING: "MappingProxyType[str, MolExportFunc]" = MappingProxyType({
-    'pdb': writepdb,
+    'pdb': write_pdb,
     'xyz': Molecule.write,
     'mol': Molecule.write,
     'mol2': Molecule.write
