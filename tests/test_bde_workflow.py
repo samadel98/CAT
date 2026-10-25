@@ -57,6 +57,8 @@ BASE_SETTINGS = Settings(yaml.load(textwrap.dedent("""
                                     scf:
                                         eps_scf: 1e-05
                                         max_scf: 20
+                                        # Newer CP2K versions abort if the SCF does not converge
+                                        ignore_convergence_failure: True
                                 subsys:
                                     cell:
                                         abc: 8.00  8.00  8.00
