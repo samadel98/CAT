@@ -209,7 +209,7 @@ def _constrain_charge(psf: PSFContainer, settings: MutableMapping,
     if charge_settings is not None:
         del charge_settings['param']
         for k, v in charge_settings.items():
-            psf.charge[psf.atom_type == k] = v
+            psf.atoms.loc[psf.atom_type == k, 'charge'] = v
             if k in atom_set:
                 atom_set.remove(k)
 

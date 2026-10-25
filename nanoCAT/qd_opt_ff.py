@@ -33,7 +33,6 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 
 from scm.plams import Molecule, Settings
 from scm.plams.core.basejob import Job
@@ -182,8 +181,7 @@ def constrain_charge(psf: PSFContainer, initial_charge: float = 0.0,
 
     charge_correction = initial_charge - psf.charge.sum()
     charge_correction /= np.count_nonzero(atom_subset)
-    with pd.option_context('mode.chained_assignment', None):
-        psf.charge[atom_subset] += charge_correction
+    psf.atoms.loc[atom_subset, 'charge'] += charge_correction
 
 
 @wraps(constrain_charge)
