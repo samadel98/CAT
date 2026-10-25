@@ -1,8 +1,8 @@
 
-.. image:: https://github.com/nlesc-nano/data-CAT/workflows/Build%20with%20Conda/badge.svg
-    :target: https://github.com/nlesc-nano/data-CAT/actions?query=workflow%3A%22Build+with+Conda%22
-.. image:: https://codecov.io/gh/nlesc-nano/data-CAT/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/nlesc-nano/data-CAT
+.. image:: https://github.com/samadel98/data-CAT/actions/workflows/pythonpackage.yml/badge.svg?branch=master
+    :target: https://github.com/samadel98/data-CAT/actions/workflows/pythonpackage.yml?query=branch%3Amaster
+.. image:: https://github.com/samadel98/CAT/actions/workflows/docs.yml/badge.svg?branch=master
+    :target: https://samadel98.github.io/CAT/7_database.html
 .. image:: https://badge.fury.io/py/Data-CAT.svg
     :target: https://badge.fury.io/py/Data-CAT
 
@@ -65,6 +65,6 @@ Now you are ready to use **Data-CAT**.
 
 .. _conda: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
 .. _MongoDB: https://www.mongodb.com/
-.. _CAT: https://github.com/nlesc-nano/CAT
+.. _CAT: https://github.com/samadel98/CAT
 .. _rdkit: http://www.rdkit.org
 .. _h5py: http://www.h5py.org/
