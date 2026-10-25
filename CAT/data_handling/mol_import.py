@@ -521,8 +521,8 @@ def set_qd(qd: Molecule, mol_dict: Settings) -> Molecule:
 def find_ligands(qd: Molecule, ligand: Chem.Mol, anchor: int = 0) -> np.ndarray:
     """Find all ligands in **qd** based on the connectivity of **ligand**.
 
-    Atoms are matched on their element and bonds on their presence only,
-    so neither formal charges nor (guessed) bond orders have to agree.
+    Heavy atoms are matched on their element and number of hydrogens, and bonds on their
+    presence only, so neither formal charges nor (guessed) bond orders have to agree.
     Symmetry-equivalent atoms (*e.g.* the two oxygens of a carboxylate) are assigned such that
     the **anchor** atom is the one closest to the remaining (core) atoms,
     and, if still undecided, such that higher-order bonds are the shorter ones.
@@ -543,20 +543,42 @@ def find_ligands(qd: Molecule, ligand: Chem.Mol, anchor: int = 0) -> np.ndarray:
         ordered like the atoms in **ligand**. Overlapping matches are discarded.
 
     """
+    n = ligand.GetNumAtoms()
     atom_idx = {id(at): i for i, at in enumerate(qd.atoms)}
     bonds = [(atom_idx[id(b.atom1)], atom_idx[id(b.atom2)]) for b in qd.bonds]
-    target = _skeleton((at.atnum for at in qd.atoms), bonds)
-    query = _skeleton(
-        (at.GetAtomicNum() for at in ligand.GetAtoms()),
-        ((b.GetBeginAtomIdx(), b.GetEndAtomIdx()) for b in ligand.GetBonds()),
+    neighbors: List[List[int]] = [[] for _ in range(len(qd))]
+    for i, j in bonds:
+        neighbors[i].append(j)
+        neighbors[j].append(i)
+    xyz = np.array([at.coords for at in qd.atoms], dtype=np.float64)
+    mapper = _LigandMapper(ligand, anchor, xyz, None, neighbors)
+    if not mapper.heavy:
+        return np.zeros((0, n), dtype=np.intp)
+
+    # Match the heavy atoms only, with their number of hydrogens encoded as isotope.
+    # Matching explicit hydrogens would enumerate all their permutations, which, before
+    # RDKit 2022.09, also count towards `maxMatches` (so that most ligands were missed)
+    atnums = [at.atnum for at in qd.atoms]
+    h_neighbors = [sorted(j for j in nb if atnums[j] == 1) for nb in neighbors]
+    heavy_qd = [i for i, atnum in enumerate(atnums) if atnum != 1]
+    heavy_pos = {i: k for k, i in enumerate(heavy_qd)}
+    target = _skeleton(
+        (atnums[i] for i in heavy_qd),
+        ((heavy_pos[i], heavy_pos[j]) for i, j in bonds if i in heavy_pos and j in heavy_pos),
+        (1 + len(h_neighbors[i]) for i in heavy_qd),
     )
-    n = query.GetNumAtoms()
 
     # Find all non-overlapping ligands
-    max_matches = max(1, len(qd) // max(1, n))
-    matches: List[Sequence[int]] = []
+    max_matches = len(mapper.perms) * max(1, len(heavy_qd) // len(mapper.heavy))
+    matches: List[List[int]] = []
     used: set = set()
-    for match in target.GetSubstructMatches(query, uniquify=True, maxMatches=max_matches):
+    for heavy_match in target.GetSubstructMatches(
+        mapper.heavy_query, uniquify=True, maxMatches=max_matches
+    ):
+        mapping = {i: heavy_qd[k] for i, k in zip(mapper.heavy, heavy_match)}
+        for i, h_list in mapper.hydrogens.items():
+            mapping.update(zip(h_list, h_neighbors[mapping[i]]))
+        match = [mapping[i] for i in range(n)]
         if used.isdisjoint(match):
             matches.append(match)
             used.update(match)
@@ -564,15 +586,9 @@ def find_ligands(qd: Molecule, ligand: Chem.Mol, anchor: int = 0) -> np.ndarray:
         return np.zeros((0, n), dtype=np.intp)
 
     # Assign symmetry-equivalent atoms based on the geometry
-    xyz = np.array([at.coords for at in qd.atoms], dtype=np.float64)
     core_mask = np.ones(len(qd), dtype=bool)
     core_mask[list(used)] = False
-    core_tree = cKDTree(xyz[core_mask]) if core_mask.any() else None
-    neighbors: List[List[int]] = [[] for _ in range(len(qd))]
-    for i, j in bonds:
-        neighbors[i].append(j)
-        neighbors[j].append(i)
-    mapper = _LigandMapper(ligand, anchor, xyz, core_tree, neighbors)
+    mapper.core_tree = cKDTree(xyz[core_mask]) if core_mask.any() else None
     return np.array([mapper(m) for m in matches], dtype=np.intp)
 
 
@@ -585,16 +601,6 @@ class _LigandMapper:
         heavy_pos = {i: k for k, i in enumerate(heavy)}
         heavy_bonds = [b for b in ligand.GetBonds()
                        if b.GetBeginAtomIdx() in heavy_pos and b.GetEndAtomIdx() in heavy_pos]
-        heavy_query = _skeleton(
-            (ligand.GetAtomWithIdx(i).GetAtomicNum() for i in heavy),
-            ((heavy_pos[b.GetBeginAtomIdx()], heavy_pos[b.GetEndAtomIdx()]) for b in heavy_bonds),
-        )
-
-        #: All permutations of the heavy atoms that preserve their connectivity
-        self.perms = [
-            [heavy[k] for k in perm] for perm in
-            heavy_query.GetSubstructMatches(heavy_query, uniquify=False, maxMatches=10000)
-        ]
         self.heavy = heavy
         self.h_idx = [at.GetIdx() for at in ligand.GetAtoms() if at.GetAtomicNum() == 1]
         self.hydrogens = {
@@ -602,6 +608,21 @@ class _LigandMapper:
                 if nb.GetAtomicNum() == 1]
             for i in heavy
         }
+
+        #: The heavy atoms, with their number of hydrogens (plus one) as isotope
+        self.heavy_query = _skeleton(
+            (ligand.GetAtomWithIdx(i).GetAtomicNum() for i in heavy),
+            ((heavy_pos[b.GetBeginAtomIdx()], heavy_pos[b.GetEndAtomIdx()]) for b in heavy_bonds),
+            (1 + len(self.hydrogens[i]) for i in heavy),
+        )
+
+        #: All permutations of the heavy atoms that preserve their connectivity
+        self.perms = [
+            [heavy[k] for k in perm] for perm in
+            self.heavy_query.GetSubstructMatches(
+                self.heavy_query, uniquify=False, maxMatches=10000
+            )
+        ]
         self.bonds = [(b.GetBeginAtomIdx(), b.GetEndAtomIdx(), b.GetBondTypeAsDouble())
                       for b in heavy_bonds]
         self.n = ligand.GetNumAtoms()
@@ -642,12 +663,18 @@ class _LigandMapper:
         return ret
 
 
-def _skeleton(atnums: Iterable[int], bonds: Iterable[Sequence[int]]) -> Chem.Mol:
-    """Construct an uncharged molecule with only single bonds from atomic numbers and bonds."""
+def _skeleton(atnums: Iterable[int], bonds: Iterable[Sequence[int]],
+              isotopes: Optional[Iterable[int]] = None) -> Chem.Mol:
+    """Construct an uncharged molecule with only single bonds from atomic numbers and bonds.
+
+    Non-zero **isotopes** have to be equal for two atoms to match in a substructure search.
+
+    """
     mol = Chem.RWMol()
-    for atnum in atnums:
+    for atnum, isotope in zip(atnums, itertools.repeat(0) if isotopes is None else isotopes):
         atom = Chem.Atom(atnum)
         atom.SetNoImplicit(True)
+        atom.SetIsotope(isotope)
         mol.AddAtom(atom)
     for i, j in bonds:
         mol.AddBond(i, j, Chem.BondType.SINGLE)
