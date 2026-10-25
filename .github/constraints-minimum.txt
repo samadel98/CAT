@@ -1,6 +1,7 @@
 # pip constraints for the CI job testing the minimum supported dependency versions.
 # Keep these in sync with the lower bounds in `pyproject.toml`.
 h5py==3.6.0
+filelock==3.12.0
 numpy==1.21.6
 pandas==1.4.4
 pymongo==4.0.2

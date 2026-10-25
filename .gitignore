@@ -108,3 +108,6 @@ docs_out/
 
 # emacs
 *~
+
+# Lock files of the Data-CAT databases
+database.lock

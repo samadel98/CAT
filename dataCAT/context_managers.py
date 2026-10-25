@@ -14,7 +14,7 @@ API
 
 """
 
-from os.path import abspath
+from os.path import abspath, dirname
 from abc import abstractmethod, ABCMeta
 from types import TracebackType
 from typing import (
@@ -23,8 +23,10 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from filelock import FileLock
 
 from .df_proxy import DFProxy
+from .locking import get_lock
 
 if TYPE_CHECKING:
     from os import PathLike  # noqa: F401
@@ -51,6 +53,11 @@ class FileManagerABC(Generic[AnyStr, T], metaclass=ABCMeta):
     def write(self) -> bool:
         """:class:`bool`: Get whether or not :attr:`.filename` should be written to when closing the context manager."""  # noqa: E501
         return self._write
+
+    @property
+    def lock(self) -> FileLock:
+        """:class:`filelock.FileLock`: Get the lock of the database, which is held while the context manager is open."""  # noqa: E501
+        return get_lock(dirname(self.filename))
 
     @final
     def __init__(self, filename: Union[AnyStr, 'PathLike[AnyStr]'], write: bool = True) -> None:
@@ -122,24 +129,32 @@ class OpenLig(FileManagerABC[AnyStr, DFProxy]):
 
     def __enter__(self) -> DFProxy:
         """Open the :class:`.OpenLig` context manager, importing :attr:`.df`."""
-        # Open the .csv file
-        dtype = {'hdf5 index': np.int64, 'formula': str, 'settings': str, 'opt': bool}
-        self._db = df = DFProxy(
-            pd.read_csv(self.filename, index_col=[0, 1], header=[0, 1], dtype=dtype)
-        )
+        # Open the .csv file; other processes have to wait until it is closed again
+        self.lock.acquire()
+        try:
+            dtype = {'hdf5 index': np.int64, 'formula': str, 'settings': str, 'opt': bool}
+            self._db = df = DFProxy(
+                pd.read_csv(self.filename, index_col=[0, 1], header=[0, 1], dtype=dtype)
+            )
 
-        # Fix the columns
-        idx_tups = [(i, '') if 'Unnamed' in j else (i, j) for i, j in df.columns]
-        df.columns = pd.MultiIndex.from_tuples(idx_tups, names=df.columns.names)
+            # Fix the columns
+            idx_tups = [(i, '') if 'Unnamed' in j else (i, j) for i, j in df.columns]
+            df.columns = pd.MultiIndex.from_tuples(idx_tups, names=df.columns.names)
+        except BaseException:
+            self.lock.release()
+            raise
         return df
 
     def __exit__(self, exc_type: Optional[Type[BaseException]],
                  exc_value: Optional[BaseException],
                  traceback: Optional[TracebackType]) -> None:
         """Close the :class:`.OpenLig` context manager, exporting :attr:`.df`."""
-        if self.write:
-            self._db.to_csv(self.filename)
-        del self._db
+        try:
+            if self.write:
+                self._db.to_csv(self.filename)
+        finally:
+            del self._db
+            self.lock.release()
 
 
 class OpenQD(FileManagerABC[AnyStr, DFProxy]):
@@ -147,21 +162,29 @@ class OpenQD(FileManagerABC[AnyStr, DFProxy]):
 
     def __enter__(self) -> DFProxy:
         """Open the :class:`.OpenQD` context manager, importing :attr:`.df`."""
-        # Open the .csv file
-        dtype = {'hdf5 index': np.int64, 'settings': str, 'opt': bool}
-        self._db = df = DFProxy(
-            pd.read_csv(self.filename, index_col=[0, 1, 2, 3], header=[0, 1], dtype=dtype)
-        )
+        # Open the .csv file; other processes have to wait until it is closed again
+        self.lock.acquire()
+        try:
+            dtype = {'hdf5 index': np.int64, 'settings': str, 'opt': bool}
+            self._db = df = DFProxy(
+                pd.read_csv(self.filename, index_col=[0, 1, 2, 3], header=[0, 1], dtype=dtype)
+            )
 
-        # Fix the columns
-        idx_tups = [(i, '') if 'Unnamed' in j else (i, j) for i, j in df.columns]
-        df.columns = pd.MultiIndex.from_tuples(idx_tups, names=df.columns.names)
+            # Fix the columns
+            idx_tups = [(i, '') if 'Unnamed' in j else (i, j) for i, j in df.columns]
+            df.columns = pd.MultiIndex.from_tuples(idx_tups, names=df.columns.names)
+        except BaseException:
+            self.lock.release()
+            raise
         return df
 
     def __exit__(self, exc_type: Optional[Type[BaseException]],
                  exc_value: Optional[BaseException],
                  traceback: Optional[TracebackType]) -> None:
         """Close the :class:`.OpenQD` context manager, exporting :attr:`.df`."""
-        if self.write:
-            self._db.to_csv(self.filename)
-        del self._db
+        try:
+            if self.write:
+                self._db.to_csv(self.filename)
+        finally:
+            del self._db
+            self.lock.release()

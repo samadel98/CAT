@@ -9,7 +9,6 @@ from types import MappingProxyType
 from os.path import join, abspath
 from pathlib import Path
 
-import h5py
 import numpy as np
 import pandas as pd
 import pytest
@@ -22,6 +21,7 @@ from CAT.utils import get_formula
 from CAT.workflows import MOL, HDF5_INDEX, OPT, V_BULK, JOB_SETTINGS_CDFT
 
 from dataCAT import Database, OpenLig, OpenQD
+from dataCAT.locking import open_hdf5
 from dataCAT.testing_utils import _readpdb as readpdb
 
 PATH = Path('tests') / 'test_files'
@@ -42,7 +42,7 @@ def test_init() -> None:
     assertion.is_(DB.csv_qd.func, OpenQD)
 
     assertion.eq(DB.hdf5.args[0], abspath(join(DB_PATH, 'structures.hdf5')))
-    assertion.is_(DB.hdf5.func, h5py.File)
+    assertion.is_(DB.hdf5.func, open_hdf5)
 
     assertion.isinstance(DB.mongodb, (type(None), MappingProxyType))
 

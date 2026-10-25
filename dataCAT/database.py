@@ -16,13 +16,14 @@ API
 import reprlib
 import textwrap
 import warnings
+import functools
 from os import getcwd, PathLike
 from os.path import abspath
 from types import MappingProxyType
 from functools import partial
 from typing import (
     Optional, Sequence, List, Union, Any, Dict, TypeVar, Mapping,
-    overload, Tuple, Type, Iterable, TypedDict, TYPE_CHECKING
+    overload, Tuple, Type, Iterable, TypedDict, ContextManager, Callable, TYPE_CHECKING
 )
 
 import h5py
@@ -39,6 +40,7 @@ from .create_database import (
     create_csv, create_hdf5, create_mongodb, QD, Ligand, IDX_DTYPE, MONGO_COLLECTIONS
 )
 from .context_managers import OpenLig, OpenQD
+from .locking import get_lock, open_hdf5
 from .functions import df_to_mongo_dict, even_index, hdf5_availability
 from .pdb_array import PDBContainer
 from .hdf5_log import update_hdf5_log
@@ -68,6 +70,17 @@ class JobRecipe(TypedDict):
 
 #: The MongoDB error code of a duplicate key error.
 _DUPLICATE_KEY_CODE = 11000
+
+FT = TypeVar('FT', bound=Callable[..., Any])
+
+
+def _locked(func: FT) -> FT:
+    """Decorate a :class:`Database` method, so that it holds the lock of the database throughout."""
+    @functools.wraps(func)
+    def wrapper(self: 'Database', *args: Any, **kwargs: Any) -> Any:
+        with get_lock(self.dirname):
+            return func(self, *args, **kwargs)
+    return wrapper  # type: ignore[return-value]
 
 
 def _to_int64_array(ar: np.ndarray) -> np.ndarray:
@@ -102,8 +115,8 @@ class Database:
         return self._csv_qd
 
     @property
-    def hdf5(self) -> 'partial[h5py.File]':
-        """:data:`Callable[..., h5py.File]<typing.Callable>`: Get a function for constructing a :class:`h5py.File` context manager."""  # noqa: E501
+    def hdf5(self) -> 'partial[ContextManager[h5py.File]]':
+        """:data:`Callable[..., ContextManager[h5py.File]]<typing.Callable>`: Get a function for opening the .hdf5 file as :class:`h5py.File`, while holding the lock of the database (see :mod:`dataCAT.locking`)."""  # noqa: E501
         return self._hdf5
 
     @property
@@ -140,14 +153,15 @@ class Database:
         self._dirname: str = abspath(path) if path is not None else getcwd()
 
         # Create the database components and return the filename
-        lig_path = create_csv(self.dirname, database='ligand')
-        qd_path = create_csv(self.dirname, database='qd')
-        hdf5_path = create_hdf5(self.dirname)
+        with get_lock(self.dirname):
+            lig_path = create_csv(self.dirname, database='ligand')
+            qd_path = create_csv(self.dirname, database='qd')
+            hdf5_path = create_hdf5(self.dirname)
 
         # Populate attributes with MetaManager instances
         self._csv_lig = partial(OpenLig, filename=lig_path)
         self._csv_qd = partial(OpenQD, filename=qd_path)
-        self._hdf5 = partial(h5py.File, hdf5_path, libver='latest')
+        self._hdf5 = partial(open_hdf5, hdf5_path, libver='latest')
 
         # Try to create or access the mongodb database
         try:
@@ -235,6 +249,7 @@ class Database:
             return self.csv_qd
         raise ValueError(f"database={database!r}; accepted values for are 'ligand' and 'qd'")
 
+    @_locked
     def update_mongodb(self, database: Union[str, Mapping[str, pd.DataFrame]] = 'ligand',
                        overwrite: bool = False) -> None:
         """Export ligand or qd results to the MongoDB database.
@@ -318,6 +333,7 @@ class Database:
                 if other_error or ex.details.get('writeConcernErrors'):
                     raise
 
+    @_locked
     def update_csv(self, df: pd.DataFrame,
                    index: Union[None, slice, pd.Series] = None,
                    database: Union[Ligand, QD] = 'ligand',
@@ -461,6 +477,7 @@ class Database:
                 db[i] = -1
         return columns.drop(drop_idx)  # type: ignore
 
+    @_locked
     def update_hdf5(self, df: pd.DataFrame,
                     index: Union[slice, pd.Series],
                     database: Union[Ligand, QD] = 'ligand',
@@ -567,6 +584,7 @@ class Database:
 
     """ ########################  Pulling results from the database ########################### """
 
+    @_locked
     def from_csv(self, df: pd.DataFrame, database: Union[Ligand, QD] = 'ligand',
                  get_mol: bool = True, inplace: bool = True) -> Optional[pd.Series]:
         """Pull results from :attr:`Database.csv_lig` or :attr:`Database.csv_qd`.
@@ -655,6 +673,7 @@ class Database:
             mol_list = self.from_hdf5(idx, database=database, rdmol=False)
             return pd.Series(mol_list, index=df_sorted[df_slice].index, name=MOL)
 
+    @_locked
     def from_hdf5(self, index: Union[slice, Sequence[int]],
                   database: Union[Ligand, QD] = 'ligand', rdmol: bool = True,
                   mol_list: Optional[Iterable[Molecule]] = None) -> List[Union[Molecule, Mol]]:
@@ -699,6 +718,9 @@ class Database:
         The purpose of this method is ensure that a .hdf5 file is actually closed,
         thus allowing the :meth:`Database.from_hdf5` method to safely access **filename** without
         the risk of raising an :exc:`OSError`.
+        It first waits for the lock of the database (see :mod:`dataCAT.locking`), which is held by
+        all other processes that use this version of Data-CAT or newer,
+        and then checks whether a process without the lock has the file open.
 
         Parameters
         ----------
@@ -721,4 +743,5 @@ class Database:
 
         """
         filename = self.hdf5.args[0]
-        hdf5_availability(filename, timeout, max_attempts, libver='latest')
+        with get_lock(self.dirname):
+            hdf5_availability(filename, timeout, max_attempts, libver='latest')

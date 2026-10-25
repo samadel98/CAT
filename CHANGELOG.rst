@@ -11,6 +11,9 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Drop support for Python 3.7, 3.8 and 3.9; add support for Python 3.11 up to and including 3.14.
 * Add support for NumPy 2, pandas 2 & 3, h5py >= 3.6 and pymongo 4.
 * Replace ``setup.py`` with a ``pyproject.toml``-based build.
+* Lock the database files while reading or writing them (``dataCAT.locking``),
+  so that several CAT runs can share a database at the same time.
+  Adds a dependency on ``filelock``.
 * Fix ``Database.update_mongodb()`` raising a ``BulkWriteError`` when re-exporting pre-existing documents.
 * Fix ``Database.update_mongodb("qd")`` exporting the ligand database instead of the QD database.
 * Fix the unique index of the QD MongoDB collection being created for ``QD_database``,
