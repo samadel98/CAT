@@ -102,6 +102,7 @@ def regenerate_mol_array(out: Path) -> None:
         overrides = diff_mol_coords(load_mol_array(out, platform="linux"))
         with open(out / f"mol_array_{sys.platform}.json", "w") as f:
             json.dump(overrides, f, indent=4)
+            f.write("\n")
         return None
 
     mol_list = _generate_mols()
