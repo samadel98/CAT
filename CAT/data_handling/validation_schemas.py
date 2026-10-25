@@ -416,7 +416,7 @@ database_schema: Schema = Schema({
             error='optional.database.write expects a boolean, string or list of unique strings'
         ),
 
-    Optional_('overwrite', default=tuple):  # Allow previous entries to be overwritten
+    Optional_('overwrite', default=lambda: ()):  # Allow previous entries to be overwritten
         Or(
             And(None, Use(lambda n: ())),
             And(bool, Use(lambda n: DB_NAMES if n is True else ())),
@@ -436,7 +436,7 @@ database_schema: Schema = Schema({
             error='optional.database.overwrite expects a boolean, string or list of unique strings'
         ),
 
-    Optional_('mongodb', default=dict):  # Settings specific to MongoDB
+    Optional_('mongodb', default=lambda: {}):  # Settings specific to MongoDB
         Or(
             dict,
             And(bool, lambda n: n is False, Use(lambda n: {})),
@@ -671,7 +671,7 @@ ligand_opt_schema: Schema = Schema({
         ),
 
     # The Job Settings for the final geometry optimization
-    Optional_('s2', default=Settings):
+    Optional_('s2', default=lambda: Settings()):
         Or(
             None,
             dict,
@@ -1076,7 +1076,7 @@ cdft_schema: Schema = Schema({
         And(bool, error='optional.ligand.cdft.keep_files expects a boolean'),
 
     # The Job type for the final geometry optimization
-    Optional_('job1', default=lambda n: ADFJob):
+    Optional_('job1', default=lambda: ADFJob):
         Or(
             And(
                 And(type, lambda n: issubclass(n, Job), Use(val_job_type)),
@@ -1091,7 +1091,7 @@ cdft_schema: Schema = Schema({
         ),
 
     # The Job Settings for the final geometry optimization
-    Optional_('s1', default=Settings):
+    Optional_('s1', default=lambda: Settings()):
         Or(
             None,
             dict,
