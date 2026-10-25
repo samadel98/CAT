@@ -26,7 +26,8 @@ env:
     CP2K_VERSION: '2026.2'
     # The CAT and Auto-FOX releases on PyPI predate NumPy 2 and pandas 2 support,
     # so test against the forks
-    CAT_URL: 'git+https://github.com/samadel98/CAT@master'
+    # TODO: Switch back to `master` once samadel98/CAT#1 is merged
+    CAT_URL: 'git+https://github.com/samadel98/CAT@claude/project-thread-si6fnl'
     FOX_URL: 'git+https://github.com/samadel98/auto-FOX@master'
 
 jobs:
@@ -61,6 +62,11 @@ jobs:
                     chmod a+rx /usr/local/bin/cp2k.ssmp
                     # PLAMS < 2024 calls CP2K as `cp2k.popt`
                     ln -s /usr/local/bin/cp2k.ssmp /usr/local/bin/cp2k.popt
+
+                    # The basis sets and pseudopotentials
+                    git clone -q --depth 1 --branch "v${CP2K_VERSION}" --filter=blob:none --sparse https://github.com/cp2k/cp2k "$RUNNER_TEMP/cp2k"
+                    git -C "$RUNNER_TEMP/cp2k" sparse-checkout set data
+                    echo "CP2K_DATA_DIR=$RUNNER_TEMP/cp2k/data" >> "$GITHUB_ENV"
 
             -   name: Install MATCH
                 if: matrix.special == '; slow'
