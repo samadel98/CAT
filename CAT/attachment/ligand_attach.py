@@ -45,6 +45,7 @@ from scipy.spatial.distance import cdist
 from scm.plams import Molecule, Atom, Settings, MoleculeError
 from assertionlib.ndrepr import aNDRepr
 
+from .._compat import COPY_IF_NEEDED
 from ..mol_utils import get_index, round_coords  # noqa: F401
 from ..utils import AnchorTup, KindEnum
 from ..workflows import WorkFlow, HDF5_INDEX, MOL, OPT
@@ -262,8 +263,8 @@ def _get_rotmat1(vec1: np.ndarray, vec2: np.ndarray) -> np.ndarray:
 
     """
     # Increase the vector dimensionality if required
-    u_vec1 = np.array(vec1, dtype=float, ndmin=2, copy=False)
-    u_vec2 = np.array(vec2, dtype=float, ndmin=2, copy=False)
+    u_vec1 = np.array(vec1, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
+    u_vec2 = np.array(vec2, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
 
     with np.errstate(divide='raise', invalid='raise'):
         # Return a unit matrix if either vec1 or vec2 is zero
@@ -321,7 +322,7 @@ def _get_rotmat2(
 
     """  # noqa
     # Increase the vector dimensionality if required and create unit vectors
-    v = np.array(vec, dtype=float, ndmin=2, copy=False)
+    v = np.array(vec, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
     v /= np.linalg.norm(v, axis=1)[:, None]
 
     v1, v2, v3 = v.T
@@ -484,7 +485,7 @@ def rotation_check_kdtree(
     for i, ar in enumerate(xyz):
         tree = cKDTree(at_other)
         dist, _ = tree.query(ar.reshape(b*c, d), k=k, distance_upper_bound=distance_upper_bound)
-        dist.shape = b, c, k
+        dist = dist.reshape(b, c, k)
 
         weighted_dist = np.exp(-dist).sum(axis=(1, 2))
         idx_min = weighted_dist.argmin()
@@ -716,12 +717,12 @@ def sanitize_dim_2(value: Any) -> np.ndarray:
     """
     value = value.coords if isinstance(value, Atom) else value
     try:
-        ret = np.array(value, dtype=float, copy=False)
+        ret = np.array(value, dtype=float, copy=COPY_IF_NEEDED)
     except TypeError:
         ret = Molecule.as_array(None, atom_subset=value)
 
     if ret.ndim < 2:
-        ret.shape = (2 - ret.ndim) * (1,) + ret.shape
+        ret = ret.reshape((2 - ret.ndim) * (1,) + ret.shape)
     elif ret.ndim > 2:
         raise ValueError(f"Failed to create a 2D array; observed dimensionality: {ret.ndim}")
     return ret
@@ -775,7 +776,7 @@ def sanitize_dim_3(value: Any, padding: float = np.nan) -> np.ndarray:
         return ret
 
     else:
-        ret = np.array(value, ndmin=3, dtype=float, copy=False)
+        ret = np.array(value, ndmin=3, dtype=float, copy=COPY_IF_NEEDED)
         if ret.ndim > 3:
             raise ValueError(f"Failed to create a 3D array; observed dimensionality: {ret.ndim}")
         return ret

@@ -35,7 +35,8 @@ from typing import (
 
 import numpy as np
 from scipy.spatial.distance import cdist
-from nanoutils import as_nd_array
+from .._nanoutils import as_nd_array
+from .._compat import COPY_IF_NEEDED
 
 from CAT.utils import cycle_accumulate
 from CAT.attachment.edge_distance import edge_dist
@@ -137,7 +138,7 @@ def distribute_idx(
     # Create an array of indices
     stop = max(1, int(round(f * len(idx_ar))))
     if mode in ('uniform', 'cluster'):
-        xyz = np.array(core, dtype=np.float64, ndmin=2, copy=False)[idx_ar]
+        xyz = np.array(core, dtype=np.float64, ndmin=2, copy=COPY_IF_NEEDED)[idx_ar]
         dist = edge_dist(xyz) if kwargs.get('follow_edge', False) else cdist(xyz, xyz)
         operation: _OpKind = 'min' if mode == 'uniform' else 'max'
 

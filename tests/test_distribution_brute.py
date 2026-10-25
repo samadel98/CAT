@@ -14,7 +14,7 @@ from CAT.attachment import brute_uniform_idx
 PATH = Path('tests') / 'test_files'
 MOL = Molecule(PATH / 'core' / 'Cd68Se55.xyz')
 IDX = np.fromiter([i for i, at in enumerate(MOL) if at.symbol == 'Cd'], dtype=int)
-IDX.shape = len(IDX) // 4, 4
+IDX = IDX.reshape(len(IDX) // 4, 4)
 IDX.setflags(write=False)
 
 

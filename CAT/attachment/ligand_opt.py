@@ -550,8 +550,7 @@ def rdmol_as_array(rdmol: rdkit.Chem.Mol) -> np.ndarray:
 
     iterator = itertools.chain.from_iterable(get_xyz(at) for at in atoms)
     ret = np.fromiter(iterator, count=count, dtype=float)
-    ret.shape = shape
-    return ret
+    return ret.reshape(shape)
 
 
 def _find_idx(mol: Molecule, bond: Bond, atom: Atom) -> List[int]:

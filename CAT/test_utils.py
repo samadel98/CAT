@@ -78,7 +78,7 @@ def _compare_atoms(
 
     dtype = np.dtype([
         ("isclose", "?"),
-        ("idx", "u8"),
+        ("idx", "i8"),
         ("max_err", "f8"),
         ("rel_err", "f8"),
     ])
