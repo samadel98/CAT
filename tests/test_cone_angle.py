@@ -68,7 +68,7 @@ class TestWorkflow:
     with open(PATH / "cone_angle_setting.yaml", "r") as f:
         SETTINGS = Settings(yaml.load(f, Loader=yaml.SafeLoader))
 
-    @pytest.fixture(scope="class", autouse=True)
+    @pytest.fixture(scope="function", autouse=True)
     def setup_cat(self) -> Generator[None, None, None]:
         if not os.path.isdir(CONE_ANGLE_PATH):
             os.mkdir(CONE_ANGLE_PATH)

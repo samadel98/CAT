@@ -49,24 +49,37 @@ def test_bulk_workflow() -> None:
         assertion.eq(get_formula(mol), formula)
 
     ref = [17.07131616, 64.15117841, 74.79488029]
-    np.testing.assert_allclose(bulk_ar, ref)
+    # The geometries, and thus the bulkiness, differ slightly between RDKit versions
+    np.testing.assert_allclose(bulk_ar, ref, rtol=1e-3)
+
+
+FAST_BULK_KWARGS = {
+    "diameter=1": dict(diameter=1),
+    "diameter=None": dict(diameter=None),
+    "func=None": dict(func=None),
+    "func=lambda x: x**2": dict(func=lambda x: x**2),
+    "func=lambda x: 1/x": dict(func=lambda x: 1/x),
+    "height_lim=5": dict(height_lim=5),
+    "height_lim=None": dict(height_lim=None),
+    "default": dict(),
+}
+
+
+@pytest.fixture(
+    scope="class",
+    ids=FAST_BULK_KWARGS.keys(),
+    params=enumerate(FAST_BULK_KWARGS.values()),
+    name="output",
+)
+def generate_output(request: _pytest.fixtures.SubRequest) -> Output:
+    """Generate the test output of :func:`fast_bulk_workflow`."""
+    i, kwargs = request.param
+    mol_list, v_bulk = fast_bulk_workflow(SMILES, **kwargs)
+    return Output(mol_list, v_bulk, FAST_BULK_REF[i])
 
 
 class TestFastBulkWorkflow:
     """Tests for :func:`fast_bulk_workflow`."""
-
-    IDS_MAPPING = {
-        "diameter=1": dict(diameter=1),
-        "diameter=None": dict(diameter=None),
-        "func=None": dict(func=None),
-        "func=lambda x: x**2": dict(func=lambda x: x**2),
-        "func=lambda x: 1/x": dict(func=lambda x: 1/x),
-        "height_lim=5": dict(height_lim=5),
-        "height_lim=None": dict(height_lim=None),
-        "default": dict(),
-    }
-    IDS = IDS_MAPPING.keys()
-    PARAMS = enumerate(IDS_MAPPING.values())
 
     @staticmethod
     def assert_ex_dict(ex_dict: Mapping[str, AssertionError], i: int) -> None:
@@ -79,13 +92,6 @@ class TestFastBulkWorkflow:
         failed = pformat(list(ex_dict.keys()))
         msg = f"Failed for {len(ex_dict)}/{i + 1} molecules\n{failed}"
         raise AssertionError(msg) from ex
-
-    @pytest.fixture(scope="class", autouse=True, ids=IDS, params=PARAMS, name="output")
-    def generate_output(self, request: _pytest.fixtures.SubRequest) -> Output:
-        """Generate the test output of :func:`fast_bulk_workflow`."""
-        i, kwargs = request.param
-        mol_list, v_bulk = fast_bulk_workflow(SMILES, **kwargs)
-        return Output(mol_list, v_bulk, FAST_BULK_REF[i])
 
     def test_mol_properties(self, output: Output) -> None:
         """Validate the properties of the output molecules."""
@@ -114,8 +120,8 @@ class TestFastBulkWorkflow:
                     err_msg=f"{name} coordinates\n",
                 )
                 np.testing.assert_array_equal(
-                    x=[at.symbol for at in mol],
-                    y=MOL_ARRAY_REF["symbol"][i, :len(mol)],
+                    [at.symbol for at in mol],
+                    MOL_ARRAY_REF["symbol"][i, :len(mol)],
                     err_msg=f"{name} symbols\n",
                 )
             except AssertionError as ex:
@@ -131,8 +137,8 @@ class TestFastBulkWorkflow:
             try:
                 mol.set_atoms_id()
                 np.testing.assert_array_equal(
-                    x=np.fromiter([(b.atom1.id, b.atom2.id) for b in mol.bonds], dtype=bond_dtype),
-                    y=BOND_ARRAY_REF[["atom1", "atom2"]][i, :len(mol.bonds)],
+                    np.fromiter([(b.atom1.id, b.atom2.id) for b in mol.bonds], dtype=bond_dtype),
+                    BOND_ARRAY_REF[["atom1", "atom2"]][i, :len(mol.bonds)],
                     err_msg=f"{name} bonds\n",
                 )
                 np.testing.assert_allclose(

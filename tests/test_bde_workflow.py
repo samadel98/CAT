@@ -6,7 +6,6 @@ import textwrap
 from collections.abc import Generator
 from typing import Any
 from pathlib import Path
-from distutils.spawn import find_executable
 
 import yaml
 import pytest
@@ -98,7 +97,7 @@ def construct_df() -> SettingsDataFrame:
     return df
 
 
-@pytest.mark.skipif(find_executable("cp2k.popt") is None, reason="requires CP2K")
+@pytest.mark.skipif(shutil.which("cp2k.popt") is None, reason="requires CP2K")
 @pytest.mark.slow
 class TestBDEWorkflow:
     PARAMS = dict(
