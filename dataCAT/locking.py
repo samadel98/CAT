@@ -26,12 +26,14 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any, Iterator, Union
 
 import h5py
 from filelock import FileLock
 
 __all__ = ['LOCK_NAME', 'get_lock', 'open_hdf5']
+
+_PathType = Union[str, bytes, 'os.PathLike[str]', 'os.PathLike[bytes]']
 
 #: The name of the lock file in the directory of a database.
 LOCK_NAME = 'database.lock'
@@ -42,7 +44,7 @@ def _get_lock(dirname: str) -> FileLock:
     return FileLock(os.path.join(dirname, LOCK_NAME))
 
 
-def get_lock(dirname: str | os.PathLike[str]) -> FileLock:
+def get_lock(dirname: _PathType) -> FileLock:
     """Return the lock of the database in the directory **dirname**.
 
     The lock can be acquired several times by the same thread (*e.g.* to open the .hdf5 file
@@ -59,18 +61,18 @@ def get_lock(dirname: str | os.PathLike[str]) -> FileLock:
         ...     ...  # Read or modify the database in `path`
 
     """
-    return _get_lock(os.path.abspath(dirname))
+    return _get_lock(os.path.abspath(os.fsdecode(dirname)))
 
 
 @contextmanager
 def open_hdf5(
-    filename: str | os.PathLike[str], mode: str = 'r', **kwargs: Any
+    filename: _PathType, mode: str = 'r', **kwargs: Any
 ) -> Iterator[h5py.File]:
     r"""Open **filename** with :class:`h5py.File` while holding the lock of its database.
 
     Parameters
     ----------
-    filename : :class:`str` or :class:`os.PathLike`
+    filename : :class:`str`, :class:`bytes` or :class:`os.PathLike`
         The path of the .hdf5 file.
     mode : :class:`str`
         The mode for opening the file.
@@ -78,6 +80,6 @@ def open_hdf5(
         Further keyword arguments for :class:`h5py.File`.
 
     """
-    with get_lock(os.path.dirname(os.path.abspath(filename))):
+    with get_lock(os.path.dirname(os.path.abspath(os.fsdecode(filename)))):
         with h5py.File(filename, mode, **kwargs) as f:
             yield f

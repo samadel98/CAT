@@ -23,7 +23,7 @@ from types import MappingProxyType
 from functools import partial
 from typing import (
     Optional, Sequence, List, Union, Any, Dict, TypeVar, Mapping,
-    overload, Tuple, Type, Iterable, TypedDict, ContextManager, Callable, TYPE_CHECKING
+    overload, Tuple, Type, Iterable, TypedDict, ContextManager, Callable, cast, TYPE_CHECKING
 )
 
 import h5py
@@ -187,7 +187,9 @@ class Database:
         # Populate attributes with MetaManager instances
         self._csv_lig = partial(OpenLig, filename=lig_path)
         self._csv_qd = partial(OpenQD, filename=qd_path)
-        self._hdf5 = partial(open_hdf5, hdf5_path, libver='latest')
+        self._hdf5 = cast(
+            'partial[ContextManager[h5py.File]]', partial(open_hdf5, hdf5_path, libver='latest')
+        )
 
         # Try to create or access the mongodb database
         try:
