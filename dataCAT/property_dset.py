@@ -103,11 +103,11 @@ def create_prop_group(file: h5py.Group, scale: h5py.Dataset) -> h5py.Group:
     # Construct the group
     grp = file.create_group('properties', track_order=True)
     grp.attrs['index'] = scale.ref
-    grp.attrs['__doc__'] = np.string_(PROPERTY_DOC)
+    grp.attrs['__doc__'] = np.bytes_(PROPERTY_DOC)
     return grp
 
 
-def create_prop_dset(group: h5py.Group, name: str, dtype: DTypeLike = None,
+def create_prop_dset(group: h5py.Group, name: str, dtype: DTypeLike | None = None,
                      prop_names: Optional[Sequence[str]] = None,
                      **kwargs: Any) -> h5py.Dataset:
     r"""Construct a new dataset for holding a user-defined molecular property.
@@ -173,6 +173,7 @@ def create_prop_dset(group: h5py.Group, name: str, dtype: DTypeLike = None,
         If :data:`None`, create a 1D dataset (with no columns) instead.
     dtype : dtype-like
         The data type of the to-be created dataset.
+        Defaults to :class:`numpy.float32` if :data:`None`.
     \**kwargs : :data:`~Any`
         Further keyword arguments for the h5py :meth:`~h5py.Group.create_dataset` method.
 
@@ -182,6 +183,9 @@ def create_prop_dset(group: h5py.Group, name: str, dtype: DTypeLike = None,
         The newly created dataset.
 
     """
+    if dtype is None:
+        dtype = np.float32
+
     scale_name = f'{name}_names'
     index_ref = group.attrs['index']
     index = group.file[index_ref]
@@ -196,7 +200,7 @@ def create_prop_dset(group: h5py.Group, name: str, dtype: DTypeLike = None,
         return dset
 
     # Parse the names
-    name_array = np.asarray(prop_names, dtype=np.string_)
+    name_array = np.asarray(prop_names, dtype=np.bytes_)
     if name_array.ndim != 1:
         raise ValueError("'prop_names' expected None or a 1D array-like object; "
                          f"observed dimensionality: {name_array.ndim!r}")
@@ -301,7 +305,7 @@ def validate_prop_group(group: h5py.Group) -> None:
         assertion.eq(dset.dims[0]['index'], idx, message=f'{name!r} invalid dataset scale')
 
 
-def prop_to_dataframe(dset: h5py.Dataset, dtype: DTypeLike = None) -> pd.DataFrame:
+def prop_to_dataframe(dset: h5py.Dataset, dtype: DTypeLike | None = None) -> pd.DataFrame:
     """Convert the passed property Dataset into a DataFrame.
 
     Examples

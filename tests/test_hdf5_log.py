@@ -5,6 +5,7 @@ from shutil import copyfile
 
 import h5py
 import numpy as np
+import pandas as pd
 
 from assertionlib import assertion
 from nanoutils import delete_finally
@@ -69,7 +70,8 @@ REF_COLUMNS = MappingProxyType({
     ('Data-CAT', 'major'): np.dtype('int8'),
     ('Data-CAT', 'minor'): np.dtype('int8'),
     ('Data-CAT', 'micro'): np.dtype('int8'),
-    ('message', ''): np.dtype('O'),
+    # The default string dtype: `object` for pandas < 3.0 and `str` for pandas >= 3.0
+    ('message', ''): pd.Series(['a']).dtype,
     ('index', ''): np.dtype('O')
 })
 

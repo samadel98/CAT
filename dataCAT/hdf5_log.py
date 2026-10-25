@@ -40,7 +40,7 @@ __all__ = [
 _VERSION = np.array([CAT_VERSION, NANOCAT_VERSION, DATACAT_VERSION], dtype=VERSION_DTYPE)  # type: ignore  # noqa: E501
 _VERSION.setflags(write=False)
 
-_VERSION_NAMES = np.array(['CAT', 'Nano-CAT', 'Data-CAT'], dtype=np.string_)
+_VERSION_NAMES = np.array(['CAT', 'Nano-CAT', 'Data-CAT'], dtype=np.bytes_)
 _VERSION_NAMES.setflags(write=False)
 
 
@@ -172,7 +172,7 @@ def create_hdf5_log(file: h5py.Group,
 
     # Set attributes
     grp = file.create_group('logger', track_order=True)
-    grp.attrs['__doc__'] = np.string_(LOG_DOC)
+    grp.attrs['__doc__'] = np.bytes_(LOG_DOC)
     grp.attrs['n'] = 0
     grp.attrs['n_step'] = n_entries
     grp.attrs['clear_when_full'] = clear_when_full
@@ -182,7 +182,7 @@ def create_hdf5_log(file: h5py.Group,
     # Set the datasets
     shape1 = (n_entries,)
     shape2 = (n_entries, m)
-    data = np.asarray(version_names, dtype=np.string_)
+    data = np.asarray(version_names, dtype=np.bytes_)
 
     scale1 = grp.create_dataset('date', shape=shape1, maxshape=(None,), dtype=DT_DTYPE, chunks=shape1, **kwargs)  # noqa: E501
     grp.create_dataset('version', shape=shape2, maxshape=(None, m), dtype=VERSION_DTYPE, chunks=shape2, **kwargs)  # noqa: E501
@@ -287,13 +287,11 @@ def update_hdf5_log(
             group['message'].resize(n_max, axis=0)
 
     # Parse the passed **idx**
-    idx = np.array(index, ndmin=1, copy=False)
+    idx = np.atleast_1d(np.asarray(index))
     generic = idx.dtype.type
     if idx.ndim > 1:
         raise ValueError("The dimensionality of 'index' should be <= 1; "
                          f"observed dimensionality: {idx.ndim!r}")
-    elif not idx.ndim:
-        idx = idx.astype(INDEX_DTYPE)
 
     if issubclass(generic, np.bool_):
         idx, *_ = idx.nonzero()
@@ -398,14 +396,16 @@ def log_to_dataframe(group: h5py.Group) -> pd.DataFrame:
         >>> with h5py.File(hdf5_file, 'r') as f:
         ...     group = f['ligand/logger']
         ...     df = log_to_dataframe(group)
-        ...     print(df)  # doctest: +NORMALIZE_WHITESPACE
-                                     CAT              ... Data-CAT message               index
-                                   major minor micro  ...    micro
-        date                                          ...
-        2020-06-24 15:28:09.861074     0     9     6  ...        1  update                 [0]
-        2020-06-24 15:56:18.971201     0     9     6  ...        1  append  [1, 2, 3, 4, 5, 6]
-        <BLANKLINE>
-        [2 rows x 11 columns]
+
+        >>> print(df.shape)
+        (2, 11)
+
+        >>> print(df[['CAT', 'message', 'index']])  # doctest: +NORMALIZE_WHITESPACE
+                                     CAT             message               index
+                                   major minor micro
+        date
+        2020-06-24 15:28:09.861074     0     9     6  update                 [0]
+        2020-06-24 15:56:18.971201     0     9     6  append  [1, 2, 3, 4, 5, 6]
 
     Parameters
     ----------

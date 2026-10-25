@@ -14,18 +14,15 @@ API
 
 """
 
-import sys
 from os.path import abspath
 from abc import abstractmethod, ABCMeta
 from types import TracebackType
 from typing import (
-    Optional, Any, Generic, TypeVar, Tuple, Type, AnyStr, Dict, TYPE_CHECKING, Union
+    Optional, Any, Generic, TypeVar, Tuple, Type, AnyStr, Dict, TYPE_CHECKING, Union, final
 )
 
 import numpy as np
 import pandas as pd
-
-from nanoutils import final
 
 from .df_proxy import DFProxy
 
@@ -41,10 +38,7 @@ ST = TypeVar('ST', bound='FileManagerABC')
 class FileManagerABC(Generic[AnyStr, T], metaclass=ABCMeta):
     """An abstract baseclass for opening and closing the various database components."""
 
-    if sys.version_info < (3, 7):
-        __slots__ = ('_filename', '_write', '_db', '_hash')
-    else:
-        __slots__ = ('__weakref__', '_filename', '_write', '_db', '_hash')
+    __slots__ = ('__weakref__', '_filename', '_write', '_db', '_hash')
 
     _db: T
 
@@ -80,7 +74,7 @@ class FileManagerABC(Generic[AnyStr, T], metaclass=ABCMeta):
         """Implement :meth:`self == value<object.__eq__>`."""
         if type(self) is not type(value):
             return False
-        return self.filename == value.filename and self.write is value.write  # type: ignore
+        return self.filename == value.filename and self.write is value.write
 
     def __repr__(self) -> str:
         """Implement :class:`str(self)<str>` and :func:`repr(self)<repr>`."""

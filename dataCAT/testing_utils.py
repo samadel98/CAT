@@ -25,7 +25,8 @@ API
 
 """
 
-from typing import Tuple
+import os
+from typing import Tuple, Union
 from pathlib import Path
 
 from scm.plams import readpdb, Molecule
@@ -35,8 +36,15 @@ from .data import PDB_TUPLE
 
 __all__ = ['MOL_TUPLE', 'MOL', 'PDB', 'HDF5_TMP', 'HDF5_READ']
 
+
+def _readpdb(path: Union[str, os.PathLike[str]]) -> Molecule:
+    """Read a .pdb file, ensuring that the file is closed afterwards."""
+    with open(path, 'r') as f:
+        return readpdb(f)
+
+
 #: A tuple of PLAMS Molecules.
-MOL_TUPLE: Tuple[Molecule, ...] = tuple(readpdb(f) for f in PDB_TUPLE)
+MOL_TUPLE: Tuple[Molecule, ...] = tuple(_readpdb(f) for f in PDB_TUPLE)
 
 #: A PLAMS Molecule.
 MOL: Molecule = MOL_TUPLE[0]
