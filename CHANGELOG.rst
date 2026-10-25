@@ -14,6 +14,8 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Lock the database files while reading or writing them (``dataCAT.locking``),
   so that several CAT runs can share a database at the same time.
   Adds a dependency on ``filelock``.
+* Add ``Database.query_mongodb()``, which reads the MongoDB results back into a DataFrame,
+  filtered by index (*e.g.* ligand SMILES or core) or by property.
 * Fix ``Database.update_mongodb()`` raising a ``BulkWriteError`` when re-exporting pre-existing documents.
 * Fix ``Database.update_mongodb("qd")`` exporting the ligand database instead of the QD database.
 * Fix the unique index of the QD MongoDB collection being created for ``QD_database``,

@@ -5,6 +5,7 @@ Index
 .. currentmodule:: dataCAT.functions
 .. autosummary::
     df_to_mongo_dict
+    mongo_dict_to_df
     get_nan_row
     even_index
     hdf5_availability
@@ -12,6 +13,7 @@ Index
 API
 ---
 .. autofunction:: df_to_mongo_dict
+.. autofunction:: mongo_dict_to_df
 .. autofunction:: get_nan_row
 .. autofunction:: even_index
 .. autofunction:: hdf5_availability
@@ -24,7 +26,7 @@ from types import MappingProxyType
 from functools import wraps
 from typing import (
     Collection, Union, Sequence, Tuple, List, Generator, Mapping, Any, cast,
-    Hashable, Optional, Type, TypeVar, Callable, SupportsIndex, TYPE_CHECKING
+    Hashable, Optional, Type, TypeVar, Callable, SupportsIndex, Iterable, TYPE_CHECKING
 )
 
 import h5py
@@ -47,8 +49,8 @@ else:
     DTypeLike = 'numpy.typing.DTypeLike'
 
 __all__ = [
-    'df_to_mongo_dict', 'get_nan_row', 'even_index', 'int_to_slice', 'hdf5_availability',
-    'if_exception'
+    'df_to_mongo_dict', 'mongo_dict_to_df', 'get_nan_row', 'even_index', 'int_to_slice',
+    'hdf5_availability', 'if_exception'
 ]
 
 FT = TypeVar('FT', bound=Callable[..., Any])
@@ -134,6 +136,68 @@ def df_to_mongo_dict(df: pd.DataFrame,
     if as_gen:
         return (_get_dict(idx, row, idx_names) for idx, row in df.iterrows())
     return [_get_dict(idx, row, idx_names) for idx, row in df.iterrows()]
+
+
+def mongo_dict_to_df(docs: Iterable[Mapping[str, Any]],
+                     index_names: Sequence[str]) -> pd.DataFrame:
+    """Convert MongoDB documents into a DataFrame; the inverse of :func:`df_to_mongo_dict`.
+
+    Examples
+    --------
+    .. code:: python
+
+        >>> from dataCAT.functions import mongo_dict_to_df
+
+        >>> docs = [
+        ...     {'E_solv': {'Acetone': -56.6, 'Acetonitrile': -57.9},
+        ...      'smiles': 'C[O-]', 'anchor': 'O2'},
+        ...     {'E_solv': {'Acetone': -56.5}, 'smiles': 'CC[O-]', 'anchor': 'O3'},
+        ... ]
+        >>> df = mongo_dict_to_df(docs, ['smiles', 'anchor'])
+        >>> print(df)  # doctest: +NORMALIZE_WHITESPACE
+        index           E_solv
+        sub index      Acetone Acetonitrile
+        smiles anchor
+        C[O-]  O2        -56.6        -57.9
+        CC[O-] O3        -56.5          NaN
+
+    Parameters
+    ----------
+    docs : :class:`Iterable[Mapping[str, Any]]<typing.Iterable>`
+        The documents.
+        The value of every key that is not in **index_names** (or ``"_id"``) should be
+        a dictionary that maps sub-column names to values.
+    index_names : :class:`Sequence[str]<typing.Sequence>`
+        The keys of the documents that make up the index of the DataFrame.
+
+    Returns
+    -------
+    :class:`pandas.DataFrame`
+        A DataFrame whose index and columns are instances of :class:`pandas.MultiIndex`;
+        values absent from a document are set to ``NaN``.
+
+    """
+    names = list(index_names)
+    skip = set(names) | {'_id'}
+    index = []
+    rows = []
+    for doc in docs:
+        index.append(tuple(doc.get(k) for k in names))
+        rows.append({
+            (k, k2): v2 for k, v in doc.items() if k not in skip
+            for k2, v2 in (v.items() if isinstance(v, Mapping) else [('', v)])
+        })
+
+    if index:
+        idx = pd.MultiIndex.from_tuples(index, names=names)
+    else:
+        idx = pd.MultiIndex.from_arrays([[] for _ in names], names=names)
+    df = pd.DataFrame(rows, index=idx)
+    if len(df.columns):
+        df.columns = pd.MultiIndex.from_tuples(df.columns, names=['index', 'sub index'])
+    else:
+        df.columns = pd.MultiIndex.from_arrays([[], []], names=['index', 'sub index'])
+    return df
 
 
 #: A dictionary with NumPy dtypes as keys and matching :data:`None`-esque items as values.

@@ -47,6 +47,18 @@ Alternatively, they can be installed beforehand in a conda_ environment:
 
 The optional MongoDB_ component of ``dataCAT.Database`` requires a running MongoDB server;
 see `mongoconfig.md <mongoconfig.md>`_ for how to run one in a Docker container.
+Results are exported to MongoDB with ``Database.update_mongodb()`` and read back as a DataFrame,
+filtered by any index or property, with ``Database.query_mongodb()``:
+
+.. code:: python
+
+    from dataCAT import Database
+
+    db = Database('path/to/database', host='localhost', port=27017)
+    db.update_mongodb('ligand')
+
+    # All ligands with a cone angle below 120 degrees
+    df = db.query_mongodb('ligand', {('cone_angle', 'dist=0.0'): {'$lt': 120}})
 
 Now you are ready to use **Data-CAT**.
 
