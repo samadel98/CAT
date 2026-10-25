@@ -19,6 +19,7 @@ import threading
 from shutil import rmtree
 from pathlib import Path
 from collections import abc
+from contextlib import nullcontext
 from typing import (
     Optional, Union, Dict, Hashable, MutableMapping, TypeVar, Iterable, Container, Tuple, Callable,
     Any, List, Type, Mapping, TYPE_CHECKING, cast, ClassVar, ContextManager
@@ -26,6 +27,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 import rdkit
 import qmflows
@@ -39,6 +41,8 @@ from .workflow_dicts import WORKFLOW_TEMPLATE, _TemplateMapping
 from ..utils import restart_init, parallel_init, JOB_MAP
 from ..logger import logger
 from ..settings_dataframe import SettingsDataFrame
+
+_PANDAS_3 = Version(pd.__version__) >= Version("3.0.0")
 
 if TYPE_CHECKING:
     from dataCAT import Database
@@ -176,10 +180,16 @@ class WorkFlow(AbstractDataClass):
     #: Map a name to a workflow template.
     _WORKFLOW_TEMPLATES: ClassVar[Mapping[str, _TemplateMapping]] = WORKFLOW_TEMPLATE
 
-    #: A context manager for supressing Pandas :exc:`SettingwithCopyWarning`.
-    _SUPRESS_SETTINGWITHCOPYWARNING: ClassVar[ContextManager[None]] = pd.option_context(
-        'mode.chained_assignment', None
-    )
+    @staticmethod
+    def _supress_settingwithcopywarning() -> ContextManager[None]:
+        """Return a context manager for supressing Pandas :exc:`SettingwithCopyWarning`.
+
+        Pandas 3.0 removed the warning (and deprecated the option that controlled it).
+
+        """
+        if _PANDAS_3:
+            return nullcontext()
+        return pd.option_context('mode.chained_assignment', None)
 
     # Get-only properties
 
@@ -395,7 +405,7 @@ class WorkFlow(AbstractDataClass):
         # Run the workflow
         logger.info(f"Starting {self.description}")
         with PlamsInit(path=self.path, folder=self.name,
-                       thread_safe=self.thread_safe), self._SUPRESS_SETTINGWITHCOPYWARNING:
+                       thread_safe=self.thread_safe), self._supress_settingwithcopywarning():
             self_vars = {k.strip('_'): v for k, v in vars(self).items()}
             value = func(df.loc[slice1], columns=columns, **self_vars, **kwargs)
 
@@ -467,7 +477,7 @@ class WorkFlow(AbstractDataClass):
             return slice(None)
 
         # Import from the database
-        with self._SUPRESS_SETTINGWITHCOPYWARNING:
+        with self._supress_settingwithcopywarning():
             mol_list = self.db.from_csv(df, database=self.mol_type,
                                         get_mol=get_mol, inplace=inplace)
             if not inplace:  # mol_list is an actual sequence instead of None
@@ -523,7 +533,7 @@ class WorkFlow(AbstractDataClass):
 
         # Write results to the database
         if self.write:
-            with self._SUPRESS_SETTINGWITHCOPYWARNING:
+            with self._supress_settingwithcopywarning():
                 self.db.update_csv(
                     df, index,
                     database=dset_name,
