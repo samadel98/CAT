@@ -283,7 +283,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     if branch_distance:
         val_nano_cat("The ligand branch-distance workflow requires the nano-CAT package")
         if Version(nanoCAT.__version__) < Version("0.7.2"):
-            raise ImportError("The `cone_angle` workflow require Nano-CAT 0.7.2")
+            raise ImportError("The `branch_distance` workflow requires Nano-CAT 0.7.2")
         init_branch_distance(ligand_df)
 
     # Perform a COSMO-RS calculation on the ligands
@@ -306,7 +306,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     if cone_angle:
         val_nano_cat("Ligand cone angle calculations require the nano-CAT package")
         if Version(nanoCAT.__version__) < Version("0.7.2"):
-            raise ImportError("The `cone_angle` workflow require Nano-CAT 0.7.2")
+            raise ImportError("The `cone_angle` workflow requires Nano-CAT 0.7.2")
         init_cone_angle(ligand_df)
 
     return ligand_df
@@ -410,7 +410,7 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
 
 
 def val_nano_cat(error_message: Optional[str] = None) -> None:
-    """Raise an an :exc:`ImportError` if the module-level constant ``NANO_CAT`` is ``False``."""
-    err = error_message if error_message is None else ''
+    """Raise an :exc:`ImportError` if Nano-CAT could not be imported (see ``NANO_CAT``)."""
+    err = '' if error_message is None else error_message
     if NANO_CAT is not None:
         raise ImportError(err) from NANO_CAT

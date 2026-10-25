@@ -52,3 +52,23 @@ def test_cat() -> None:
 
     arg.path = PATH
     prep(arg)
+
+
+@pytest.mark.parametrize("msg,ref", [
+    ("Ligand cone angle calculations require the nano-CAT package",
+     "Ligand cone angle calculations require the nano-CAT package"),
+    (None, ""),
+])
+def test_val_nano_cat(monkeypatch: pytest.MonkeyPatch, msg: Optional[str], ref: str) -> None:
+    """Test that :func:`CAT.base.val_nano_cat` keeps its error message."""
+    from CAT import base
+
+    cause = ImportError("No module named 'nanoCAT'")
+    monkeypatch.setattr(base, "NANO_CAT", cause)
+    with pytest.raises(ImportError) as rec:
+        base.val_nano_cat(msg)
+    assert str(rec.value) == ref
+    assert rec.value.__cause__ is cause
+
+    monkeypatch.setattr(base, "NANO_CAT", None)
+    base.val_nano_cat(msg)
