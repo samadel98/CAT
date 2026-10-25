@@ -27,9 +27,10 @@ defaults:
 env:
     PY_COLORS: '1'
     # Branches of the other forks; CAT itself is the checked-out commit.
-    # TODO: switch NANOCAT_REF back to `master` once samadel98/nano-CAT#2 is merged
+    # TODO: switch NANOCAT_REF and DATACAT_REF back to `master` once
+    # samadel98/nano-CAT#2 and samadel98/data-CAT#2 are merged
     NANOCAT_REF: claude/project-thread-1zvsuz
-    DATACAT_REF: master
+    DATACAT_REF: claude/project-thread-1zvsuz
     FOX_REF: master
 
 jobs:
