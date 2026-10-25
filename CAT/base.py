@@ -37,7 +37,7 @@ from .logger import logger
 from .settings_dataframe import SettingsDataFrame
 
 from .data_handling.mol_import import read_mol
-from .data_handling.update_qd_df import update_qd_df
+from .data_handling.update_qd_df import init_qd_import
 from .data_handling.validate_input import validate_input
 
 from .multi_ligand import init_multi_ligand
@@ -353,20 +353,21 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
 
     """
     # Unpack arguments
-    bulk = ligand_df.settings.optional.qd.bulkiness
-    optimize = ligand_df.settings.optional.qd.optimize
-    forcefield = ligand_df.settings.optional.forcefield
-    dissociate = ligand_df.settings.optional.qd.dissociate
-    activation_strain = ligand_df.settings.optional.qd.activation_strain
-    construct_qd = ligand_df.settings.optional.qd.construct_qd
-    multi_ligand = ligand_df.settings.optional.qd.multi_ligand
+    settings = (ligand_df if ligand_df is not None else qd_df).settings
+    bulk = settings.optional.qd.bulkiness
+    optimize = settings.optional.qd.optimize
+    forcefield = settings.optional.forcefield
+    dissociate = settings.optional.qd.dissociate
+    activation_strain = settings.optional.qd.activation_strain
+    construct_qd = settings.optional.qd.construct_qd
+    multi_ligand = settings.optional.qd.multi_ligand
 
     # Construct the quantum dot DataFrame
     # If construct_qd is False, construct the dataframe without filling it with quantum dots
     if qd_df is None:  # Construct new quantum dots
         qd_df = init_qd_construction(ligand_df, core_df, construct_qd=construct_qd)
     elif ligand_df is core_df is None:  # Update existing quantum dots
-        update_qd_df(qd_df)
+        init_qd_import(qd_df)
     else:
         raise TypeError("Either qd_df must be 'None' or ligand_df "
                         " and core_df must both be 'None'")
@@ -374,6 +375,9 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
     # Start the ligand bulkiness workflow
     if bulk:
         val_nano_cat("Ligand bulkiness calculations require the nano-CAT package")
+        if ligand_df is None:
+            raise NotImplementedError("Ligand bulkiness calculations require the quantum dots "
+                                      "to be built from 'input_cores' and 'input_ligands'")
         init_lig_bulkiness(qd_df, ligand_df, core_df)
 
     # Skip the actual quantum dot construction

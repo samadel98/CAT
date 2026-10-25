@@ -17,6 +17,7 @@ Index
     set_mol_prop
     set_atom_prop
     set_qd
+    find_ligands
     print_exception
 
 API
@@ -34,6 +35,7 @@ API
 .. autofunction:: set_mol_prop
 .. autofunction:: set_atom_prop
 .. autofunction:: set_qd
+.. autofunction:: find_ligands
 .. autofunction:: print_exception
 
 """
@@ -42,11 +44,14 @@ import os
 import itertools
 from types import MappingProxyType
 from string import ascii_letters
-from typing import Dict, Iterable, List, Sequence, Optional, Mapping, Callable, overload
+from typing import (
+    Dict, Iterable, List, Sequence, Optional, Mapping, Callable, Tuple, overload
+)
 
 import numpy as np
+from scipy.spatial import cKDTree
 
-from scm.plams import (Molecule, Atom, Settings)
+from scm.plams import (Molecule, Atom, Settings, MoleculeError)
 import scm.plams.interfaces.molecule.rdkit as molkit
 
 from rdkit import Chem, RDLogger
@@ -420,33 +425,76 @@ def set_atom_prop(atom: Atom, at_id: Sequence[str], residue_name: str) -> None:
 
 
 def set_qd(qd: Molecule, mol_dict: Settings) -> Molecule:
-    """Update quantum dots imported by :func:`.read_mol`."""
-    # Create ligand (and anchor) molecules
-    ligand = molkit.from_smiles(mol_dict.ligand_smiles)
-    ligand_rdmol = molkit.to_rdmol(ligand)
-    anchor = molkit.from_smiles(mol_dict.ligand_anchor)
-    anchor_rdmol = molkit.to_rdmol(anchor)
-    qd_rdmol = molkit.to_rdmol(qd)
+    """Update quantum dots imported by :func:`.read_mol`.
 
-    # Create arrays of atomic indices of the core and ligands
-    lig_idx = 1 + np.array(qd_rdmol.GetSubstructMatches(ligand_rdmol))
-    core_idx = np.arange(1, len(qd))[~lig_idx]
-    lig_idx = lig_idx.ravel().tolist()
-    core_idx = core_idx.tolist()
+    The ligands are identified by matching the connectivity of ``mol_dict.ligand_smiles``,
+    after guessing all bonds if the file did not provide any (or ``guess_bonds = True``).
+    The atoms are then reordered (core first, followed by one ligand at a time),
+    the bonds and charges of the ligands are taken from the SMILES string
+    and all properties used by the CAT and Nano-CAT workflows are set.
 
-    # Guess bonds
-    if mol_dict.guess_bonds:
-        qd.guess_bonds(atom_subset=[qd[i] for i in lig_idx])
+    """
+    if not (mol_dict.get('ligand_smiles') and mol_dict.get('ligand_anchor')):
+        raise ValueError(f"{mol_dict.name!r}: imported quantum dots require "
+                         "the 'ligand_smiles' and 'ligand_anchor' arguments")
+
+    # Create the ligand (with explicit hydrogens) and find its anchor atom
+    ligand = Chem.AddHs(Chem.MolFromSmiles(mol_dict.ligand_smiles))
+    anchor_match = ligand.GetSubstructMatch(Chem.MolFromSmarts(mol_dict.ligand_anchor))
+    if not anchor_match:
+        raise MoleculeError(f"{mol_dict.name!r}: ligand_anchor {mol_dict.ligand_anchor!r} "
+                            f"is not part of ligand_smiles {mol_dict.ligand_smiles!r}")
+    _anchor_idx = anchor_match[0]
+
+    # Guess the connectivity if the file did not provide any
+    guess_bonds = bool(mol_dict.guess_bonds or not qd.bonds)
+    if guess_bonds:
+        qd.guess_bonds()
+
+    # Find the ligands; all remaining atoms belong to the core
+    lig_idx = find_ligands(qd, ligand, _anchor_idx)
+    if not len(lig_idx):
+        raise MoleculeError(f"{mol_dict.name!r}: no ligands matching "
+                            f"{mol_dict.ligand_smiles!r} were found")
+    is_lig = np.zeros(len(qd), dtype=bool)
+    is_lig[lig_idx.ravel()] = True
+    core_idx = np.flatnonzero(~is_lig)
 
     # Reorder all atoms: core atoms first followed by ligands
-    qd.atoms = [qd[i] for i in core_idx] + [qd[j] for i in lig_idx for j in i]
+    atoms = qd.atoms
+    qd.atoms = [atoms[i] for i in core_idx] + [atoms[i] for i in lig_idx.ravel()]
+
+    # Replace the (guessed) ligand bonds with those of the ligand
+    if guess_bonds:
+        qd.delete_all_bonds()
+    lig_atoms = [[atoms[i] for i in idx] for idx in lig_idx]
+    for lig in lig_atoms:
+        lig_set = set(lig)
+        intra_bonds = {id(b): b for at in lig for b in at.bonds if b.other_end(at) in lig_set}
+        for bond in intra_bonds.values():
+            qd.delete_bond(bond)
+        for bond in ligand.GetBonds():
+            at1 = lig[bond.GetBeginAtomIdx()]
+            at2 = lig[bond.GetEndAtomIdx()]
+            qd.add_bond(at1, at2, order=bond.GetBondTypeAsDouble())
+
+    # Set the formal charges of the ligand atoms
+    for lig in lig_atoms:
+        for at, rdatom in zip(lig, ligand.GetAtoms()):
+            at.properties.charge = rdatom.GetFormalCharge()
+
+    # Set the pdb_info (and the charges of the core atoms)
+    alphabet = itertools.cycle(itertools.combinations(ascii_letters, 2))
+    for at, i in zip(qd.atoms[:len(core_idx)], alphabet):
+        set_atom_prop(at, i, 'COR')
+    for at, i in zip(qd.atoms[len(core_idx):], alphabet):
+        set_atom_prop(at, i, 'LIG')
 
     # Construct a list with the indices of all ligand anchor atoms
     core_idx_max = 1 + len(core_idx)
-    _anchor_idx = ligand_rdmol.GetSubstructMatch(anchor_rdmol)[0]
     start = core_idx_max + _anchor_idx
-    stop = core_idx_max + _anchor_idx + np.prod(lig_idx.shape)
-    step = len(ligand)
+    stop = core_idx_max + lig_idx.size
+    step = ligand.GetNumAtoms()
     anchor_idx = list(range(start, stop, step))
 
     # Update the properties of **qd**
@@ -457,15 +505,155 @@ def set_qd(qd: Molecule, mol_dict: Settings) -> Molecule:
     qd.properties.name = mol_dict.name
     qd.properties.path = mol_dict.path
     qd.properties.ligand_smiles = Chem.CanonSmiles(mol_dict.ligand_smiles)
-    qd.properties.ligand_anchor = f'{ligand[_anchor_idx].symbol}{_anchor_idx}'
+    i = 1 + _anchor_idx
+    qd.properties.ligand_anchor = f'{ligand.GetAtomWithIdx(_anchor_idx).GetSymbol()}{i}'
 
     # Update the pdb_info of all atoms
     for i, at in enumerate(qd, 1):
         at.properties.pdb_info.SerialNumber = i
-        if i <= core_idx_max:  # A core atom
+        if i < core_idx_max:  # A core atom
             at.properties.pdb_info.ResidueNumber = 1
         else:  # A ligand atom
-            at.properties.pdb_info.ResidueNumber = 2 + int((i - core_idx_max) / len(ligand))
+            at.properties.pdb_info.ResidueNumber = 2 + int((i - core_idx_max) / step)
+    return qd
+
+
+def find_ligands(qd: Molecule, ligand: Chem.Mol, anchor: int = 0) -> np.ndarray:
+    """Find all ligands in **qd** based on the connectivity of **ligand**.
+
+    Atoms are matched on their element and bonds on their presence only,
+    so neither formal charges nor (guessed) bond orders have to agree.
+    Symmetry-equivalent atoms (*e.g.* the two oxygens of a carboxylate) are assigned such that
+    the **anchor** atom is the one closest to the remaining (core) atoms,
+    and, if still undecided, such that higher-order bonds are the shorter ones.
+
+    Parameters
+    ----------
+    qd : |plams.Molecule|_
+        A quantum dot (or any other molecule) with bonds.
+    ligand : :class:`rdkit.Chem.Mol`
+        The ligand, including explicit hydrogens.
+    anchor : int
+        The 0-based index of the anchor atom in **ligand**.
+
+    Returns
+    -------
+    :class:`numpy.ndarray[int] <numpy.ndarray>`, shape :math:`(n_{lig}, n_{atom})`
+        The 0-based indices of the atoms in **qd** belonging to each ligand,
+        ordered like the atoms in **ligand**. Overlapping matches are discarded.
+
+    """
+    atom_idx = {id(at): i for i, at in enumerate(qd.atoms)}
+    bonds = [(atom_idx[id(b.atom1)], atom_idx[id(b.atom2)]) for b in qd.bonds]
+    target = _skeleton((at.atnum for at in qd.atoms), bonds)
+    query = _skeleton(
+        (at.GetAtomicNum() for at in ligand.GetAtoms()),
+        ((b.GetBeginAtomIdx(), b.GetEndAtomIdx()) for b in ligand.GetBonds()),
+    )
+    n = query.GetNumAtoms()
+
+    # Find all non-overlapping ligands
+    max_matches = max(1, len(qd) // max(1, n))
+    matches: List[Sequence[int]] = []
+    used: set = set()
+    for match in target.GetSubstructMatches(query, uniquify=True, maxMatches=max_matches):
+        if used.isdisjoint(match):
+            matches.append(match)
+            used.update(match)
+    if not matches:
+        return np.zeros((0, n), dtype=np.intp)
+
+    # Assign symmetry-equivalent atoms based on the geometry
+    xyz = np.array([at.coords for at in qd.atoms], dtype=np.float64)
+    core_mask = np.ones(len(qd), dtype=bool)
+    core_mask[list(used)] = False
+    core_tree = cKDTree(xyz[core_mask]) if core_mask.any() else None
+    neighbors: List[List[int]] = [[] for _ in range(len(qd))]
+    for i, j in bonds:
+        neighbors[i].append(j)
+        neighbors[j].append(i)
+    mapper = _LigandMapper(ligand, anchor, xyz, core_tree, neighbors)
+    return np.array([mapper(m) for m in matches], dtype=np.intp)
+
+
+class _LigandMapper:
+    """Pick the geometrically most sensible atom mapping of a ligand (see :func:`find_ligands`)."""
+
+    def __init__(self, ligand: Chem.Mol, anchor: int, xyz: np.ndarray,
+                 core_tree: "None | cKDTree", neighbors: List[List[int]]) -> None:
+        heavy = [at.GetIdx() for at in ligand.GetAtoms() if at.GetAtomicNum() != 1]
+        heavy_pos = {i: k for k, i in enumerate(heavy)}
+        heavy_bonds = [b for b in ligand.GetBonds()
+                       if b.GetBeginAtomIdx() in heavy_pos and b.GetEndAtomIdx() in heavy_pos]
+        heavy_query = _skeleton(
+            (ligand.GetAtomWithIdx(i).GetAtomicNum() for i in heavy),
+            ((heavy_pos[b.GetBeginAtomIdx()], heavy_pos[b.GetEndAtomIdx()]) for b in heavy_bonds),
+        )
+
+        #: All permutations of the heavy atoms that preserve their connectivity
+        self.perms = [
+            [heavy[k] for k in perm] for perm in
+            heavy_query.GetSubstructMatches(heavy_query, uniquify=False, maxMatches=10000)
+        ]
+        self.heavy = heavy
+        self.h_idx = [at.GetIdx() for at in ligand.GetAtoms() if at.GetAtomicNum() == 1]
+        self.hydrogens = {
+            i: [nb.GetIdx() for nb in ligand.GetAtomWithIdx(i).GetNeighbors()
+                if nb.GetAtomicNum() == 1]
+            for i in heavy
+        }
+        self.bonds = [(b.GetBeginAtomIdx(), b.GetEndAtomIdx(), b.GetBondTypeAsDouble())
+                      for b in heavy_bonds]
+        self.n = ligand.GetNumAtoms()
+        self.anchor = anchor
+        self.xyz = xyz
+        self.core_tree = core_tree
+        self.neighbors = neighbors
+
+    def __call__(self, match: Sequence[int]) -> List[int]:
+        """Return the best mapping of the ligand atoms onto the quantum dot atoms in **match**."""
+        if len(self.perms) <= 1:
+            return list(match)
+
+        h_atoms = {match[i] for i in self.h_idx}
+        best: "None | Tuple[float, float]" = None
+        ret = list(match)
+        for perm in self.perms:
+            # Map ligand atom ``heavy[k]`` onto the quantum dot atom of ligand atom ``perm[k]``
+            mapping = {i: match[j] for i, j in zip(self.heavy, perm)}
+            for i, h_list in self.hydrogens.items():
+                h_target = [k for k in self.neighbors[mapping[i]] if k in h_atoms]
+                if len(h_target) != len(h_list):
+                    break  # The hydrogens do not fit this permutation
+                mapping.update(zip(h_list, h_target))
+            else:
+                if self.core_tree is not None:
+                    dist = float(self.core_tree.query(self.xyz[mapping[self.anchor]])[0])
+                else:
+                    dist = 0.0
+                length = sum(
+                    order * float(np.linalg.norm(self.xyz[mapping[i]] - self.xyz[mapping[j]]))
+                    for i, j, order in self.bonds
+                )
+                score = (round(dist, 1), length)
+                if best is None or score < best:
+                    best = score
+                    ret = [mapping[i] for i in range(self.n)]
+        return ret
+
+
+def _skeleton(atnums: Iterable[int], bonds: Iterable[Sequence[int]]) -> Chem.Mol:
+    """Construct an uncharged molecule with only single bonds from atomic numbers and bonds."""
+    mol = Chem.RWMol()
+    for atnum in atnums:
+        atom = Chem.Atom(atnum)
+        atom.SetNoImplicit(True)
+        mol.AddAtom(atom)
+    for i, j in bonds:
+        mol.AddBond(i, j, Chem.BondType.SINGLE)
+    mol.UpdatePropertyCache(strict=False)
+    Chem.FastFindRings(mol)
+    return mol.GetMol()
 
 
 def print_exception(func_name: str, mol_name: str, ex: Exception) -> None:

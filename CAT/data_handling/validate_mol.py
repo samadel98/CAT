@@ -157,7 +157,7 @@ def validate_mol(args: Sequence[Union[Any, Settings]],
                 'path': _path,
                 'is_core': is_core,
                 'is_qd': is_qd,
-                'canonicalize': not is_core,
+                'canonicalize': not (is_core or is_qd),
             })
         else:  # Optional arguments have been provided: parse and validate them
             if dict_.get('parsed'):
@@ -165,7 +165,7 @@ def validate_mol(args: Sequence[Union[Any, Settings]],
             mol, mol_dict = next(iter(dict_.items()))
             mol_dict.setdefault('is_core', is_core)
             mol_dict.setdefault('is_qd', is_qd)
-            mol_dict.setdefault('canonicalize', not mol_dict.is_core)
+            mol_dict.setdefault('canonicalize', not (mol_dict.is_core or mol_dict.is_qd))
             mol_dict = mol_schema.validate(mol_dict)
             mol_dict.setdefault('path', _path)
 
