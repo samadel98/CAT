@@ -16,6 +16,7 @@ Unreleased
 * Fix ``import CAT`` failing when a broken Nano-CAT or Data-CAT version is installed.
 * Fix the input validation with schema >= 0.7.6.
 * Fix the default job of the ``optional.ligand.cdft`` workflow.
+* Fix reading the energy of CP2K 2026 frequency analyses.
 * Fix string-defined weight functions that use modules other than NumPy (*e.g.*
   ``scipy.special.expit(x)``) on Python 3.13.
 * Move the package metadata to ``pyproject.toml``.

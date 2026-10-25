@@ -28,6 +28,7 @@ API
 
 """
 
+import re
 from shutil import rmtree
 from typing import (Optional, Type)
 from os.path import join
@@ -78,6 +79,9 @@ def _xyz_to_mol(filename: str) -> Molecule:
     return Molecule(filename, geometry=mol_count)
 
 
+_VIB_ENERGY_PATTERN = re.compile(r"\s*VIB\|\s*Electronic energy \(U\)")
+
+
 @add_to_class(Cp2kResults)
 def get_energy(
     self,
@@ -87,13 +91,16 @@ def get_energy(
 ) -> float:
     """Return the energy of the last occurence of ``'ENERGY| Total FORCE_EVAL'`` in the output."""
     if job_preset == 'frequency analysis':
-        pattern = 'VIB|              Electronic energy (U)'
+        # The amount of whitespace after ``VIB|`` differs between CP2K versions
+        energy_list = [
+            i for i in self.grep_output('Electronic energy (U)') if _VIB_ENERGY_PATTERN.match(i)
+        ]
         initial_unit = "kj/mol"
     else:
-        pattern = 'ENERGY| Total FORCE_EVAL'
+        energy_list = self.grep_output('ENERGY| Total FORCE_EVAL')
         initial_unit = "Hartree"
 
-    energy_str = self.grep_output(pattern)[index]
+    energy_str = energy_list[index]
     energy = float(energy_str.rsplit(maxsplit=1)[1])
     return Units.convert(energy, initial_unit, unit)
 
