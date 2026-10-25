@@ -36,6 +36,12 @@ Package installation
   - ``pip install nlesc-CAT`` installs the last release on PyPI (1.1.0, from 2022),
     which predates the fixes in this repository (*e.g.* NumPy 2, pandas 2 and Python 3.13 support).
 
+  - CAT works with PLAMS_ 1.5.1 as well as PLAMS 2024 and later, but no QMFlows_ release supports
+    the newer PLAMS versions yet, so CAT caps PLAMS below 2024 by default.
+    To use a newer PLAMS, download latest-plams-overrides.txt_, which swaps in the
+    `QMFlows fork <https://github.com/samadel98/qmflows>`_ and lifts the cap, and install CAT with uv_:
+    ``uv pip install git+https://github.com/samadel98/CAT --override latest-plams-overrides.txt``
+
 Note that, while not strictly necessary, it is recommended to first create a conda environment:
 
 - Download and install miniconda for python3: miniconda_ (also you can install the complete anaconda_ version).
@@ -72,5 +78,7 @@ References
 .. _rdkit: http://www.rdkit.org
 .. _PLAMS: https://github.com/SCM-NV/PLAMS
 .. _QMFlows: https://github.com/SCM-NV/qmflows
+.. _uv: https://docs.astral.sh/uv/
+.. _latest-plams-overrides.txt: https://github.com/samadel98/CAT/blob/master/.github/latest-plams-overrides.txt
 .. _example1: https://github.com/BvB93/CAT/blob/master/examples/input_settings.yaml
 .. _example2: https://github.com/BvB93/CAT/blob/master/examples/input.py

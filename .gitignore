@@ -46,6 +46,8 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+# PLAMS >= 2024 writes a logfile into the reused working folder of `CAT.utils.restart_init()`
+tests/test_files/test_plams_workdir/logfile
 
 # Translations
 *.mo
