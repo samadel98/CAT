@@ -95,12 +95,19 @@ jobs:
                 run: pip list
 
             -   name: Run tests
+                id: tests
                 run: |
                     if [[ "${{ matrix.special }}" == '; slow' ]]; then
                         pytest -m "slow"
                     else
                         pytest -m "not slow"
                     fi
+
+            # Print the coordinates of the molecules that RDKit lays out differently
+            # from the reference geometries (see tests/rdkit_references.py)
+            -   name: Show RDKit geometries that differ from the references
+                if: failure() && steps.tests.outcome == 'failure' && matrix.special != '; slow'
+                run: python tests/rdkit_references.py --diff
 
             -   name: Run codecov
                 uses: codecov/codecov-action@v7
