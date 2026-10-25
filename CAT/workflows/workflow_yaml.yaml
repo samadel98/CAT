@@ -202,3 +202,5 @@ branch_distance:
         write: [optional, database, write]
         overwrite: [optional, database, overwrite]
         thread_safe: [optional, database, thread_safe]
+
+        path: [optional, ligand, dirname]

@@ -34,6 +34,10 @@ Unreleased
 * Add ``optional.processes``: optimize the ligands with RDKit UFF in several processes.
 * Build quantum dots and convert molecules to RDKit faster; together with the above, a run with
   128 ligands takes 24 s instead of 43 s with 4 processes, or 27 s with 1.
+* Fix workflows with text results (``optional.ligand.branch_distance``) never running when results
+  are read from the database, with pandas 3.
+* Fix the ``optional.ligand.branch_distance`` workflow creating a ``branch_distance`` folder in the
+  current directory instead of the ligand folder.
 
 
 1.1.1
