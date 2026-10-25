@@ -59,7 +59,7 @@ jobs:
                         "; minimum")
                             pip install -e .[test] "nlesc-CAT @ $CAT_URL" -c .github/constraints-minimum.txt ;;
                         "; pre-release")
-                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" --pre --upgrade ;;
+                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" --pre --upgrade -c .github/constraints.txt ;;
                         *)
                             pip install -e .[test] "nlesc-CAT @ $CAT_URL" -c .github/constraints.txt ;;
                     esac
