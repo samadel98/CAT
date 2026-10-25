@@ -65,7 +65,7 @@ init_cat = "CAT.data_handling.entry_points:main"
 [project.urls]
 Homepage = "https://github.com/samadel98/CAT"
 "Bug Tracker" = "https://github.com/samadel98/CAT/issues"
-Documentation = "https://cat.readthedocs.io/en/latest/"
+Documentation = "https://samadel98.github.io/CAT/"
 
 [project.optional-dependencies]
 test = [

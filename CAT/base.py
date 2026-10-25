@@ -235,7 +235,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     * Ligand COSMO-RS calculations
     * Ligand conceptual DFT calculations
 
-    .. _Nano-CAT: https://github.com/nlesc-nano/nano-CAT
+    .. _Nano-CAT: https://github.com/samadel98/nano-CAT
 
     Parameters
     ----------
@@ -322,7 +322,7 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
     * Peforming activation strain analyses
     * Dissociating ligands on the quantum dot surface
 
-    .. _Nano-CAT: https://github.com/nlesc-nano/nano-CAT
+    .. _Nano-CAT: https://github.com/samadel98/nano-CAT
 
     Has two accepted signatures:
         * ``ligand_df = core_df = None``: Update an existing quantum dot dataframe (**qd_df**).

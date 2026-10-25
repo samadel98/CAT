@@ -40,6 +40,8 @@ Unreleased
   current directory instead of the ligand folder.
 * Add a weekly scheduled run of the tests, and an integration test that runs CAT end to end with
   the Nano-CAT, Data-CAT and Auto-FOX forks (``.github/workflows/integration.yml``).
+* Publish the documentation of this fork at https://samadel98.github.io/CAT/,
+  including the new Nano-CAT ``ligand_descriptors()`` recipe and Data-CAT's file locking.
 
 
 1.1.1

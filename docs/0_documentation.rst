@@ -10,6 +10,7 @@ look into the customization of the various jobs.
     1_get_started
     2_path
     3_input_core_ligand
+    8_import_qd
     4_optional
     5_bde
     6_type_aliases
@@ -18,6 +19,7 @@ look into the customization of the various jobs.
     15_dtype
     16_hdf5_logging
     17_property_dset
+    19_locking
     10_context_managers
     11_md_asa
     12_recipes
@@ -30,4 +32,3 @@ look into the customization of the various jobs.
     _1_identify_surface
     _2_distribution_brute
     _4_guess_core_core_dist
-    8_import_qd.rst

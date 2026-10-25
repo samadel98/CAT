@@ -135,7 +135,7 @@ Database
     All database-related settings.
 
     .. note::
-        For :attr:`optional.database` settings to take effect the `Data-CAT <https://github.com/nlesc-nano/data-CAT>`_ package has to be installed.
+        For :attr:`optional.database` settings to take effect the `Data-CAT <https://github.com/samadel98/data-CAT>`_ package has to be installed.
 
     Example:
 

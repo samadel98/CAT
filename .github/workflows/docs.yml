@@ -1,0 +1,81 @@
+# Build the documentation and publish it to GitHub Pages (https://samadel98.github.io/CAT/)
+
+name: Docs
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+    workflow_dispatch:
+    schedule:
+        # Weekly, to catch breaking releases of dependencies
+        -   cron: '0 5 * * 1'
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+    cancel-in-progress: true
+
+env:
+    # The documentation includes the API of Nano-CAT and Data-CAT.
+    # TODO: switch both back to `master` once samadel98/nano-CAT#2 and samadel98/data-CAT#2 are merged
+    NANOCAT_REF: claude/project-thread-1zvsuz
+    DATACAT_REF: claude/project-thread-1zvsuz
+    # Only pushes to (and manual runs on) master are published
+    PUBLISH: ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+
+jobs:
+    Docs:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
+
+            -   name: Set up Python on ubuntu-latest
+                uses: actions/setup-python@v7
+                with:
+                    python-version: '3.12'
+
+            -   name: Install dependencies
+                # The PyPI releases of Nano-CAT and Data-CAT predate NumPy 2
+                # (and Nano-CAT's pulls in the conflicting `rdkit-pypi` package)
+                run: |
+                    pip install -e .[docs] h5py pymongo filelock "numpy<2"
+                    pip install --no-deps \
+                        "git+https://github.com/samadel98/nano-CAT@${NANOCAT_REF}" \
+                        "git+https://github.com/samadel98/data-CAT@${DATACAT_REF}" \
+                        git+https://github.com/samadel98/auto-FOX@master
+
+            -   name: Installed packages
+                run: pip list
+
+            -   name: Build the documentation
+                run: sphinx-build -W --keep-going -b html docs docs/_build/html
+
+            -   name: Upload the documentation
+                if: env.PUBLISH == 'true'
+                uses: actions/upload-pages-artifact@v5
+                with:
+                    path: docs/_build/html
+
+    Publish:
+        needs: Docs
+        if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        runs-on: ubuntu-latest
+        permissions:
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        concurrency:
+            group: pages
+            cancel-in-progress: false
+        steps:
+            -   name: Deploy to GitHub Pages
+                id: deployment
+                uses: actions/deploy-pages@v5

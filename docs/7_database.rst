@@ -44,9 +44,12 @@ accoring to their functionality:
 -   Exporting from the database - these methods handle the exporting of data
     from the Database class to other python objects or remote locations:
 
-    ==========================  ===========================
-    :meth:`~Database.from_csv`  :meth:`~Database.from_hdf5`
-    ==========================  ===========================
+    ==========================  ===========================  =================================
+    :meth:`~Database.from_csv`  :meth:`~Database.from_hdf5`  :meth:`~Database.query_mongodb`
+    ==========================  ===========================  =================================
+
+All methods lock the database files while reading or writing them,
+so that several CAT runs can share a database (see :ref:`Locking`).
 
 
 Index
@@ -65,6 +68,7 @@ Index
     Database.update_hdf5
     Database.from_csv
     Database.from_hdf5
+    Database.query_mongodb
 
     DFProxy
     OpenLig

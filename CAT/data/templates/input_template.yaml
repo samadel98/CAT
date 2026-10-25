@@ -1,7 +1,7 @@
 # A starter input file for CAT; run it with `init_cat input.yaml`.
 # Check it first with `init_cat --validate input.yaml` (input only) or
 # `init_cat --dry-run input.yaml` (also reads all molecules and lists what would run).
-# All options are described at https://cat.readthedocs.io/en/latest/4_optional.html
+# All options are described at https://samadel98.github.io/CAT/4_optional.html
 
 # The working directory; cores and ligands given as file names are read from `<path>/core`
 # and `<path>/ligand`, and all results are written below it
