@@ -17,6 +17,8 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Fix a segmentation fault in the default (RDKit UFF) activation-strain analysis.
 * Fix the cone angles read from the database being discarded (and set to ``NaN``).
 * Fix the branch-distance workflow modifying the ligands, which were then used for the quantum dots.
+* Add ``nanoCAT.recipes.ligand_descriptors()``, which computes a table of cone angles,
+  bulkiness and branch distances of ligands from their SMILES strings, as by ``init_cat``.
 * Run the tests weekly.
 
 
