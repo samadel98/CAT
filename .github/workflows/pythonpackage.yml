@@ -16,8 +16,7 @@ concurrency:
 
 env:
     # The CAT branch, tag or commit to test against
-    # TODO: Switch back to `master` once the CAT modernization PR has been merged
-    CAT_URL: git+https://github.com/samadel98/CAT@claude/project-thread-si6fnl
+    CAT_URL: git+https://github.com/samadel98/CAT@master
 
 jobs:
     build:
@@ -59,9 +58,9 @@ jobs:
                         "; minimum")
                             pip install -e .[test] "nlesc-CAT @ $CAT_URL" -c .github/constraints-minimum.txt ;;
                         "; pre-release")
-                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" --pre --upgrade -c .github/constraints.txt ;;
+                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" --pre --upgrade ;;
                         *)
-                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" -c .github/constraints.txt ;;
+                            pip install -e .[test] "nlesc-CAT @ $CAT_URL" ;;
                     esac
 
             -   name: Start MongoDB
@@ -111,7 +110,7 @@ jobs:
                     python-version: '3.x'
 
             -   name: Install dependencies
-                run: pip install -e .[lint] "nlesc-CAT @ $CAT_URL" -c .github/constraints.txt
+                run: pip install -e .[lint] "nlesc-CAT @ $CAT_URL"
 
             -   name: Python info
                 run: |

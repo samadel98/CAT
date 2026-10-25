@@ -1,4 +1,0 @@
-# pip constraints for the default CI jobs.
-# The legacy PLAMS job classes used by CAT (e.g. `ADFJob`) were removed in PLAMS 2024,
-# and no qmflows release on PyPI supports newer PLAMS versions.
-plams<2024
