@@ -186,7 +186,7 @@ def dissociate_surface(mol: Molecule,
         :class:`MolDissociater<nanoCAT.bde.dissociate_xyn.MolDissociater>` class.
 
     """
-    idx_ar = _parse_idx(idx, ndim=2, copy=False)
+    idx_ar = _parse_idx(idx, ndim=2)
     if idx_ar.ndim > 2:
         raise ValueError("'idx' expected a 2D array-like object; "
                          f"observed number of dimensions: {idx_ar.ndim}")
@@ -402,8 +402,7 @@ def dissociate_bulk(
         if "cluster_size" in kwargs:
             raise TypeError("Specifying both `cluster_size` and `count_x` is not supported")
         kwargs["cluster_size"] = count_x
-    idx_x_sorted = distribute_idx(mol, idx_x, f=1, **kwargs)
-    idx_x_sorted.shape = -1, count_x
+    idx_x_sorted = distribute_idx(mol, idx_x, f=1, **kwargs).reshape(-1, count_x)
 
     if symbol_y is not None:
         # Identify a subset of matching atoms `y`
@@ -443,7 +442,7 @@ def _get_opposite_neighbor(
     except IndexError:
         raise ValueError("'k' should be smaller than the total number of surface atoms "
                          f"(len(idx_neighbor)); observed value: {k!r}") from None
-    idx_nn.shape = -1, idx_nn.shape[1] * idx_center.shape[1]
+    idx_nn = idx_nn.reshape(-1, idx_nn.shape[1] * idx_center.shape[1])
 
     # Find the **n** atoms in **idx_nn** furthest removed from each other
     return brute_uniform_idx(mol, idx_nn, n=n, **kwargs)

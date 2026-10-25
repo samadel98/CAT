@@ -65,10 +65,10 @@ def init_bde(qd_df: SettingsDataFrame) -> None:
     workflow(start_bde, qd_df, columns=columns, index=idx, workflow=workflow)
 
     # Convert the datatype from object back to float
-    qd_df['BDE dE'] = qd_df['BDE dE'].astype(float, copy=False)
+    qd_df['BDE dE'] = qd_df['BDE dE'].astype(float)
     if workflow.jobs[1]:
-        qd_df['BDE ddG'] = qd_df['BDE ddG'].astype(float, copy=False)
-        qd_df['BDE dG'] = qd_df['BDE dG'].astype(float, copy=False)
+        qd_df['BDE ddG'] = qd_df['BDE ddG'].astype(float)
+        qd_df['BDE dG'] = qd_df['BDE dG'].astype(float)
 
     # Sets a nested list with the filenames of .in files
     # This cannot be done with loc is it will try to expand the list into a 2D array

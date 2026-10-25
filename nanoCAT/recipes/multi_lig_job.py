@@ -294,7 +294,7 @@ def _concatenate_prm(file_list: Iterable[PathType]) -> PRMContainer:
             elif df is None:
                 setattr(ret, k, v)
             else:
-                setattr(ret, k, df.append(v))
+                setattr(ret, k, pd.concat([df, v]))
 
     items = ((k.lower(), getattr(ret, k.lower())) for k in ret.HEADERS[:-2])
     for k, df in items:

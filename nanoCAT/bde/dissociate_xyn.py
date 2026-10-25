@@ -479,16 +479,16 @@ class MolDissociater(AbstractDataClass):
 
         # Create an array of combinations
         combine = np.fromiter(chain.from_iterable(combinations(range(stop), n)), dtype=int)
-        combine.shape = -1, n
+        combine = combine.reshape(-1, n)
 
         # Accept the n_pair entries (per row) based on the norm
         norm = np.linalg.norm(dist_smallest[:, combine], axis=2)
         idx_accept = combine[np.argsort(norm, axis=1)[:, :n_pairs]]
-        idx_accept.shape = len(idx_accept), -1
+        idx_accept = idx_accept.reshape(len(idx_accept), -1)
 
         # Create an array with all core/ligand pairs
         lig_idx = np.take_along_axis(idx_small, idx_accept, axis=1)
-        lig_idx.shape = -1, n
+        lig_idx = lig_idx.reshape(-1, n)
         core_idx = np.fromiter(iter_repeat(i, n_pairs), dtype=int)[:, None]
         return np.hstack([core_idx, j[lig_idx]])
 

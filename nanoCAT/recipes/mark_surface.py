@@ -146,7 +146,7 @@ def replace_surface(mol: Molecule,
 
     """
     # Parse input arguments
-    xyz = np.array(mol, dtype=float, ndmin=2, copy=False)
+    xyz = np.atleast_2d(np.asarray(mol, dtype=float))
     atnum = to_atnum(symbol)
     atnum_new = to_atnum(symbol_new)
 

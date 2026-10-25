@@ -120,8 +120,7 @@ def get_asa_md(mol_list: Iterable[Molecule], jobs: Tuple[Type[Job], ...],
                                                 distance_upper_bound=distance_upper_bound,
                                                 k=k, dump_csv=dump_csv))
 
-    E = np.fromiter(iterator, count=count, dtype=float)
-    E.shape = shape
+    E = np.fromiter(iterator, count=count, dtype=float).reshape(shape)
     E[:, :4] *= Units.conversion_ratio('hartree', 'kcal/mol')
 
     # Calculate (and return) the interaction, strain and total energy
