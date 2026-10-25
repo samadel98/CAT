@@ -58,17 +58,17 @@ def init_bde(qd_df: SettingsDataFrame) -> None:
 
     # Create columns
     columns = _construct_columns(workflow, qd_df[MOL])
-    import_columns = {(i, j): (np.nan if i != 'label' else None) for i, j in columns}
+    import_columns = {(i, j): (np.nan if i != 'BDE label' else None) for i, j in columns}
 
     # Pull from the database; push unoptimized structures
     idx = workflow.from_db(qd_df, columns=import_columns)
     workflow(start_bde, qd_df, columns=columns, index=idx, workflow=workflow)
 
     # Convert the datatype from object back to float
-    qd_df['BDE dE'] = qd_df['BDE dE'].astype(float, copy=False)
+    qd_df['BDE dE'] = qd_df['BDE dE'].astype(float)
     if workflow.jobs[1]:
-        qd_df['BDE ddG'] = qd_df['BDE ddG'].astype(float, copy=False)
-        qd_df['BDE dG'] = qd_df['BDE dG'].astype(float, copy=False)
+        qd_df['BDE ddG'] = qd_df['BDE ddG'].astype(float)
+        qd_df['BDE dG'] = qd_df['BDE dG'].astype(float)
 
     # Sets a nested list with the filenames of .in files
     # This cannot be done with loc is it will try to expand the list into a 2D array
@@ -143,9 +143,10 @@ def start_bde(
         ddG = get_bde_ddG(qd_complete, XYn, qd_list, job2, s2)
         dG = dE + ddG
 
-        # Append the to-be returned list
-        value = np.concatenate([labels, dE, ddG, dG] if job2 else [labels, dE])
-        ret_append(value)  # value is now, unfortunetly, a str array
+        # Append the to-be returned list; use an object array so that
+        # the energies are not converted into strings
+        value = np.concatenate([labels, dE, ddG, dG] if job2 else [labels, dE], dtype=object)
+        ret_append(value)
 
         # Update the list with all .in files
         try:

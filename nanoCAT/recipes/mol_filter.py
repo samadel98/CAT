@@ -66,8 +66,7 @@ def get_mol_length(mol: Union[np.ndarray, Molecule],
 
     """  # noqa: E501
     if isinstance(atom, Atom):
-        atom_xyz = np.fromiter(atom.coords, 3, dtype=float)
-        atom_xyz.shape = (1, 3)
+        atom_xyz = np.fromiter(atom.coords, dtype=float, count=3).reshape(1, 3)
     else:
         atom_xyz = np.asarray(atom, dtype=float).reshape((1, 3))
 

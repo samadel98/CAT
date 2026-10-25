@@ -256,8 +256,8 @@ def get_V(
         The bulkiness factor :math:`V_{bulk}`.
 
     """  # noqa
-    r = np.array(radius_array, dtype=float, ndmin=1, copy=False)
-    h = np.array(height_array, dtype=float, ndmin=1, copy=False)
+    r = np.atleast_1d(np.asarray(radius_array, dtype=float))
+    h = np.atleast_1d(np.asarray(height_array, dtype=float))
     ndim_1 = getattr(d, "ndim", 0) == 1
 
     if d is not None:

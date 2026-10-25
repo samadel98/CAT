@@ -209,7 +209,7 @@ def _constrain_charge(psf: PSFContainer, settings: MutableMapping,
     if charge_settings is not None:
         del charge_settings['param']
         for k, v in charge_settings.items():
-            psf.charge[psf.atom_type == k] = v
+            psf.atoms.loc[psf.atom_type == k, 'charge'] = v
             if k in atom_set:
                 atom_set.remove(k)
 
@@ -294,7 +294,7 @@ def _concatenate_prm(file_list: Iterable[PathType]) -> PRMContainer:
             elif df is None:
                 setattr(ret, k, v)
             else:
-                setattr(ret, k, df.append(v))
+                setattr(ret, k, pd.concat([df, v]))
 
     items = ((k.lower(), getattr(ret, k.lower())) for k in ret.HEADERS[:-2])
     for k, df in items:

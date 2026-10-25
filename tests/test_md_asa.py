@@ -3,7 +3,6 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 from collections.abc import Generator
-from distutils.spawn import find_executable
 
 import numpy as np
 import yaml
@@ -15,7 +14,7 @@ from CAT.base import prep
 PATH = Path("tests") / "test_files"
 
 
-@pytest.mark.skipif(find_executable("cp2k.popt") is None, reason="requires CP2K")
+@pytest.mark.skipif(shutil.which("cp2k.popt") is None, reason="requires CP2K")
 @pytest.mark.slow
 class TestMDASA:
     SETTINGS = Settings(yaml.load("""\

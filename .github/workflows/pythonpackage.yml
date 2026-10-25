@@ -10,6 +10,9 @@ on:
     pull_request:
     workflow_dispatch:
 
+permissions:
+    contents: read
+
 concurrency:
     group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
     cancel-in-progress: true
@@ -18,70 +21,69 @@ defaults:
     run:
         shell: bash
 
+env:
+    PY_COLORS: '1'
+    CP2K_VERSION: '2026.2'
+    # The CAT and Auto-FOX releases on PyPI predate NumPy 2 and pandas 2 support,
+    # so test against the forks
+    CAT_URL: 'git+https://github.com/samadel98/CAT@master'
+    FOX_URL: 'git+https://github.com/samadel98/auto-FOX@master'
+
 jobs:
     build:
-        name: ${{ matrix.os }}; py ${{ matrix.version }}${{ matrix.special }}
+        name: ${{ matrix.os }} (py ${{ matrix.version }}${{ matrix.special }})
         runs-on: ${{ matrix.os }}
         strategy:
             fail-fast: false
             matrix:
                 os: [ubuntu-latest, macos-latest]
-                version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
-                special: [""]
+                version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+                special: ['']
                 include:
-                -   os: ubuntu-latest
-                    special: '; pre-release'
-                    version: '3.11'
-                -   os: ubuntu-latest
-                    special: '; slow'
-                    version: '3.11'
-        env:
-            CP2K_DATA_DIR: "/home/runner/work/nano-CAT/nano-CAT/cp2k/data"
-            MATCH: "/home/runner/work/nano-CAT/nano-CAT/MATCH/MATCH"
-            PerlChemistry: "/home/runner/work/nano-CAT/nano-CAT/MATCH/PerlChemistry"
+                    -   os: ubuntu-latest
+                        special: '; slow'
+                        version: '3.13'
 
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
 
-            -   name: Install cp2k
-                if: matrix.os == 'ubuntu-latest'
+            -   name: Set up Python
+                uses: actions/setup-python@v7
+                with:
+                    python-version: ${{ matrix.version }}
+
+            -   name: Install CP2K
+                if: matrix.special == '; slow'
                 run: |
-                    git clone https://github.com/cp2k/cp2k -q
-                    cd cp2k
-                    git -c advice.detachedHead=false checkout tags/v9.1.0
-                    wget -nv https://github.com/cp2k/cp2k/releases/download/v9.1.0/cp2k-9.1-Linux-x86_64.ssmp -O cp2k.ssmp
-                    chmod a+rx cp2k.ssmp
-                    mv cp2k.ssmp /usr/local/bin/cp2k.popt
+                    curl -Lsf "https://github.com/cp2k/cp2k/releases/download/v${CP2K_VERSION}/cp2k-${CP2K_VERSION}-Linux-gnu-x86_64.ssmp" -o /usr/local/bin/cp2k.ssmp
+                    chmod a+rx /usr/local/bin/cp2k.ssmp
+                    # PLAMS < 2024 calls CP2K as `cp2k.popt`
+                    ln -s /usr/local/bin/cp2k.ssmp /usr/local/bin/cp2k.popt
+
+                    # The basis sets and pseudopotentials
+                    git clone -q --depth 1 --branch "v${CP2K_VERSION}" --filter=blob:none --sparse https://github.com/cp2k/cp2k "$RUNNER_TEMP/cp2k"
+                    git -C "$RUNNER_TEMP/cp2k" sparse-checkout set data
+                    echo "CP2K_DATA_DIR=$RUNNER_TEMP/cp2k/data" >> "$GITHUB_ENV"
 
             -   name: Install MATCH
                 if: matrix.special == '; slow'
                 run: |
-                    git clone https://github.com/nlesc-nano/MATCH -q
-                    cd MATCH
-                    git -c advice.detachedHead=false checkout main
-                    chmod -R a+rx MATCH/scripts
-                    ln -s MATCH/scripts/*.pl /usr/local/bin/
+                    git clone -q --depth 1 https://github.com/nlesc-nano/MATCH "$RUNNER_TEMP/MATCH"
+                    chmod -R a+rx "$RUNNER_TEMP/MATCH/MATCH/scripts"
+                    echo "$RUNNER_TEMP/MATCH/MATCH/scripts" >> "$GITHUB_PATH"
+                    echo "MATCH=$RUNNER_TEMP/MATCH/MATCH" >> "$GITHUB_ENV"
+                    echo "PerlChemistry=$RUNNER_TEMP/MATCH/PerlChemistry" >> "$GITHUB_ENV"
 
-            -   name: Set up Python
-                uses: actions/setup-python@v4
-                with:
-                    python-version: ${{ matrix.version }}
+            -   name: Info CP2K
+                if: matrix.special == '; slow'
+                run: cp2k.popt --version
 
+            # The reference geometries of the tests were made with RDKit 2026.09
+            # (see tests/rdkit_references.py)
             -   name: Install dependencies
-                run: |
-                    case "${{ matrix.special }}" in
-                        "; pre-release")
-                            pip install --pre -e .[test] --upgrade --force-reinstall
-                            pip install git+https://github.com/nlesc-nano/CAT@master --upgrade
-                            pip install git+https://github.com/nlesc-nano/auto-FOX@master --upgrade
-                            pip install git+https://github.com/SCM-NV/qmflows@master --upgrade
-                            pip install git+https://github.com/SCM-NV/PLAMS@master --upgrade
-                            ;;
-                        *)
-                            pip install -e .[test]
-                            pip install git+https://github.com/nlesc-nano/CAT@master --upgrade
-                            ;;
-                    esac
+                run: pip install -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*"
 
             -   name: Info Python
                 run: |
@@ -91,37 +93,42 @@ jobs:
             -   name: Info installed packages
                 run: pip list
 
-            -   name: Info CP2K
-                if: matrix.os == 'ubuntu-latest'
-                run: cp2k.popt --version
-
             -   name: Run tests
+                id: tests
                 run: |
-                    case "${{ matrix.special }}" in
-                        "; slow")
-                            pytest -m "slow" ;;
-                        *)
-                            pytest -m "not slow" ;;
-                    esac
+                    if [[ "${{ matrix.special }}" == '; slow' ]]; then
+                        pytest -m "slow"
+                    else
+                        pytest -m "not slow"
+                    fi
+
+            # Print the coordinates of the molecules that RDKit lays out differently
+            # from the reference geometries (see tests/rdkit_references.py)
+            -   name: Show RDKit geometries that differ from the references
+                if: failure() && steps.tests.outcome == 'failure' && matrix.special != '; slow'
+                run: python tests/rdkit_references.py --diff
 
             -   name: Run codecov
-                uses: codecov/codecov-action@v3
+                uses: codecov/codecov-action@v7
                 with:
-                    file: ./coverage.xml
+                    files: ./coverage.xml
                     name: codecov-umbrella
+                    token: ${{ secrets.CODECOV_TOKEN }}
 
     Linting:
         runs-on: ubuntu-latest
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
 
             -   name: Set up Python on ubuntu-latest
-                uses: actions/setup-python@v4
+                uses: actions/setup-python@v7
                 with:
-                    python-version: "3.*"
+                    python-version: '3.x'
 
             -   name: Install linters
-                run: pip install "flake8>=3.8.0"
+                run: pip install "flake8>=3.8.0" "Flake8-pyproject>=1.2.2"
 
             -   name: Python info
                 run: |

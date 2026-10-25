@@ -120,8 +120,7 @@ def get_asa_md(mol_list: Iterable[Molecule], jobs: Tuple[Type[Job], ...],
                                                 distance_upper_bound=distance_upper_bound,
                                                 k=k, dump_csv=dump_csv))
 
-    E = np.fromiter(iterator, count=count, dtype=float)
-    E.shape = shape
+    E = np.fromiter(iterator, count=count, dtype=float).reshape(shape)
     E[:, :4] *= Units.conversion_ratio('hartree', 'kcal/mol')
 
     # Calculate (and return) the interaction, strain and total energy
@@ -311,9 +310,10 @@ def _get_neutral_psf(psf: PSFContainer, frag_neutral: Molecule, frag_count: int)
     charge_list = [at.properties.charge_float for at in frag_neutral] * frag_count
 
     # Update the PSFContainer and set all charges in the core to 0
-    psf_neutral.atom_type.loc[psf_neutral.residue_name == 'LIG'] = symbol_list
-    psf_neutral.charge.loc[psf_neutral.residue_name == 'LIG'] = charge_list
-    psf_neutral.charge.loc[psf_neutral.residue_name == 'COR'] = 0.0
+    is_lig = psf_neutral.residue_name == 'LIG'
+    psf_neutral.atoms.loc[is_lig, 'atom type'] = symbol_list
+    psf_neutral.atoms.loc[is_lig, 'charge'] = charge_list
+    psf_neutral.atoms.loc[psf_neutral.residue_name == 'COR', 'charge'] = 0.0
     return psf_neutral
 
 

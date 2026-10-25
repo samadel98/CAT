@@ -63,7 +63,7 @@ def get_entropy(mol: Molecule, temp: float = 298.15) -> Tuple[float, float]:
         [-sum(mass*x*y), sum(mass*(x**2 + z**2)), -sum(mass*y*z)],
         [-sum(mass*x*z), -sum(mass*y*z), sum(mass*(x**2 + y**2))]
     ])
-    inertia_product = np.product(np.linalg.eig(inertia)[0])
+    inertia_product = np.prod(np.linalg.eig(inertia)[0])
     q_rot = pi**0.5 * ((8 * pi**2 * kT) / h**2)**1.5 * inertia_product**0.5
 
     # Calculate the translational and rotational entropy in j/mol

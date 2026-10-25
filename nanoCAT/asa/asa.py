@@ -120,8 +120,7 @@ def get_asa_energy(mol_list: Iterable[Molecule],
         )
 
     # Cast into an array and reshape into n*4
-    E_intermediate = np.array(E_intermediate, dtype=float)
-    E_intermediate.shape = -1, 5
+    E_intermediate = np.array(E_intermediate, dtype=float).reshape(-1, 5)
 
     # Calclate the ASA terms
     E_int = E_intermediate[:, 0] - (E_intermediate[:, 1] + E_intermediate[:, 2])

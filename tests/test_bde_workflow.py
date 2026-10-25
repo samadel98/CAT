@@ -6,7 +6,6 @@ import textwrap
 from collections.abc import Generator
 from typing import Any
 from pathlib import Path
-from distutils.spawn import find_executable
 
 import yaml
 import pytest
@@ -58,6 +57,8 @@ BASE_SETTINGS = Settings(yaml.load(textwrap.dedent("""
                                     scf:
                                         eps_scf: 1e-05
                                         max_scf: 20
+                                        # Newer CP2K versions abort if the SCF does not converge
+                                        ignore_convergence_failure: True
                                 subsys:
                                     cell:
                                         abc: 8.00  8.00  8.00
@@ -98,7 +99,7 @@ def construct_df() -> SettingsDataFrame:
     return df
 
 
-@pytest.mark.skipif(find_executable("cp2k.popt") is None, reason="requires CP2K")
+@pytest.mark.skipif(shutil.which("cp2k.popt") is None, reason="requires CP2K")
 @pytest.mark.slow
 class TestBDEWorkflow:
     PARAMS = dict(

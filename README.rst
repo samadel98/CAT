@@ -1,5 +1,5 @@
-.. image:: https://github.com/nlesc-nano/nano-CAT/workflows/Build%20with%20Conda/badge.svg
-   :target: https://github.com/nlesc-nano/nano-CAT/actions?query=workflow%3A%22Build+with+Conda%22
+.. image:: https://github.com/samadel98/nano-CAT/actions/workflows/pythonpackage.yml/badge.svg?branch=master
+   :target: https://github.com/samadel98/nano-CAT/actions/workflows/pythonpackage.yml?query=branch%3Amaster
 .. image:: https://readthedocs.org/projects/cat/badge/?version=latest
    :target: https://cat.readthedocs.io/en/latest/
 .. image:: https://badge.fury.io/py/nano-CAT.svg
@@ -7,16 +7,16 @@
 
 |
 
-.. image:: https://img.shields.io/badge/python-3.7-blue.svg
-   :target: https://docs.python.org/3.7/
-.. image:: https://img.shields.io/badge/python-3.8-blue.svg
-   :target: https://docs.python.org/3.8/
-.. image:: https://img.shields.io/badge/python-3.9-blue.svg
-   :target: https://docs.python.org/3.9/
 .. image:: https://img.shields.io/badge/python-3.10-blue.svg
    :target: https://docs.python.org/3.10/
-.. image:: https://img.shields.io/badge/python-3.10-blue.svg
+.. image:: https://img.shields.io/badge/python-3.11-blue.svg
    :target: https://docs.python.org/3.11/
+.. image:: https://img.shields.io/badge/python-3.12-blue.svg
+   :target: https://docs.python.org/3.12/
+.. image:: https://img.shields.io/badge/python-3.13-blue.svg
+   :target: https://docs.python.org/3.13/
+.. image:: https://img.shields.io/badge/python-3.14-blue.svg
+   :target: https://docs.python.org/3.14/
 
 ########
 Nano-CAT
@@ -33,9 +33,9 @@ Installation
 
 - Install according to: installConda_.
 
-- Create a new virtual environment, for python 3.7, using the following commands:
+- Create a new virtual environment, for Python 3.10 or later, using the following commands:
 
-  - ``conda create --name CAT python``
+  - ``conda create --name CAT -c conda-forge python pip``
 
 - The virtual environment can be enabled and disabled by, respectively, typing:
 
@@ -44,19 +44,14 @@ Installation
   - Disable: ``conda deactivate``
 
 
-Dependencies installation
--------------------------
-
-Using the conda environment the following packages should be installed:
-
-- rdkit_: ``conda install -y --name CAT --channel conda-forge rdkit``
-
-
 Package installation
 --------------------
-Finally, install **Nano-CAT** using pip:
+Finally, install **Nano-CAT**, together with its CAT_ and Auto-FOX_ dependencies, using pip:
 
-- **Nano-CAT**: ``pip install nano-CAT --upgrade``
+- ``pip install git+https://github.com/samadel98/CAT git+https://github.com/samadel98/auto-FOX git+https://github.com/samadel98/nano-CAT``
+
+  - ``pip install nano-CAT`` installs the last release on PyPI, which (just like the CAT and
+    Auto-FOX releases on PyPI) predates the fixes in these repositories (*e.g.* NumPy 2 and pandas 2 support).
 
 Now you are ready to use **Nano-CAT**.
 
@@ -64,5 +59,5 @@ Now you are ready to use **Nano-CAT**.
 .. _miniconda: http://conda.pydata.org/miniconda.html
 .. _anaconda: https://www.continuum.io/downloads
 .. _installConda: https://docs.anaconda.com/anaconda/install/
-.. _CAT: https://github.com/nlesc-nano/CAT
-.. _rdkit: http://www.rdkit.org
+.. _CAT: https://github.com/samadel98/CAT
+.. _Auto-FOX: https://github.com/samadel98/auto-FOX

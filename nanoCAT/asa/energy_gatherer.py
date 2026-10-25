@@ -447,11 +447,11 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
 
     def drop_zero(self) -> None:
         """Remove all DataFrame columns whose values consist exclusively of ``0.0``."""
-        for df in self.values():
+        for key, df in list(self.items()):
             if df is not None:
                 is_zero = ~df.any(axis=0)
                 labels = is_zero[is_zero].index
-                df.drop(labels, inplace=True, axis=1)
+                setattr(self, key, df.drop(labels, axis=1))
 
     def _imap(self, value: SupportsFloat,
               func: Callable[[pd.DataFrame, float], Any]) -> None:
