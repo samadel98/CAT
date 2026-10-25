@@ -14,6 +14,7 @@ API
 .. autofunction:: compile_func
 
 """
+import importlib
 from types import FunctionType, CodeType
 from typing import Union, Callable
 
@@ -56,14 +57,17 @@ def compile_func(func_str: str) -> FunctionType:
     func_str = func_str.replace('numpy', 'np')
 
     # Load all module specified in **func_str**
+    # Use an explicit namespace, as `exec()` can not add names to a function's
+    # local scope (and since Python 3.13 they are not even visible to the next `exec()` call)
     while True:
+        namespace = {**global_dict, 'x': x.copy()}
         try:
-            x.copy()
-            exec(func_str)
+            exec(func_str, namespace)
         except NameError as ex:
             module = str(ex).split("'")[1]
-            exec(f'import {module}')
-            global_dict[module] = eval(module)
+            if module in global_dict:
+                raise
+            global_dict[module] = importlib.import_module(module)
         else:
             break
 
