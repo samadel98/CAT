@@ -373,8 +373,7 @@ def _inner_loop(
     """Perform the inner loop of :func:`run_fast_sigma`."""
     i, index = args
     if not len(index):
-        df = pd.DataFrame(index=index, columns=columns)
-        df.sort_index(axis=1, inplace=True)
+        df = pd.DataFrame(index=index, columns=columns).sort_index(axis=1)
         return i, df
 
     # Skip if a .csv file already exists
@@ -400,7 +399,7 @@ def _inner_loop(
         _get_fast_sigma_properties(index, workdir)
         _set_properties(df, compkf_list, solvents)
 
-    df.sort_index(axis=1, inplace=True)
+    df = df.sort_index(axis=1)
     df.to_csv(df_filename)
     return i, df
 
@@ -738,8 +737,8 @@ def read_csv(
 
         argsort = np.argsort(columns_idx2)
         df = pd.read_csv(file, usecols=columns_idx, index_col=0, skiprows=2, **kwargs)
-        df.sort_index(
-            axis=1, inplace=True,
+        df = df.sort_index(
+            axis=1,
             key=lambda i: i.str.strip("Unnamed: ").astype(np.int64)[argsort],
         )
         df.columns = columns_superset[columns_idx2]

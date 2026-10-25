@@ -665,10 +665,10 @@ def as_array(iterable: Iterable, dtype: Union[None, str, type, np.dtype] = None,
 
     """
     try:
-        ret = np.array(iterable, dtype=dtype, copy=copy)
+        ret = np.array(iterable, dtype=dtype) if copy else np.asarray(iterable, dtype=dtype)
     except TypeError:  # **iterable** is an iterator
         ret = np.fromiter(iterable, dtype=dtype)
 
     if ret.ndim < ndmin:
-        ret.shape += (1,) * (ndmin - ret.ndim)
+        ret = ret.reshape(ret.shape + (1,) * (ndmin - ret.ndim))
     return ret
