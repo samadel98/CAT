@@ -18,6 +18,8 @@ input_ligands:
     - OC(CC)=O
 
 optional:
+    processes: 1  # Processes for the ligand optimization; null: one per CPU core
+
     database:
         read: True  # Reuse results of previous runs
         write: True

@@ -319,7 +319,7 @@ def canonicalize_mol(mol: Molecule, inplace: bool = True) -> Optional[Molecule]:
       molecule fragment.
 
     """  # noqa
-    rdmol = molkit.to_rdmol(mol)
+    rdmol = molkit.to_rdmol(mol, properties=False)
     idx_collection = Chem.CanonicalRankAtoms(rdmol)
 
     # Reverse sort Molecule.atoms by the atomic indices in idx_collection
@@ -372,7 +372,7 @@ def set_mol_prop(mol: Molecule, mol_dict: Settings) -> None:
 
     if not mol.properties.smiles:
         mol.properties.smiles = Chem.MolToSmiles(
-            Chem.RemoveHs(molkit.to_rdmol(mol)), canonical=True
+            Chem.RemoveHs(molkit.to_rdmol(mol, properties=False)), canonical=True
         )
 
 

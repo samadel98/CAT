@@ -68,6 +68,10 @@ def str_to_rdmol(
 class FormatEnum(enum.Enum):
     """An enum with various rdkit-based string-parsing options."""
 
+    def __reduce_ex__(self, protocol: Any) -> Any:
+        """Pickle members by name, as their values (rdkit functions) cannot be pickled."""
+        return getattr, (type(self), self.name)
+
     FASTA = _member(PartialPrepend(str_to_rdmol, Chem.MolFromFASTA, "FASTA string", sanitize=False))
     HELM = _member(PartialPrepend(str_to_rdmol, Chem.MolFromHELM, "HELM string", sanitize=False))
     INCHI = _member(PartialPrepend(str_to_rdmol, Chem.MolFromInchi, "InChi string", sanitize=False, removeHs=False))

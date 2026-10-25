@@ -33,7 +33,7 @@ API
 import itertools
 from types import MappingProxyType
 from typing import (
-    List, Iterable, Union, Set, Optional, Type, Tuple,
+    List, Dict, Any, Iterable, Union, Set, Optional, Type, Tuple,
     Mapping, Callable, Sequence, TYPE_CHECKING,
 )
 from collections import ChainMap
@@ -58,6 +58,7 @@ from ..settings_dataframe import SettingsDataFrame
 from ..data_handling.mol_to_file import mol_to_file
 from ..jobs import job_geometry_opt  # noqa: F401
 from ..utils import KindEnum, AnchorTup
+from ..parallel import parallel_map, pack_atom_refs, unpack_atom_refs
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -78,7 +79,8 @@ def init_ligand_opt(ligand_df: SettingsDataFrame) -> None:
         return None
 
     # Start the ligand optimization
-    workflow(start_ligand_jobs, ligand_df, columns=[], index=idx)
+    processes = ligand_df.settings.optional.get('processes', 1)
+    workflow(start_ligand_jobs, ligand_df, columns=[], index=idx, processes=processes)
 
     # Push the optimized structures to the database
     job_recipe = workflow.get_recipe()
@@ -118,8 +120,12 @@ CHARGE_FUNC_MAPPING: Mapping[Type[Job], ChargeFunc] = MappingProxyType({
 def start_ligand_jobs(ligand_list: Iterable[Molecule],
                       jobs: Iterable[Optional[Type[Job]]],
                       settings: Iterable[Optional[Settings]],
-                      use_ff: bool = False, **kwargs) -> None:
-    """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations."""
+                      use_ff: bool = False, processes: int = 1, **kwargs) -> None:
+    """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations.
+
+    RDKit UFF optimizations are spread over **processes** worker processes.
+
+    """
     _j1, job = jobs
     _s1, s = settings
 
@@ -129,7 +135,7 @@ def start_ligand_jobs(ligand_list: Iterable[Molecule],
         raise NotImplementedError(f"use_ff: {use_ff.__class__} = {use_ff!r}")
 
     if job is None:
-        _start_ligand_jobs_uff(ligand_list)
+        _start_ligand_jobs_uff(ligand_list, processes=processes)
     else:
         charge_func = CHARGE_FUNC_MAPPING[job]
         _start_ligand_jobs_plams(ligand_list, job, s, charge_func)
@@ -156,21 +162,97 @@ def _start_ligand_jobs_plams(ligand_list: Iterable[Molecule],
     return None
 
 
-def _start_ligand_jobs_uff(ligand_list: Iterable[Molecule]) -> None:
+def _start_ligand_jobs_uff(ligand_list: Iterable[Molecule], processes: int = 1) -> None:
     """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations."""
-    for ligand in ligand_list:
+    ligands = list(ligand_list)
+    if processes > 1 and len(ligands) > 1:
+        logger.info(f'UFFGetMoleculeForceField: optimizing {len(ligands)} ligands '
+                    f'with {min(processes, len(ligands))} processes')
+        args = ((lig, pack_atom_refs(lig)) for lig in ligands)
+        results = parallel_map(_optimize_ligand_uff, args, processes)
+        for ligand, (result, error) in zip(ligands, results):
+            if result is not None:
+                _apply_uff_result(ligand, *result)
+            _log_uff_result(ligand, error)
+        return None
+
+    for ligand in ligands:
         logger.info(f'UFFGetMoleculeForceField: {ligand.properties.name} optimization has started')
         try:
             optimize_ligand(ligand)
         except Exception as ex:
-            ligand.properties.is_opt = False
-            logger.error(f'UFFGetMoleculeForceField: {ligand.properties.name} optimization '
-                         f'has failed: {ex!r}', exc_info=True)
-            logger.debug(f'{ex.__class__.__name__}: {ex}', exc_info=True)
+            _log_uff_result(ligand, ex)
         else:
-            ligand.properties.is_opt = True
-            logger.info(f'UFFGetMoleculeForceField: {ligand.properties.name} optimization '
-                        'is successful')
+            _log_uff_result(ligand, None)
+    return None
+
+
+#: The result of :func:`_optimize_ligand_uff`: the new coordinates, the new order of the atoms
+#: and bonds, and the indices of the bonds of each atom
+_UFFResult = Tuple["NDArray[np.float64]", List[int], List[Tuple[int, int]], List[List[int]]]
+
+
+def _optimize_ligand_uff(
+    ligand: Molecule,
+    atom_refs: Dict[str, Any],
+) -> "Tuple[None | _UFFResult, None | str]":
+    """Optimize **ligand** in a worker process; return the result or the error.
+
+    :func:`optimize_ligand` also reorders the atoms and bonds of the ligand,
+    so the result includes their new order, which :func:`_apply_uff_result` applies.
+
+    """
+    unpack_atom_refs(ligand, atom_refs)
+    atom_idx = {id(at): i for i, at in enumerate(ligand.atoms)}
+    try:
+        optimize_ligand(ligand)
+    except Exception as ex:
+        return None, repr(ex)
+
+    bond_idx = {id(bond): i for i, bond in enumerate(ligand.bonds)}
+    atoms = [atom_idx[id(at)] for at in ligand.atoms]
+    bonds = [(atom_idx[id(b.atom1)], atom_idx[id(b.atom2)]) for b in ligand.bonds]
+    atom_bonds = [[bond_idx[id(b)] for b in at.bonds] for at in ligand.atoms]
+    return (ligand.as_array(), atoms, bonds, atom_bonds), None
+
+
+def _apply_uff_result(
+    ligand: Molecule,
+    xyz: "NDArray[np.float64]",
+    atoms: List[int],
+    bonds: List[Tuple[int, int]],
+    atom_bonds: List[List[int]],
+) -> None:
+    """Update **ligand** with the result of :func:`_optimize_ligand_uff`."""
+    old_atoms = ligand.atoms
+    bond_dict = {frozenset((id(b.atom1), id(b.atom2))): b for b in ligand.bonds}
+    new_bonds = []
+    for i, j in bonds:
+        bond = bond_dict[frozenset((id(old_atoms[i]), id(old_atoms[j])))]
+        bond.atom1, bond.atom2 = old_atoms[i], old_atoms[j]
+        new_bonds.append(bond)
+
+    ligand.atoms = [old_atoms[i] for i in atoms]
+    ligand.bonds = new_bonds
+    for at, idx in zip(ligand.atoms, atom_bonds):
+        at.bonds = [new_bonds[i] for i in idx]
+    ligand.from_array(xyz)
+
+
+def _log_uff_result(ligand: Molecule, error: "None | str | Exception") -> None:
+    """Set ``ligand.properties.is_opt`` and log the result of a UFF optimization."""
+    name = ligand.properties.name
+    if error is None:
+        ligand.properties.is_opt = True
+        logger.info(f'UFFGetMoleculeForceField: {name} optimization is successful')
+        return None
+
+    ligand.properties.is_opt = False
+    exc_info = isinstance(error, Exception)
+    logger.error(f'UFFGetMoleculeForceField: {name} optimization has failed: {error!r}',
+                 exc_info=exc_info)
+    if exc_info:
+        logger.debug(f'{error.__class__.__name__}: {error}', exc_info=True)
     return None
 
 
@@ -209,7 +291,7 @@ def optimize_ligand(ligand: Molecule) -> None:
             bond_tup = (j, k) if dist_mat[i, j - 1] < dist_mat[i, k - 1] else (k, j)
             modified_minimum_scan_rdkit(ligand, bond_tup)
     else:
-        rdmol = molkit.to_rdmol(ligand)
+        rdmol = molkit.to_rdmol(ligand, properties=False)
         UFF(rdmol).Minimize()
         ligand.from_rdmol(rdmol)
 
@@ -530,7 +612,7 @@ def set_dihed(self, angle: float, anchor: Atom, cap: Sequence[Atom],
         at.atnum = atnum
 
     if opt:
-        rdmol = molkit.to_rdmol(self)
+        rdmol = molkit.to_rdmol(self, properties=False)
         UFF(rdmol).Minimize()
         self.from_rdmol(rdmol)
 

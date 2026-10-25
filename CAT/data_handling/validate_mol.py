@@ -213,7 +213,8 @@ def _parse_name_type(mol_dict: Settings) -> None:
     elif isinstance(mol, Molecule):  # mol is an instance of plams.Molecule
         mol_dict.type = 'plams_mol'
         if not mol.properties.name:
-            mol_dict.name = Chem.MolToSmiles(Chem.RemoveHs(molkit.to_rdmol(mol)), canonical=True)
+            rdmol = molkit.to_rdmol(mol, properties=False)
+            mol_dict.name = Chem.MolToSmiles(Chem.RemoveHs(rdmol), canonical=True)
         else:
             mol_dict.name = mol.properties.name
 

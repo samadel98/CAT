@@ -31,6 +31,9 @@ Unreleased
 * Fix ``mol_to_file(overwrite=False)`` overwriting existing files.
 * Write molecules whose name exceeds the 255-byte filename limit under a shortened, hashed name
   instead of skipping them.
+* Add ``optional.processes``: optimize the ligands with RDKit UFF in several processes.
+* Build quantum dots and convert molecules to RDKit faster; together with the above, a run with
+  128 ligands takes 24 s instead of 43 s with 4 processes, or 27 s with 1.
 
 
 1.1.1

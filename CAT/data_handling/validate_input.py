@@ -41,12 +41,14 @@ from .validation_schemas import (
     cdft_schema,
     bulkiness_schema,
     cone_angle_schema,
+    processes_schema,
 )
 
 from .validate_ff import validate_ff, update_ff_jobs
 from .validate_mol import validate_mol
 from .anchor_parsing import parse_anchors
 from ..utils import validate_path, SetEnviron
+from ..parallel import get_processes
 from ..logger import logger
 
 try:
@@ -137,6 +139,7 @@ def validate_input(s: Settings, validate_only: bool = True) -> None:
         context = SetEnviron(AMSBIN='', AMSHOME='', AMSRESOURCES='', SCMLICENSE='')
 
     s.optional.database = database_schema.validate(s.optional.database)
+    s.optional.processes = get_processes(processes_schema.validate(s.optional.get('processes', 1)))
     with context:
         s.optional.ligand = ligand_schema.validate(s.optional.ligand)
         s.optional.core = core_schema.validate(s.optional.core)
