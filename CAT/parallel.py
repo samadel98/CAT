@@ -24,11 +24,14 @@ import os
 import math
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from typing import Any, TypeVar
 
 from scm.plams import Molecule, Atom
+
+from .logger import logger
 
 __all__ = ['get_processes', 'parallel_map', 'pack_atom_refs', 'unpack_atom_refs']
 
@@ -74,6 +77,8 @@ def parallel_map(func: Callable[..., T], args: Iterable[tuple[Any, ...]],
     ----
     As the workers are spawned, scripts that call CAT with ``optional.processes > 1``
     must guard their entry point with ``if __name__ == "__main__":``.
+    If the worker processes cannot be started or die, everything is computed in the current
+    process instead (with a warning).
 
     """
     arg_list = list(args)
@@ -83,9 +88,17 @@ def parallel_map(func: Callable[..., T], args: Iterable[tuple[Any, ...]],
 
     chunksize = max(1, math.ceil(len(arg_list) / (4 * n)))
     ctx = multiprocessing.get_context('spawn')
-    with _single_threaded_children():
-        with ProcessPoolExecutor(max_workers=n, mp_context=ctx) as executor:
-            return list(executor.map(func, *zip(*arg_list), chunksize=chunksize))
+    try:
+        with _single_threaded_children():
+            with ProcessPoolExecutor(max_workers=n, mp_context=ctx) as executor:
+                return list(executor.map(func, *zip(*arg_list), chunksize=chunksize))
+    except BrokenProcessPool as ex:
+        logger.warning(
+            f"The worker processes failed ({ex}); continuing in a single process. Note that "
+            "scripts that run CAT with `optional.processes` > 1 must guard their entry point "
+            "with `if __name__ == '__main__':`"
+        )
+        return [func(*a) for a in arg_list]
 
 
 @contextmanager

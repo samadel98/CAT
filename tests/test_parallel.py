@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 import pickle
+import logging
 import operator
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ from scm.plams import Molecule, Settings, from_smiles
 from CAT.base import prep
 from CAT.utils import FormatEnum
 from CAT.workflows import MOL
+from CAT import parallel
 from CAT.parallel import get_processes, parallel_map, pack_atom_refs, unpack_atom_refs
 from CAT.attachment.ligand_attach import _copy_mol
 from CAT.data_handling.validation_schemas import processes_schema
@@ -46,6 +49,26 @@ def test_parallel_map() -> None:
     assert parallel_map(operator.add, args, 1) == ref
     assert parallel_map(operator.add, args, 2) == ref
     assert parallel_map(operator.add, [], 2) == []
+
+
+def test_parallel_map_broken(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """If the worker processes fail, :func:`parallel_map` falls back to the current process."""
+    class BrokenExecutor:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+        def __enter__(self) -> BrokenExecutor:
+            raise BrokenProcessPool("A process in the process pool was terminated abruptly")
+
+        def __exit__(self, *args: Any) -> None:
+            pass
+
+    monkeypatch.setattr(parallel, "ProcessPoolExecutor", BrokenExecutor)
+    with caplog.at_level(logging.WARNING, logger="CAT"):
+        assert parallel_map(operator.add, [(1, 2), (3, 4)], 2) == [3, 7]
+    assert "if __name__ == '__main__':" in caplog.text
 
 
 def test_atom_refs() -> None:
