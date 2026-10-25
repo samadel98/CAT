@@ -26,8 +26,7 @@ env:
     CP2K_VERSION: '2026.2'
     # The CAT and Auto-FOX releases on PyPI predate NumPy 2 and pandas 2 support,
     # so test against the forks
-    # TODO: Switch back to `master` once samadel98/CAT#1 is merged
-    CAT_URL: 'git+https://github.com/samadel98/CAT@claude/project-thread-si6fnl'
+    CAT_URL: 'git+https://github.com/samadel98/CAT@master'
     FOX_URL: 'git+https://github.com/samadel98/auto-FOX@master'
 
 jobs:
