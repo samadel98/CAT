@@ -9,7 +9,7 @@ After an RDKit update, regenerate the latter by running this module from the rep
 root (``python tests/rdkit_references.py tests/test_files/rdkit-<version>``), check that
 the differences are only due to RDKit, and update :data:`RDKIT_REF_VERSION`. The references
 are made on Linux; ``XFAIL_PLATFORM`` in ``test_entry_points.py`` lists the ligands whose
-geometry differs on macOS and Windows.
+geometry differs between platforms or even machines.
 
 """
 
