@@ -295,7 +295,7 @@ class SplitMol(AbstractContextManager):
 
     """############################# Context manager magic methods #############################"""
 
-    def __enter__(self) -> tuple[Molecule]:
+    def __enter__(self) -> tuple[Molecule, ...]:
         """Enter the :class:`SplitMol` context manager; return a list of molecules."""
         # Create a backup of mols' instance variables
         mol = self.mol

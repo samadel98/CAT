@@ -23,7 +23,9 @@ from contextlib import nullcontext, AbstractContextManager
 from typing import (
     Union, TypeVar, Any, TYPE_CHECKING, cast, ClassVar
 )
-from collections.abc import Hashable, MutableMapping, Iterable, Container, Callable, Mapping
+from collections.abc import (
+    Hashable, MutableMapping, Iterable, Container, Callable, Mapping, Sequence
+)
 
 import numpy as np
 import pandas as pd
@@ -350,6 +352,10 @@ class WorkFlow(AbstractDataClass):
                 raise AttributeError(f"An attribute by the name of {k!r} already exists")
             setattr(self, k, v)
 
+    if TYPE_CHECKING:
+        def __getattr__(self, name: str) -> Any:
+            """Get a workflow-specific option, which :meth:`__init__` sets as an attribute."""
+
     @AbstractDataClass.inherit_annotations()
     def _str_iterator(self):
         iterator = super()._str_iterator()
@@ -358,7 +364,7 @@ class WorkFlow(AbstractDataClass):
     # TODO: Ensure that func allways returns an array-like object (no iterators)
     def __call__(self, func: Callable, df: pd.DataFrame,
                  index: slice | pd.Series = slice(None),
-                 columns: list[Hashable] | None = None,
+                 columns: Sequence[Hashable] | None = None,
                  no_loc: bool = False, **kwargs) -> None:
         r"""Initialize the workflow.
 
@@ -493,7 +499,7 @@ class WorkFlow(AbstractDataClass):
     def to_db(self, df: pd.DataFrame, status: str | None = None,
               job_recipe: dict | None = None,
               index: slice | pd.Series = slice(None),
-              columns: dict[Hashable, Any] | None = None) -> None:
+              columns: Sequence[Hashable] | None = None) -> None:
         """Export results to the database.
 
         Parameters
