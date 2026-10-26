@@ -131,7 +131,7 @@ jobs:
                     python-version: '3.x'
 
             -   name: Install linters
-                run: pip install "flake8>=3.8.0" "Flake8-pyproject>=1.2.2"
+                run: pip install "ruff>=0.15"
 
             -   name: Python info
                 run: |
@@ -141,5 +141,26 @@ jobs:
             -   name: Installed packages
                 run: pip list
 
-            -   name: Run flake8
-                run: flake8 nanoCAT tests
+            -   name: Run ruff
+                run: ruff check --output-format=github .
+
+    Type-check:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
+
+            -   name: Set up Python on ubuntu-latest
+                uses: actions/setup-python@v7
+                with:
+                    python-version: '3.13'
+
+            -   name: Install dependencies
+                run: pip install -e . "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" mypy types-PyYAML
+
+            -   name: Installed packages
+                run: pip list
+
+            -   name: Run mypy
+                run: mypy nanoCAT
