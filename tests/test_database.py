@@ -274,7 +274,7 @@ def test_update_hdf5_settinga() -> None:
         job_ar = f['job_settings_cdft'][-1].astype(str)
 
     for file, ar in zip(job_settings, job_ar):
-        with open(file, 'r') as f:
+        with open(file) as f:
             try:
                 iterator = (i.rstrip('\n') for i in f)
                 for i, j in zip(iterator, ar):

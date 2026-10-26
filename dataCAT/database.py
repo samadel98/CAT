@@ -22,9 +22,11 @@ from os.path import abspath
 from types import MappingProxyType
 from functools import partial
 from typing import (
-    Optional, Sequence, List, Union, Any, Dict, TypeVar, Mapping,
-    overload, Tuple, Type, Iterable, TypedDict, ContextManager, Callable, cast, TYPE_CHECKING
+    Union, Any, TypeVar,
+    overload, TypedDict, cast, TYPE_CHECKING
 )
+from contextlib import AbstractContextManager
+from collections.abc import Sequence, Mapping, Iterable, Callable
 
 import h5py
 import numpy as np
@@ -64,8 +66,8 @@ MIT = TypeVar('MIT', bound=pd.MultiIndex)
 class JobRecipe(TypedDict):
     """A :class:`~typing.TypedDict` representing the input of :class:`.Database.update_yaml`."""
 
-    key: Union[str, type]
-    value: Union[str, Settings]
+    key: str | type
+    value: str | Settings
 
 
 #: The MongoDB error code of a duplicate key error.
@@ -83,7 +85,7 @@ def _locked(func: FT) -> FT:
     return wrapper  # type: ignore[return-value]
 
 
-def _parse_mongo_query(query: Mapping[Any, Any], add_fields: Dict[str, Any]) -> Dict[str, Any]:
+def _parse_mongo_query(query: Mapping[Any, Any], add_fields: dict[str, Any]) -> dict[str, Any]:
     """Translate the ``(index, sub index)`` keys of **query** into MongoDB fields.
 
     Plain sub indices become dotted paths (``"index.sub"``). As dots cannot be escaped,
@@ -141,12 +143,12 @@ class Database:
         return self._csv_qd
 
     @property
-    def hdf5(self) -> 'partial[ContextManager[h5py.File]]':
-        """:data:`Callable[..., ContextManager[h5py.File]]<typing.Callable>`: Get a function for opening the .hdf5 file as :class:`h5py.File`, while holding the lock of the database (see :mod:`dataCAT.locking`)."""  # noqa: E501
+    def hdf5(self) -> 'partial[AbstractContextManager[h5py.File]]':
+        """:data:`Callable[..., AbstractContextManager[h5py.File]]<typing.Callable>`: Get a function for opening the .hdf5 file as :class:`h5py.File`, while holding the lock of the database (see :mod:`dataCAT.locking`)."""  # noqa: E501
         return self._hdf5
 
     @property
-    def mongodb(self) -> Optional[Mapping[str, Any]]:
+    def mongodb(self) -> Mapping[str, Any] | None:
         """:class:`Mapping[str, Any]<typing.Mapping>`, optional: Get a mapping with keyword arguments for :class:`pymongo.MongoClient<pymongo.mongo_client.MongoClient>`."""  # noqa: E501
         return self._mongodb
 
@@ -188,12 +190,13 @@ class Database:
         self._csv_lig = partial(OpenLig, filename=lig_path)
         self._csv_qd = partial(OpenQD, filename=qd_path)
         self._hdf5 = cast(
-            'partial[ContextManager[h5py.File]]', partial(open_hdf5, hdf5_path, libver='latest')
+            'partial[AbstractContextManager[h5py.File]]',
+            partial(open_hdf5, hdf5_path, libver='latest'),
         )
 
         # Try to create or access the mongodb database
         try:
-            self._mongodb: Optional[Mapping[str, Any]] = MappingProxyType(
+            self._mongodb: Mapping[str, Any] | None = MappingProxyType(
                 create_mongodb(host, port, **kwargs)
             )
         except PyMongoError:
@@ -236,13 +239,13 @@ class Database:
             self._hash: int = hash((cls, args, state))
             return self._hash
 
-    def __reduce__(self: ST) -> Tuple[Type[ST], Tuple[str], Optional[Dict[str, Any]]]:
+    def __reduce__(self: ST) -> tuple[type[ST], tuple[str], dict[str, Any] | None]:
         """Helper for :mod:`pickle`."""
         cls = type(self)
         mongodb = self.mongodb if self.mongodb is None else dict(self.mongodb)
         return cls, (self.dirname,), mongodb
 
-    def __setstate__(self, state: Optional[Dict[str, Any]]) -> None:
+    def __setstate__(self, state: dict[str, Any] | None) -> None:
         """Helper for :mod:`pickle` and :meth:`~Database.__reduce__`."""
         if state is None:
             self._mongodb = None
@@ -257,7 +260,7 @@ class Database:
         """Implement :func:`copy.copy(self)<copy.copy>`."""
         return self
 
-    def __deepcopy__(self: ST, memo: Optional[Dict[int, Any]] = None) -> ST:
+    def __deepcopy__(self: ST, memo: dict[int, Any] | None = None) -> ST:
         """Implement :func:`copy.deepcopy(self, memo=memo)<copy.deepcopy>`."""
         return self
 
@@ -278,7 +281,7 @@ class Database:
         raise ValueError(f"database={database!r}; accepted values for are 'ligand' and 'qd'")
 
     @_locked
-    def update_mongodb(self, database: Union[str, Mapping[str, pd.DataFrame]] = 'ligand',
+    def update_mongodb(self, database: str | Mapping[str, pd.DataFrame] = 'ligand',
                        overwrite: bool = False) -> None:
         """Export ligand or qd results to the MongoDB database.
 
@@ -342,7 +345,7 @@ class Database:
             return None
 
         # Insert all new documents; replace pre-existing ones if `overwrite=True`
-        requests: List[Union[InsertOne, ReplaceOne]]
+        requests: list[InsertOne | ReplaceOne]
         if overwrite:
             requests = [
                 ReplaceOne({k: doc[k] for k in idx_keys}, doc, upsert=True) for doc in docs
@@ -363,9 +366,9 @@ class Database:
 
     def query_mongodb(
         self,
-        database: Union[Ligand, QD] = 'ligand',
-        query: Optional[Mapping[Union[str, Tuple[str, str]], Any]] = None,
-        columns: Optional[Sequence[Union[str, Tuple[str, str]]]] = None,
+        database: Ligand | QD = 'ligand',
+        query: Mapping[str | tuple[str, str], Any] | None = None,
+        columns: Sequence[str | tuple[str, str]] | None = None,
         limit: int = 0,
     ) -> pd.DataFrame:
         """Read ligand or qd results from the MongoDB database into a DataFrame.
@@ -426,19 +429,19 @@ class Database:
             ) from None
 
         # Skip the placeholder row that `Database.update_mongodb` exports from the .csv file
-        placeholder = {'$nor': [{k: '-' for k in idx_keys}]}
-        add_fields: Dict[str, Any] = {}
+        placeholder = {'$nor': [dict.fromkeys(idx_keys, '-')]}
+        add_fields: dict[str, Any] = {}
         match = _parse_mongo_query(query or {}, add_fields)
 
-        pipeline: List[Dict[str, Any]] = []
+        pipeline: list[dict[str, Any]] = []
         if add_fields:
             pipeline.append({'$addFields': add_fields})
         pipeline.append({'$match': {'$and': [placeholder, match]} if match else placeholder})
         if columns is None:
-            pipeline.append({'$project': {'_id': 0, **{k: 0 for k in add_fields}}})
+            pipeline.append({'$project': {'_id': 0, **dict.fromkeys(add_fields, 0)}})
         else:
             keep = {i if isinstance(i, str) else i[0] for i in columns}
-            pipeline.append({'$project': {'_id': 0, **{k: 1 for k in [*idx_keys, *keep]}}})
+            pipeline.append({'$project': {'_id': 0, **dict.fromkeys([*idx_keys, *keep], 1)}})
         if limit:
             pipeline.append({'$limit': limit})
 
@@ -448,7 +451,7 @@ class Database:
         if columns is None:
             return df.sort_index(axis=1)
 
-        selection: List[Tuple[str, str]] = []
+        selection: list[tuple[str, str]] = []
         for i in columns:
             if isinstance(i, str):
                 selection += sorted(j for j in df.columns if j[0] == i)
@@ -458,12 +461,12 @@ class Database:
 
     @_locked
     def update_csv(self, df: pd.DataFrame,
-                   index: Union[None, slice, pd.Series] = None,
-                   database: Union[Ligand, QD] = 'ligand',
-                   columns: Optional[Sequence] = None,
+                   index: None | slice | pd.Series = None,
+                   database: Ligand | QD = 'ligand',
+                   columns: Sequence | None = None,
                    overwrite: bool = False,
                    job_recipe: None = None,
-                   status: Optional[str] = None) -> None:
+                   status: str | None = None) -> None:
         """Update :attr:`Database.csv_lig` or :attr:`Database.csv_qd` with new settings.
 
         Parameters
@@ -491,7 +494,9 @@ class Database:
         manager = self._parse_database(database)
 
         if job_recipe is not None:
-            warnings.warn("job_recipe .yaml storage has been discontinued", DeprecationWarning)
+            warnings.warn(
+                "job_recipe .yaml storage has been discontinued", DeprecationWarning, stacklevel=2
+            )
 
         df_index = slice(None) if index is None else index
 
@@ -541,7 +546,7 @@ class Database:
 
             # "Fix" for rare bug wherein the index dtype is incorrect
             if df[HDF5_INDEX].dtype.kind != "i":
-                warnings.warn(f"Invalid {HDF5_INDEX!r} dtype: {df[HDF5_INDEX].dtype}")
+                warnings.warn(f"Invalid {HDF5_INDEX!r} dtype: {df[HDF5_INDEX].dtype}", stacklevel=2)
                 df[HDF5_INDEX] = _to_int64_array(df[HDF5_INDEX].values)
 
             # Define the indices; h5py requires them to be sorted
@@ -556,10 +561,7 @@ class Database:
             dct = {k: df_columns.get_loc_level(k)[1] for k in lvl0}
             for n, name_seq in dct.items():
                 data = df_sorted[n].to_numpy()
-                if data.dtype == object:
-                    dtype = h5py.string_dtype(encoding='utf-8')
-                else:
-                    dtype = data.dtype
+                dtype = h5py.string_dtype(encoding='utf-8') if data.dtype == object else data.dtype
 
                 # Get the dataset
                 try:
@@ -602,10 +604,10 @@ class Database:
 
     @_locked
     def update_hdf5(self, df: pd.DataFrame,
-                    index: Union[slice, pd.Series],
-                    database: Union[Ligand, QD] = 'ligand',
+                    index: slice | pd.Series,
+                    database: Ligand | QD = 'ligand',
                     overwrite: bool = False,
-                    status: Optional[str] = None) -> pd.Series:
+                    status: str | None = None) -> pd.Series:
         """Export molecules (see the ``"mol"`` column in **df**) to the structure database.
 
         Returns a series with the :attr:`Database.hdf5` indices of all new entries.
@@ -657,7 +659,7 @@ class Database:
 
     @classmethod
     def _write_hdf5(cls, group: h5py.Group, df: pd.DataFrame, new_index: pd.Index,
-                    dtype: DTypeLike, database: Union[Ligand, QD] = 'ligand',
+                    dtype: DTypeLike, database: Ligand | QD = 'ligand',
                     opt: bool = False) -> pd.Index:
         """Helper method for :meth:`update_hdf5` when :code:`overwrite = False`."""
         mol_series = df.loc[new_index, MOL]
@@ -695,7 +697,7 @@ class Database:
             df.loc[old.index, OPT] = True
 
     @staticmethod
-    def _sanitize_multi_idx(index: MIT, dtype: DTypeLike, database: Union[Ligand, QD]) -> MIT:
+    def _sanitize_multi_idx(index: MIT, dtype: DTypeLike, database: Ligand | QD) -> MIT:
         """Parse and sanitize the passed MultiIndex."""
         return index.values.astype(dtype)  # type: ignore
 
@@ -708,8 +710,8 @@ class Database:
     """ ########################  Pulling results from the database ########################### """
 
     @_locked
-    def from_csv(self, df: pd.DataFrame, database: Union[Ligand, QD] = 'ligand',
-                 get_mol: bool = True, inplace: bool = True) -> Optional[pd.Series]:
+    def from_csv(self, df: pd.DataFrame, database: Ligand | QD = 'ligand',
+                 get_mol: bool = True, inplace: bool = True) -> pd.Series | None:
         """Pull results from :attr:`Database.csv_lig` or :attr:`Database.csv_qd`.
 
         Performs in inplace update of **df** if **inplace** = :data:`True`,
@@ -749,8 +751,8 @@ class Database:
         return self._get_csv_mol(df, database, inplace)
 
     def _get_csv_mol(self, df: pd.DataFrame,
-                     database: Union[Ligand, QD] = 'ligand',
-                     inplace: bool = True) -> Optional[pd.Series]:
+                     database: Ligand | QD = 'ligand',
+                     inplace: bool = True) -> pd.Series | None:
         """A method which handles the retrieval and subsequent formatting of molecules.
 
         Called internally by :meth:`Database.from_csv`.
@@ -773,7 +775,7 @@ class Database:
         """
         # Sort and find all valid HDF5 indices; h5py requires them to be sorted
         df_sorted = df.sort_values(by=[HDF5_INDEX])
-        if 'no_opt' in database:
+        if 'no_opt' in database:  # noqa: SIM108
             df_slice = df_sorted[HDF5_INDEX] >= 0
         else:
             df_slice = df_sorted[OPT] == True  # noqa
@@ -797,9 +799,9 @@ class Database:
             return pd.Series(mol_list, index=df_sorted[df_slice].index, name=MOL)
 
     @_locked
-    def from_hdf5(self, index: Union[slice, Sequence[int]],
-                  database: Union[Ligand, QD] = 'ligand', rdmol: bool = True,
-                  mol_list: Optional[Iterable[Molecule]] = None) -> List[Union[Molecule, Mol]]:
+    def from_hdf5(self, index: slice | Sequence[int],
+                  database: Ligand | QD = 'ligand', rdmol: bool = True,
+                  mol_list: Iterable[Molecule] | None = None) -> list[Molecule | Mol]:
         """Import structures from the hdf5 database as RDKit or PLAMS molecules.
 
         Parameters
@@ -823,7 +825,7 @@ class Database:
             pdb = PDBContainer.from_hdf5(f[database], index)
             mol_list_ = pdb.to_molecules(mol=mol_list)
 
-        is_opt = not ('no_opt' in database)
+        is_opt = 'no_opt' not in database
         for mol in mol_list_:
             mol.properties.is_opt = is_opt
 
@@ -832,7 +834,7 @@ class Database:
         return mol_list_
 
     def hdf5_availability(self, timeout: float = 5.0,
-                          max_attempts: Optional[int] = 10) -> None:
+                          max_attempts: int | None = 10) -> None:
         """Check if a .hdf5 file is opened by another process; return once it is not.
 
         If two processes attempt to simultaneously open a single hdf5 file then

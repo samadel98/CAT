@@ -18,7 +18,7 @@ from os.path import abspath, dirname
 from abc import abstractmethod, ABCMeta
 from types import TracebackType
 from typing import (
-    Optional, Any, Generic, TypeVar, Tuple, Type, AnyStr, Dict, TYPE_CHECKING, Union, final
+    Any, Generic, TypeVar, AnyStr, TYPE_CHECKING, Union, final
 )
 
 import numpy as np
@@ -87,7 +87,7 @@ class FileManagerABC(Generic[AnyStr, T], metaclass=ABCMeta):
         """Implement :class:`str(self)<str>` and :func:`repr(self)<repr>`."""
         return f'{self.__class__.__name__}(filename={self.filename!r}, write={self.write!r})'
 
-    def __reduce__(self: ST) -> Tuple[Type[ST], Tuple[AnyStr, bool]]:
+    def __reduce__(self: ST) -> tuple[type[ST], tuple[AnyStr, bool]]:
         """A helper function for :mod:`pickle`."""
         cls = type(self)
         return cls, (self.filename, self.write)
@@ -96,7 +96,7 @@ class FileManagerABC(Generic[AnyStr, T], metaclass=ABCMeta):
         """Implement :func:`copy.copy(self)<copy.copy>`."""
         return self
 
-    def __deepcopy__(self: ST, memo: Optional[Dict[int, Any]] = None) -> ST:
+    def __deepcopy__(self: ST, memo: dict[int, Any] | None = None) -> ST:
         """Implement :func:`copy.deepcopy(self, memo=memo)<copy.deepcopy>`."""
         return self
 
@@ -116,9 +116,9 @@ class FileManagerABC(Generic[AnyStr, T], metaclass=ABCMeta):
         return self._db
 
     @abstractmethod
-    def __exit__(self, exc_type: Optional[Type[BaseException]],
-                 exc_value: Optional[BaseException],
-                 traceback: Optional[TracebackType]) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None,
+                 exc_value: BaseException | None,
+                 traceback: TracebackType | None) -> None:
         """Exit the context manager; close and, optionally, write the database."""
         raise NotImplementedError("Trying to call an abstract method")
         del self._db
@@ -145,9 +145,9 @@ class OpenLig(FileManagerABC[AnyStr, DFProxy]):
             raise
         return df
 
-    def __exit__(self, exc_type: Optional[Type[BaseException]],
-                 exc_value: Optional[BaseException],
-                 traceback: Optional[TracebackType]) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None,
+                 exc_value: BaseException | None,
+                 traceback: TracebackType | None) -> None:
         """Close the :class:`.OpenLig` context manager, exporting :attr:`.df`."""
         try:
             if self.write:
@@ -178,9 +178,9 @@ class OpenQD(FileManagerABC[AnyStr, DFProxy]):
             raise
         return df
 
-    def __exit__(self, exc_type: Optional[Type[BaseException]],
-                 exc_value: Optional[BaseException],
-                 traceback: Optional[TracebackType]) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None,
+                 exc_value: BaseException | None,
+                 traceback: TracebackType | None) -> None:
         """Close the :class:`.OpenQD` context manager, exporting :attr:`.df`."""
         try:
             if self.write:

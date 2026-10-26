@@ -24,9 +24,10 @@ API
 from __future__ import annotations
 
 import os
-from functools import lru_cache
+from functools import cache
 from contextlib import contextmanager
-from typing import Any, Iterator, Union
+from typing import Any, Union
+from collections.abc import Iterator
 
 import h5py
 from filelock import FileLock
@@ -39,7 +40,7 @@ _PathType = Union[str, bytes, 'os.PathLike[str]', 'os.PathLike[bytes]']
 LOCK_NAME = 'database.lock'
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_lock(dirname: str) -> FileLock:
     return FileLock(os.path.join(dirname, LOCK_NAME))
 
@@ -80,6 +81,6 @@ def open_hdf5(
         Further keyword arguments for :class:`h5py.File`.
 
     """
-    with get_lock(os.path.dirname(os.path.abspath(os.fsdecode(filename)))):
-        with h5py.File(filename, mode, **kwargs) as f:
-            yield f
+    lock = get_lock(os.path.dirname(os.path.abspath(os.fsdecode(filename))))
+    with lock, h5py.File(filename, mode, **kwargs) as f:
+        yield f

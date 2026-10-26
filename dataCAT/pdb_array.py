@@ -75,9 +75,10 @@ import textwrap
 from types import MappingProxyType
 from itertools import repeat, chain
 from typing import (
-    List, Iterable, Union, Type, TypeVar, Optional, Dict, Any, Literal, SupportsIndex,
-    TypedDict, overload, Sequence, Mapping, Tuple, Generator, ClassVar, TYPE_CHECKING
+    TypeVar, Any, Literal, SupportsIndex,
+    TypedDict, overload, ClassVar, TYPE_CHECKING
 )
+from collections.abc import Iterable, Sequence, Mapping, Generator
 
 import h5py
 import numpy as np
@@ -98,7 +99,7 @@ ST = TypeVar('ST', bound='PDBContainer')
 #: The value of the ``copy`` parameter of :func:`numpy.array` for only copying when needed.
 _COPY_IF_NEEDED = None if np.lib.NumpyVersion(np.__version__) >= '2.0.0' else False
 
-_AtomTuple = Tuple[
+_AtomTuple = tuple[
     bool,  # IsHeteroAtom
     int,  # SerialNumber
     str,  # Name
@@ -115,13 +116,13 @@ _AtomTuple = Tuple[
     float  # charge_float
 ]
 
-_BondTuple = Tuple[
+_BondTuple = tuple[
     int,  # atom1
     int,  # atom2
     int,  # order
 ]
 
-_ReduceTuple = Tuple[
+_ReduceTuple = tuple[
     np.recarray,  # atoms
     np.recarray,  # bonds
     np.ndarray,  # atom_count
@@ -130,9 +131,9 @@ _ReduceTuple = Tuple[
     Literal[False]  # validate
 ]
 
-_Coords = Tuple[float, float, float]
+_Coords = tuple[float, float, float]
 
-_ResInfo = Tuple[
+_ResInfo = tuple[
     str,  # Name,
     int,  # SerialNumber,
     str,  # AltLoc
@@ -186,7 +187,7 @@ def _get_atom_info(at: Atom, i: int) -> _AtomTuple:
     )
 
 
-def _get_bond_info(mol: Molecule) -> List[_BondTuple]:
+def _get_bond_info(mol: Molecule) -> list[_BondTuple]:
     """Helper function for :meth:`PDBContainer.from_molecules`: create a tuple representing a single :attr:`PDBContainer.bonds` row.
 
     Note that the atomic indices are 1-based.
@@ -199,7 +200,7 @@ def _get_bond_info(mol: Molecule) -> List[_BondTuple]:
 
 def _iter_rec_plams(
     atom_array: np.ndarray,
-) -> Generator[Tuple[_Properties, _Coords, str], None, None]:
+) -> Generator[tuple[_Properties, _Coords, str], None, None]:
     """Helper function for :func:`_rec_to_mol`: create an iterator yielding atom properties and attributes."""  # noqa: E501
     for ar in atom_array:
         IsHeteroAtom, SerialNumber, Name, ResidueName, ChainId, ResidueNumber, x, y, z, Occupancy, TempFactor, symbol, charge, charge_float = ar.item()  # noqa: E501
@@ -253,7 +254,7 @@ def _rec_to_plams(
 
 def _iter_rec_rdkit(
     atom_array: np.ndarray,
-) -> Generator[Tuple[str, int, _ResInfo], None, None]:
+) -> Generator[tuple[str, int, _ResInfo], None, None]:
     """Helper function for :func:`_rec_to_mol`: create an iterator yielding atom properties and attributes."""  # noqa: E501
     for ar in atom_array:
         IsHeteroAtom, SerialNumber, Name, ResidueName, ChainId, ResidueNumber, x, y, z, Occupancy, TempFactor, symbol, charge, charge_float = ar.item()  # noqa: E501
@@ -305,7 +306,7 @@ def _rec_to_rdkit(
     return mol
 
 
-IndexLike = Union[None, SupportsIndex, Sequence[int], slice, np.ndarray]
+IndexLike = None | SupportsIndex | Sequence[int] | slice | np.ndarray
 Hdf5Mode = Literal['append', 'update']
 _AttrName = Literal['atoms', 'bonds', 'atom_count', 'bond_count', 'scale']
 
@@ -461,7 +462,7 @@ class PDBContainer:
     @overload  # noqa: E301
     def __init__(self, atoms: ArrayLike, bonds: ArrayLike,
                  atom_count: ArrayLike, bond_count: ArrayLike,
-                 scale: Optional[ArrayLike] = None,
+                 scale: ArrayLike | None = None,
                  validate: Literal[True] = ..., copy: bool = ...,) -> None:
         ...
     def __init__(self, atoms, bonds, atom_count, bond_count, scale=None, validate=True, copy=True, index_dtype=None):  # noqa: E501,E301
@@ -547,10 +548,7 @@ class PDBContainer:
         wdith = max(len(k) for k in self.keys())
 
         def _str(k, v):
-            if isinstance(v, np.recarray):
-                dtype = '...'
-            else:
-                dtype = str(v.dtype)
+            dtype = '...' if isinstance(v, np.recarray) else str(v.dtype)
 
             # NumPy >= 2.0 reports `numpy.rec` as the module of `numpy.recarray`
             cls = type(v)
@@ -561,7 +559,7 @@ class PDBContainer:
         indent = 4 * ' '
         return f'{self.__class__.__name__}(\n{textwrap.indent(ret, indent)}\n)'
 
-    def __reduce__(self: ST) -> Tuple[Type[ST], _ReduceTuple]:
+    def __reduce__(self: ST) -> tuple[type[ST], _ReduceTuple]:
         """Helper for :mod:`pickle`."""
         cls = type(self)
         return cls, (*self.values(), False)  # type: ignore
@@ -570,7 +568,7 @@ class PDBContainer:
         """Implement :func:`copy.copy(self)<copy.copy>`."""
         return self  # self is immutable
 
-    def __deepcopy__(self: ST, memo: Optional[Dict[int, Any]] = None) -> ST:
+    def __deepcopy__(self: ST, memo: dict[int, Any] | None = None) -> ST:
         """Implement :func:`copy.deepcopy(self, memo=memo)<copy.deepcopy>`."""
         return self  # self is immutable
 
@@ -588,9 +586,7 @@ class PDBContainer:
 
     def __eq__(self, value: object) -> bool:
         """Implement :meth:`self == value<object.__eq__>`."""
-        if type(self) is not type(value):
-            return False
-        elif hash(self) != hash(value):
+        if type(self) is not type(value) or hash(self) != hash(value):
             return False
 
         iterator = ((v, getattr(value, k)) for k, v in self.items())
@@ -607,7 +603,7 @@ class PDBContainer:
             # with the array's first and last element along axis 0
             for ar in self.values():
                 if not len(ar):
-                    first_and_last: Tuple[Any, ...] = ()
+                    first_and_last: tuple[Any, ...] = ()
                 else:
                     first = ar[0] if ar.ndim == 1 else ar[0, 0]
                     last = ar[-1] if ar.ndim == 1 else ar[-1, 0]
@@ -686,7 +682,7 @@ class PDBContainer:
         """
         cls = type(self)
         if index is None:
-            idx: Union[slice, np.ndarray] = slice(None)
+            idx: slice | np.ndarray = slice(None)
         else:
             try:
                 idx = int_to_slice(index, len(self))  # type: ignore
@@ -725,7 +721,7 @@ class PDBContainer:
         """
         return (name.strip('_') for name in cls.__slots__[2:])  # type: ignore
 
-    def values(self) -> Generator[Union[np.ndarray, np.recarray], None, None]:
+    def values(self) -> Generator[np.ndarray | np.recarray, None, None]:
         """Yield the (public) attributes in this instance.
 
         Examples
@@ -756,7 +752,7 @@ class PDBContainer:
         cls = type(self)
         return (getattr(self, name) for name in cls.keys())
 
-    def items(self) -> Generator[Tuple[_AttrName, Union[np.ndarray, np.recarray]], None, None]:
+    def items(self) -> Generator[tuple[_AttrName, np.ndarray | np.recarray], None, None]:
         """Yield the (public) attribute name/value pairs in this instance.
 
         Examples
@@ -865,10 +861,10 @@ class PDBContainer:
         return cls(*ret_list, validate=False)  # type: ignore
 
     @classmethod
-    def from_molecules(cls: Type[ST], mol_list: Iterable[Molecule],
+    def from_molecules(cls: type[ST], mol_list: Iterable[Molecule],
                        min_atom: int = 0,
                        min_bond: int = 0,
-                       scale: Optional[ArrayLike] = None) -> ST:
+                       scale: ArrayLike | None = None) -> ST:
         """Convert an iterable or sequence of molecules into a new :class:`PDBContainer` instance.
 
         Examples
@@ -962,11 +958,11 @@ class PDBContainer:
         )
 
     @overload
-    def to_molecules(self, index: Union[None, Sequence[int], slice, np.ndarray] = ...,
-                     mol: Optional[Iterable[Optional[Molecule]]] = ...) -> List[Molecule]:
+    def to_molecules(self, index: None | Sequence[int] | slice | np.ndarray = ...,
+                     mol: Iterable[Molecule | None] | None = ...) -> list[Molecule]:
         ...
     @overload  # noqa: E301
-    def to_molecules(self, index: SupportsIndex = ..., mol: Optional[Molecule] = ...) -> Molecule:
+    def to_molecules(self, index: SupportsIndex = ..., mol: Molecule | None = ...) -> Molecule:
         ...
     def to_molecules(self, index=None, mol=None):  # noqa: E301
         """Create a molecule or list of molecules from this instance.
@@ -1072,7 +1068,7 @@ class PDBContainer:
         self,
         index: None | Sequence[int] | slice | np.ndarray = ...,
         sanitize: bool = ...,
-    ) -> List[Chem.Mol]:
+    ) -> list[Chem.Mol]:
         ...
     @overload  # noqa: E301
     def to_rdkit(
@@ -1257,7 +1253,7 @@ class PDBContainer:
                             f"observed type: {group.__class__.__name__}")
 
         # Check if **group** has all required keys
-        keys: List[str] = list(cls.keys())
+        keys: list[str] = list(cls.keys())
         keys[-1] = cls.SCALE_NAME
         difference = set(keys) - group.keys()
         if difference:
@@ -1283,8 +1279,7 @@ class PDBContainer:
 
     @if_exception(validate_hdf5.__func__)  # type: ignore
     def to_hdf5(self, group: h5py.Group, index: IndexLike, update_scale: bool = True) -> None:
-        """Update all datasets in **group** positioned at **index** with its \
-        counterpart from **pdb**.
+        """Update the datasets in **group** at **index** with their counterparts in this instance.
 
         Follows the standard broadcasting rules as employed by h5py.
 
@@ -1384,7 +1379,7 @@ class PDBContainer:
 
     @classmethod
     @if_exception(validate_hdf5.__func__)  # type: ignore
-    def from_hdf5(cls: Type[ST], group: h5py.Group, index: IndexLike = None) -> ST:
+    def from_hdf5(cls: type[ST], group: h5py.Group, index: IndexLike = None) -> ST:
         """Construct a new PDBContainer from the passed hdf5 **group**.
 
         Parameters
@@ -1401,7 +1396,7 @@ class PDBContainer:
 
         """
         if index is None:
-            idx: Union[slice, np.ndarray] = slice(None)
+            idx: slice | np.ndarray = slice(None)
         else:
             try:
                 idx = int_to_slice(index, len(group['atom_count']))  # type: ignore
@@ -1419,7 +1414,7 @@ class PDBContainer:
             validate=False
         )
 
-    def intersection(self: ST, value: Union[ST, ArrayLike]) -> ST:
+    def intersection(self: ST, value: ST | ArrayLike) -> ST:
         """Construct a new PDBContainer by the intersection of **self** and **value**.
 
         Examples
@@ -1463,7 +1458,7 @@ class PDBContainer:
         _, i, _ = np.intersect1d(idx1, idx2, assume_unique=True, return_indices=True)
         return self[i]
 
-    def difference(self: ST, value: Union[ST, ArrayLike]) -> ST:
+    def difference(self: ST, value: ST | ArrayLike) -> ST:
         """Construct a new PDBContainer by the difference of **self** and **value**.
 
         Examples
@@ -1616,7 +1611,7 @@ class PDBContainer:
         ret = value[i]
         return self.concatenate(ret)
 
-    def _get_index(self: ST, value: Union[ST, ArrayLike]) -> Tuple[np.recarray, np.ndarray]:
+    def _get_index(self: ST, value: ST | ArrayLike) -> tuple[np.recarray, np.ndarray]:
         """Parse and return the :attr:`~PDBContainer.scale` of **self** and **value**."""
         cls = type(self)
         scale1 = self.scale
