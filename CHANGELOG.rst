@@ -11,6 +11,7 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Drop support for Python 3.7, 3.8 and 3.9; add support for Python 3.11 up to and including 3.14.
 * Add support for NumPy 2, pandas 2 & 3, h5py >= 3.6 and pymongo 4.
 * Replace ``setup.py`` with a ``pyproject.toml``-based build.
+* Lint with ruff (including the pyupgrade, bugbear and simplify rules) instead of flake8 and pydocstyle.
 * Lock the database files while reading or writing them (``dataCAT.locking``),
   so that several CAT runs can share a database at the same time.
   Adds a dependency on ``filelock``.
