@@ -21,7 +21,8 @@ from __future__ import annotations
 import warnings
 import functools
 from itertools import chain
-from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -42,17 +43,17 @@ if TYPE_CHECKING:
 
 __all__ = ['ligand_descriptors']
 
-_Row = Tuple[Tuple[str, str], List[Any]]
+_Row = tuple[tuple[str, str], list[Any]]
 
 
 def ligand_descriptors(
     smiles_list: Iterable[str],
-    anchor: Union[None, str, Iterable[str]] = None,
+    anchor: None | str | Iterable[str] = None,
     *,
     split: bool = True,
     anchor_condition: None | Callable[[int], bool] = None,
     optimize: bool = True,
-    cone_angle_dist: Union[float, Sequence[float]] = 0.0,
+    cone_angle_dist: float | Sequence[float] = 0.0,
     diameter: None | float = 4.5,
     height_lim: None | float = 10.0,
     processes: int = 1,
@@ -145,10 +146,11 @@ def ligand_descriptors(
 
     mol_list = read_smiles(smiles_list)
     anchors = parse_anchors(anchor, split=split)
-    kwargs = dict(
-        anchors=anchors, split=split, condition=anchor_condition, optimize=optimize,
-        dist_list=dist_list, diameter=diameter, height_lim=height_lim, return_mol=return_mol,
-    )
+    kwargs: dict[str, Any] = {
+        'anchors': anchors, 'split': split, 'condition': anchor_condition, 'optimize': optimize,
+        'dist_list': dist_list, 'diameter': diameter, 'height_lim': height_lim,
+        'return_mol': return_mol,
+    }
     if processes == 1:
         rows = list(chain.from_iterable(_get_rows(mol, **kwargs) for mol in mol_list))
     else:
@@ -180,12 +182,12 @@ def _get_rows(
     split: bool,
     condition: None | Callable[[int], bool],
     optimize: bool,
-    dist_list: List[float],
+    dist_list: list[float],
     diameter: None | float,
     height_lim: None | float,
     return_mol: bool,
     pack_refs: bool = False,
-) -> List[_Row]:
+) -> list[_Row]:
     """Return the index and descriptors of each anchoring group of **mol**."""
     ret = []
     for ligand in find_substructure(mol, anchors, split=split, condition=condition):
@@ -203,10 +205,10 @@ def _get_rows(
 def _get_descriptors(
     ligand: Molecule,
     optimize: bool,
-    dist_list: List[float],
+    dist_list: list[float],
     diameter: None | float,
     height_lim: None | float,
-) -> List[Any]:
+) -> list[Any]:
     """Optimize **ligand** and return its cone angle(s), bulkiness and branch distances."""
     smiles = ligand.properties.smiles
     try:
@@ -218,10 +220,10 @@ def _get_descriptors(
         _warn(f"Failed to optimize {smiles!r}", ex)
         return [np.nan] * (len(dist_list) + 3)
 
-    ret: List[Any] = []
+    ret: list[Any] = []
     try:
         anchor = ligand.atoms.index(ligand.properties.dummies)
-        ret += [float(i) for i in get_cone_angle(ligand, anchor, dist_list)]
+        ret += [float(i) for i in np.atleast_1d(get_cone_angle(ligand, anchor, dist_list))]
     except Exception as ex:
         _warn(f"Failed to compute the cone angle of {smiles!r}", ex)
         ret += [np.nan] * len(dist_list)

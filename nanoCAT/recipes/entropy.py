@@ -16,7 +16,7 @@ API
 
 """
 
-from typing import Tuple, NamedTuple
+from typing import NamedTuple
 
 from scm.plams import Molecule, Units
 import numpy as np
@@ -29,7 +29,7 @@ class EntropyTuple(NamedTuple):
     S_rot: float
 
 
-def get_entropy(mol: Molecule, temp: float = 298.15) -> Tuple[float, float]:
+def get_entropy(mol: Molecule, temp: float = 298.15) -> tuple[float, float]:
     """Calculate the translational of the passsed molecule.
 
     Parameters

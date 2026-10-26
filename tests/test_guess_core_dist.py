@@ -8,7 +8,7 @@ from assertionlib import assertion
 from nanoCAT.bde.guess_core_dist import guess_core_core_dist
 
 PATH = Path('tests') / 'test_files'
-with open(PATH / 'mol.pdb', 'r') as f:
+with open(PATH / 'mol.pdb') as f:
     MOL: Molecule = readpdb(f)
 
 

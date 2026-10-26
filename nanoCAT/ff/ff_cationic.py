@@ -71,7 +71,8 @@ def run_ff_cationic(mol: Molecule, anchor: Atom, s: Settings) -> None:
     else:
         raise MoleculeError("All bonds attached to 'anchor' are part of a ring system")
 
-    with SplitMol(mol, bond) as (frag1, frag2):
+    # CAT annotates `SplitMol.__enter__()` as returning a 1-tuple
+    with SplitMol(mol, bond) as (frag1, frag2):  # type: ignore[misc]
         # Identify the amine and the alkylic fragment
         if anchor in frag1:
             amine = frag1

@@ -22,15 +22,11 @@ from types import MappingProxyType
 from itertools import chain
 from collections.abc import Iterable
 from typing import (
-    Dict,
-    Tuple,
     NamedTuple,
-    Generator,
     TYPE_CHECKING,
-    Callable,
     TypeVar,
-    Mapping,
 )
+from collections.abc import Generator, Callable, Mapping
 
 import numpy as np
 from scm.plams import Molecule, Atom, Bond, MoleculeError
@@ -52,7 +48,7 @@ class NeighborTuple(NamedTuple):
 
     aligned: np.bool_
     mol: Molecule
-    mol_next: Dict[Molecule, Tuple[float, Atom]]
+    mol_next: dict[Molecule, tuple[float, Atom]]
     mol_prev: None | Molecule
     mol_dist_mat: npt.NDArray[np.float64]
     start: int
@@ -77,6 +73,7 @@ class GraphConstructor:
         21.58389271
 
     """
+
     id_set: set[int]
     neighbor_dict: dict[Molecule, NeighborTuple]
 
@@ -105,7 +102,7 @@ class GraphConstructor:
         self.id_set = set()
         self.neighbor_dict = {}
 
-    def __call__(self, anchor: Atom) -> Dict[Molecule, NeighborTuple]:
+    def __call__(self, anchor: Atom) -> dict[Molecule, NeighborTuple]:
         """Construct a directed graph starting from **anchor**."""
         if len(self.id_set):
             self.id_set = set()
@@ -194,7 +191,7 @@ def _get_dist_mat(mol: Molecule) -> np.ndarray:
     return edge_dist(mol_array, edges=idx_ar)
 
 
-def _find_start(mol_graph: Mapping[Molecule, NeighborTuple]) -> Tuple[Molecule, NeighborTuple]:
+def _find_start(mol_graph: Mapping[Molecule, NeighborTuple]) -> tuple[Molecule, NeighborTuple]:
     """Find the start of the molecular graph."""
     for m, tup in mol_graph.items():
         if tup.mol_prev is None:
@@ -209,7 +206,7 @@ def yield_distances(
     offset_xy: float = 0,
     offset_z: float = 0,
     start: None | Molecule = None,
-) -> Generator[Tuple[_T, np.float64, np.float64], None, None]:
+) -> Generator[tuple[_T, np.float64, np.float64], None, None]:
     """Traverse the graph and yield the weighted distances.
 
     Parameters

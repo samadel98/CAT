@@ -65,7 +65,7 @@ class TestConeAngle:
 
 
 class TestWorkflow:
-    with open(PATH / "cone_angle_setting.yaml", "r") as f:
+    with open(PATH / "cone_angle_setting.yaml") as f:
         SETTINGS = Settings(yaml.load(f, Loader=yaml.SafeLoader))
 
     @pytest.fixture(scope="function", autouse=True)

@@ -1,7 +1,7 @@
 """Tests for :mod:`nanoCAT.bde.dissociate_xyn`."""
 
 from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
 import numpy as np
 
@@ -19,7 +19,7 @@ def _get_idx_iter(mol: Molecule) -> Generator[int, None, None]:
 
 
 PATH = Path('tests') / 'test_files' / 'bde'
-with open(PATH / 'mol.pdb', 'r') as f:
+with open(PATH / 'mol.pdb') as f:
     MOL: Molecule = readpdb(f)
 
 LIG_IDX = np.fromiter(_get_idx_iter(MOL), dtype=int)

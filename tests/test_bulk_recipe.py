@@ -5,7 +5,8 @@ from __future__ import annotations
 import sys
 from pprint import pformat
 from pathlib import Path
-from typing import Mapping, TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
+from collections.abc import Mapping
 
 import numpy as np
 import pandas as pd
@@ -55,14 +56,14 @@ def test_bulk_workflow() -> None:
 
 
 FAST_BULK_KWARGS = {
-    "diameter=1": dict(diameter=1),
-    "diameter=None": dict(diameter=None),
-    "func=None": dict(func=None),
-    "func=lambda x: x**2": dict(func=lambda x: x**2),
-    "func=lambda x: 1/x": dict(func=lambda x: 1/x),
-    "height_lim=5": dict(height_lim=5),
-    "height_lim=None": dict(height_lim=None),
-    "default": dict(),
+    "diameter=1": {"diameter": 1},
+    "diameter=None": {"diameter": None},
+    "func=None": {"func": None},
+    "func=lambda x: x**2": {"func": lambda x: x**2},
+    "func=lambda x: 1/x": {"func": lambda x: 1/x},
+    "height_lim=5": {"height_lim": 5},
+    "height_lim=None": {"height_lim": None},
+    "default": {},
 }
 
 

@@ -16,7 +16,8 @@ API
 
 """
 
-from typing import Any, Union, Iterable
+from typing import Any, Literal
+from collections.abc import Iterable
 from collections import abc
 
 import numpy as np
@@ -32,11 +33,11 @@ __all__ = ['replace_surface']
 
 
 def replace_surface(mol: Molecule,
-                    symbol: Union[str, int],
-                    symbol_new: Union[str, int] = 'Cl',
-                    nth_shell: Union[int, Iterable[int]] = 0,
+                    symbol: str | int,
+                    symbol_new: str | int = 'Cl',
+                    nth_shell: int | Iterable[int] = 0,
                     f: float = 0.5,
-                    mode: str = 'uniform',
+                    mode: Literal['uniform', 'random', 'cluster'] = 'uniform',
                     displacement_factor: float = 0.5,
                     **kwargs: Any) -> Molecule:
     r"""A workflow for identifying all surface atoms in **mol** and replacing a subset of them.
@@ -181,7 +182,7 @@ def replace_surface(mol: Molecule,
 
 
 def _collect_surface(xyz: np.ndarray, displacement_factor: float,
-                     nth_shell: Union[int, Iterable[int]] = 0) -> np.ndarray:
+                     nth_shell: int | Iterable[int] = 0) -> np.ndarray:
     """Collect all user-specified surface and/or sub-surface shells of **xyz**."""
     n = -1
     xyz_df = pd.DataFrame(xyz)

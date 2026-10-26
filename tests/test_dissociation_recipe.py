@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from itertools import chain
 from pathlib import Path
-from typing import Mapping, Any, Type
+from typing import Any
+from collections.abc import Mapping
 
 import pytest
 import numpy as np
@@ -113,6 +114,6 @@ class TestDissociateBulk:
             ({"symbol_x": "Au", "symbol_y": "Cl", "count_y": 5, "r_max": 1.0}, ValueError),
         ],
     )
-    def test_raises(self, kwargs: Mapping[str, Any], exc: Type[Exception]) -> None:
+    def test_raises(self, kwargs: Mapping[str, Any], exc: type[Exception]) -> None:
         with pytest.raises(exc):
             dissociate_bulk(MOL_PbBr, **kwargs)

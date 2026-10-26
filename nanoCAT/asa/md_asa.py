@@ -20,7 +20,8 @@ API
 
 import os
 from pathlib import Path
-from typing import Iterable, Tuple, Any, Type, Generator, Sequence
+from typing import Any
+from collections.abc import Iterable, Generator, Sequence, Sized
 from itertools import chain
 
 import numpy as np
@@ -40,8 +41,8 @@ from ..ff.ff_cationic import run_ff_cationic
 from ..ff.ff_anionic import run_ff_anionic
 
 
-def get_asa_md(mol_list: Iterable[Molecule], jobs: Tuple[Type[Job], ...],
-               settings: Tuple[Settings, ...], iter_start: int = 500,
+def get_asa_md(mol_list: Iterable[Molecule], jobs: tuple[type[Job], ...],
+               settings: tuple[Settings, ...], iter_start: int = 500,
                el_scale14: float = 0.0, lj_scale14: float = 1.0,
                distance_upper_bound: float = np.inf, k: int = 20,
                dump_csv: bool = False, **kwargs: Any) -> np.ndarray:
@@ -100,17 +101,15 @@ def get_asa_md(mol_list: Iterable[Molecule], jobs: Tuple[Type[Job], ...],
     job = jobs[0]
     s = settings[0].copy()
     if job is not Cp2kJob:
-        raise ValueError("'jobs' expected '(Cp2kJob,)'; observed value: {repr(jobs)}")
+        raise ValueError(f"'jobs' expected '(Cp2kJob,)'; observed value: {jobs!r}")
 
     # Infer the shape of the to-be created energy array
-    try:
-        mol_len = len(mol_list)
-    except TypeError:  # **mol_list*** is an iterator
+    if isinstance(mol_list, Sized):
+        shape = len(mol_list), 5
+        count = len(mol_list) * 5
+    else:  # **mol_list** is an iterator
         shape = -1, 5
         count = -1
-    else:
-        shape = mol_len, 5
-        count = mol_len * 5
 
     # Extract all energies and ligand counts
     iterator = chain.from_iterable(md_generator(mol_list, job, s,
@@ -130,10 +129,10 @@ def get_asa_md(mol_list: Iterable[Molecule], jobs: Tuple[Type[Job], ...],
 
 
 MATCH_SETTINGS = Settings({'input': {'forcefield': 'top_all36_cgenff_new'}})
-Tuple5 = Tuple[float, float, float, float, int]
+Tuple5 = tuple[float, float, float, float, int]
 
 
-def md_generator(mol_list: Iterable[Molecule], job: Type[Job],
+def md_generator(mol_list: Iterable[Molecule], job: type[Job],
                  settings: Settings, iter_start: int = 500,
                  el_scale14: float = 0.0, lj_scale14: float = 1.0,
                  distance_upper_bound: float = np.inf, k: int = 20,

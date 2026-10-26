@@ -21,7 +21,6 @@ API
 from __future__ import annotations
 
 from itertools import chain
-from typing import Tuple
 
 import numpy as np
 from scm.plams import MoleculeError, Molecule, Atom, AMSJob, axis_rotation_matrix
@@ -146,7 +145,7 @@ def _construct_xyn(
     lig: Molecule,
     lig_at: Atom,
     lig_idx: int,
-) -> Tuple[Molecule, Atom]:
+) -> tuple[Molecule, Atom]:
     """Construct the :math:`XYn` molecule for :func:`get_xyn`.
 
     Parameters
@@ -225,7 +224,7 @@ def _preoptimize(mol: Molecule) -> None:
     mol.job_geometry_opt(AMSJob, s, name='E_XYn_preopt')
 
 
-def _parse_ion(ion: Molecule | str | int) -> Tuple[Molecule, Atom]:
+def _parse_ion(ion: Molecule | str | int) -> tuple[Molecule, Atom]:
     """Interpret and parse the **ion** argument in :func:`.get_xyn`.
 
     Construct and return a new :math:`XY_{n=0}` molecule and the atom :math:`X` itself.
@@ -268,7 +267,7 @@ def _parse_ion(ion: Molecule | str | int) -> Tuple[Molecule, Atom]:
         return XYn, X
 
 
-def _get_anchor(mol: Molecule) -> Tuple[int, Atom]:
+def _get_anchor(mol: Molecule) -> tuple[int, Atom]:
     """Find the first atom in **mol** marked with :attr:`Atom.properties` ``["anchor"]``.
 
     Parameters

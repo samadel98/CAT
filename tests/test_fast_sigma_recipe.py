@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import Mapping, Any, Type
+from typing import Any
+from collections.abc import Mapping
 from pathlib import Path
 from collections.abc import Hashable
 
@@ -61,7 +62,7 @@ def compare_df(df1: pd.DataFrame, df2: pd.DataFrame) -> None:
     np.testing.assert_array_equal(df1.columns, df2.columns, err_msg="columns")
     np.testing.assert_array_equal(df1.index, df2.index, err_msg="index")
 
-    iterator = ((repr(k), df1[k], df2[k]) for k in df1.keys())
+    iterator = ((repr(k), df1[k], df2[k]) for k in df1)
     for k, v1, v2 in iterator:
         if issubclass(v2.dtype.type, np.inexact):
             np.testing.assert_allclose(v1, v2, err_msg=k)
@@ -114,7 +115,7 @@ class TestFastSigma:
         ],
     )
     def test_raises(
-        self, solvents: Mapping[str, Any], kwargs: Mapping[str, Any], exc: Type[Exception]
+        self, solvents: Mapping[str, Any], kwargs: Mapping[str, Any], exc: type[Exception]
     ) -> None:
         """Test that whether appropiate exception is raised."""
         with pytest.raises(exc):
@@ -165,7 +166,7 @@ class TestReadCSV:
             (TypeError, "cosmo-rs.csv", {"usecols": None}),
         ]
     )
-    def test_raises(self, exc: Type[Exception], file: str, kwargs: Mapping[str, Any]) -> None:
+    def test_raises(self, exc: type[Exception], file: str, kwargs: Mapping[str, Any]) -> None:
         """Test that whether appropiate exception is raised."""
         with pytest.raises(exc):
             read_csv(PATH / file, **kwargs)
@@ -200,7 +201,7 @@ class TestSanitize:
             (TypeError, {"column_padding": []}),
         ]
     )
-    def test_raises(self, exc: Type[Exception], kwargs: Mapping[str, Any]) -> None:
+    def test_raises(self, exc: type[Exception], kwargs: Mapping[str, Any]) -> None:
         """Test that an appropiate exception is raised."""
         with pytest.raises(exc):
             sanitize_smiles_df(SANITIZE3_DF, **kwargs)

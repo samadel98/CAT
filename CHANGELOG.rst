@@ -20,6 +20,15 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Add ``nanoCAT.recipes.ligand_descriptors()``, which computes a table of cone angles,
   bulkiness and branch distances of ligands from their SMILES strings, as by ``init_cat``.
 * Run the tests weekly.
+* Lint with ruff (including the pydocstyle, pyupgrade, bugbear and simplify rules) instead of
+  flake8, and type-check with mypy in CI.
+* Fix the BDE workflow crashing when ``forcefield`` is enabled.
+* Fix the PLAMS-based activation strain analysis using the energy of a ligand as the energy
+  of the core.
+* Fix ``multi_ligand_job()`` crashing when combining the .prm files of several ligands.
+* Fix the arithmetic operators of ``EnergyGatherer``: ``a + b`` (*etc.*) modified ``a``,
+  and ``/`` and ``//`` were swapped.
+* Fix a few error messages that showed placeholders instead of values.
 
 
 0.7.2

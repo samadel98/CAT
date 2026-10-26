@@ -19,7 +19,7 @@ API
 """
 
 import operator
-from typing import Optional, Union, Callable
+from collections.abc import Callable
 
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -35,7 +35,7 @@ __all__ = ['identify_surface', 'identify_surface_ch']
 CompareFunc = Callable[[np.ndarray, float], np.ndarray]
 
 
-def identify_surface_ch(mol: Union[Molecule, np.ndarray],
+def identify_surface_ch(mol: Molecule | np.ndarray,
                         n: float = 0.5,
                         invert: bool = False) -> np.ndarray:
     """Identify the surface of **mol** using a convex hull-based approach.
@@ -90,8 +90,8 @@ def identify_surface_ch(mol: Union[Molecule, np.ndarray],
         return np.arange(len(xyz))[bool_ar]
 
 
-def identify_surface(mol: Union[Molecule, np.ndarray],
-                     max_dist: Optional[float] = None,
+def identify_surface(mol: Molecule | np.ndarray,
+                     max_dist: float | None = None,
                      tolerance: float = 0.5,
                      compare_func: CompareFunc = operator.__gt__) -> np.ndarray:
     """Take a molecule and identify which atoms are located on the surface, rather than in the bulk.

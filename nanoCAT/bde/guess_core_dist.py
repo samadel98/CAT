@@ -16,7 +16,6 @@ API
 
 """
 
-from typing import Union, Tuple
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -30,10 +29,10 @@ from FOX.functions.rdf import get_rdf_lowmem as get_rdf
 __all__ = ['guess_core_core_dist']
 
 #: An atomic symbol or number.
-AtomSymbol = Union[str, int]
+AtomSymbol = str | int
 
 #: A 2-tuple of atomc symbols/numbers.
-AtomSymbolTup = Tuple[AtomSymbol, AtomSymbol]
+AtomSymbolTup = tuple[AtomSymbol, AtomSymbol]
 
 
 def _get_xyz(mol: Molecule, atom: AtomSymbol) -> np.ndarray:
@@ -47,8 +46,8 @@ def _get_xyz(mol: Molecule, atom: AtomSymbol) -> np.ndarray:
     return xyz
 
 
-def guess_core_core_dist(mol: Union[Molecule, np.ndarray],
-                         atom: Union[None, AtomSymbol, AtomSymbolTup] = None,
+def guess_core_core_dist(mol: Molecule | np.ndarray,
+                         atom: None | AtomSymbol | AtomSymbolTup = None,
                          dr: float = 0.1,
                          r_max: float = 8.0,
                          window_length: int = 21,
