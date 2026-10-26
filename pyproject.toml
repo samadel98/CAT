@@ -71,6 +71,7 @@ lint = [
 test = [
     "pytest>=6.2.5",
     "pytest-cov",
+    "tblite>=0.4; platform_system!='Windows'",  # No Windows wheels
 ]
 
 [tool.setuptools.packages.find]
