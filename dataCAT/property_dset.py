@@ -24,7 +24,8 @@ API
 
 from __future__ import annotations
 
-from typing import Union, Sequence, Any, Optional, Dict, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Sequence
 
 import h5py
 import numpy as np
@@ -108,7 +109,7 @@ def create_prop_group(file: h5py.Group, scale: h5py.Dataset) -> h5py.Group:
 
 
 def create_prop_dset(group: h5py.Group, name: str, dtype: DTypeLike | None = None,
-                     prop_names: Optional[Sequence[str]] = None,
+                     prop_names: Sequence[str] | None = None,
                      **kwargs: Any) -> h5py.Dataset:
     r"""Construct a new dataset for holding a user-defined molecular property.
 
@@ -212,7 +213,7 @@ def create_prop_dset(group: h5py.Group, name: str, dtype: DTypeLike | None = Non
         shape=(n, m),
         maxshape=(None, m),
         dtype=dtype,
-        fillvalue=(_null_value(dtype) if dtype != object else None),
+        fillvalue=(_null_value(dtype) if np.dtype(dtype).kind != 'O' else None),
         **kwargs
     )
     scale = group.create_dataset(scale_name, data=name_array, shape=(m,), dtype=name_array.dtype)
@@ -250,7 +251,7 @@ def _resize_prop_dset(dset: h5py.Dataset) -> None:
 
 
 def update_prop_dset(dset: h5py.Dataset, data: np.ndarray,
-                     index: Union[None, slice, np.ndarray] = None) -> None:
+                     index: None | slice | np.ndarray = None) -> None:
     """Update **dset** at position **index** with **data**.
 
     Parameters
@@ -460,7 +461,7 @@ def index_to_pandas(dset: h5py.Dataset, fields: None | Sequence[str] = None) -> 
 
 def _vlen_to_tuples(array: np.ndarray) -> np.ndarray:
     """Convert an (object) array consisting of arrays into an (object) array of tuples."""
-    cache: Dict[bytes, tuple] = {}
+    cache: dict[bytes, tuple] = {}
     ret = np.empty_like(array, dtype=object)
 
     for i, ar in enumerate(array):

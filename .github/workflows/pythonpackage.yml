@@ -123,11 +123,8 @@ jobs:
             -   name: Installed packages
                 run: pip list
 
-            -   name: Run flake8
-                run: flake8 dataCAT tests conftest.py
-
-            -   name: Run pydocstyle
-                run: pydocstyle dataCAT
+            -   name: Run ruff
+                run: ruff check --output-format=github .
 
             -   name: Run mypy
                 run: mypy dataCAT

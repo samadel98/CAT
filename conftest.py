@@ -34,12 +34,5 @@ def repr_instance(self, obj: Any, level: int) -> str:
 
 
 def pytest_configure(config: Any) -> None:
-    """Flake8 is very verbose by default. Silence it.
-
-    See Also
-    --------
-    https://github.com/eisensheng/pytest-catchlog/issues/59
-
-    """
-    logging.getLogger("flake8").setLevel(logging.ERROR)
+    """Silence the debug messages of filelock."""
     logging.getLogger("filelock").setLevel(logging.WARNING)

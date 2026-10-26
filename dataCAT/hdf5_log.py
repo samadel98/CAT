@@ -20,7 +20,8 @@ API
 
 from __future__ import annotations
 
-from typing import Sequence, Tuple, Optional, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Sequence
 from datetime import datetime
 
 import h5py
@@ -90,7 +91,7 @@ def create_hdf5_log(file: h5py.Group,
                     n_entries: int = 100,
                     clear_when_full: bool = False,
                     version_names: Sequence[str] | Sequence[bytes] | np.ndarray = _VERSION_NAMES,
-                    version_values: Sequence[Tuple[int, int, int]] | np.ndarray = _VERSION,
+                    version_values: Sequence[tuple[int, int, int]] | np.ndarray = _VERSION,
                     **kwargs: Any) -> h5py.Group:
     r"""Create a hdf5 group for logging database modifications.
 
@@ -208,8 +209,8 @@ def create_hdf5_log(file: h5py.Group,
 def update_hdf5_log(
     group: h5py.Group,
     index: ArrayLike,
-    message: Optional[str] = None,
-    version_values: Sequence[Tuple[int, int, int]] | np.ndarray = _VERSION,
+    message: str | None = None,
+    version_values: Sequence[tuple[int, int, int]] | np.ndarray = _VERSION,
 ) -> None:
     r"""Add a new entry to the hdf5 logger in **file**.
 
@@ -311,7 +312,7 @@ def update_hdf5_log(
 
 def reset_hdf5_log(
     group: h5py.Group,
-    version_values: Sequence[Tuple[int, int, int]] | np.ndarray = _VERSION,
+    version_values: Sequence[tuple[int, int, int]] | np.ndarray = _VERSION,
 ) -> h5py.Group:
     r"""Clear and reset the passed ``logger`` Group.
 

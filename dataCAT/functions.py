@@ -25,9 +25,9 @@ from time import sleep
 from types import MappingProxyType
 from functools import wraps
 from typing import (
-    Collection, Union, Sequence, Tuple, List, Generator, Mapping, Any, cast,
-    Hashable, Optional, Type, TypeVar, Callable, SupportsIndex, Iterable, TYPE_CHECKING
+    Any, cast, TypeVar, SupportsIndex, TYPE_CHECKING
 )
+from collections.abc import Collection, Sequence, Generator, Mapping, Hashable, Callable, Iterable
 
 import h5py
 import numpy as np
@@ -57,7 +57,7 @@ FT = TypeVar('FT', bound=Callable[..., Any])
 
 
 def df_to_mongo_dict(df: pd.DataFrame,
-                     as_gen: bool = True) -> Union[Generator, list]:
+                     as_gen: bool = True) -> Generator | list:
     """Convert a dataframe into a generator of dictionaries suitable for a MongoDB_ databases.
 
     Tuple-keys present in **df** (*i.e.* pd.MultiIndex) are expanded into nested dictionaries.
@@ -256,7 +256,7 @@ def as_pdb_array(mol_list: Collection[Molecule], min_size: int = 0,
         msg = DeprecationWarning("'as_pdb_array()' is deprecated")
         warnings.warn(msg, stacklevel=2)
 
-    def _get_value(mol: Molecule) -> Tuple[List[str], int]:
+    def _get_value(mol: Molecule) -> tuple[list[str], int]:
         """Return a partially deserialized .pdb file and the length of aforementioned file."""
         ret = Chem.MolToPDBBlock(molkit.to_rdmol(mol)).splitlines()
         return ret, len(ret)
@@ -273,7 +273,7 @@ def as_pdb_array(mol_list: Collection[Molecule], min_size: int = 0,
 
 
 def from_pdb_array(array: np.ndarray, rdmol: bool = True,
-                   warn: bool = True) -> Union[Molecule, Mol]:
+                   warn: bool = True) -> Molecule | Mol:
     """Convert an array with a (partially) de-serialized .pdb file into a molecule.
 
     Parameters
@@ -380,7 +380,7 @@ def int_to_slice(int_like: SupportsIndex, seq_len: int) -> slice:
 
 
 def hdf5_availability(filename: PathType, timeout: float = 5.0,
-                      max_attempts: Optional[int] = 10,
+                      max_attempts: int | None = 10,
                       **kwargs: Any) -> None:
     r"""Check if a .hdf5 file is opened by another process; return once it is not.
 
@@ -424,14 +424,14 @@ def hdf5_availability(filename: PathType, timeout: float = 5.0,
         except OSError as ex:  # the .hdf5 file cannot be safely opened yet
             warn = ResourceWarning(err)
             warn.__cause__ = exception = ex
-            warnings.warn(warn)
+            warnings.warn(warn, stacklevel=2)
             sleep(timeout)
         i -= 1
 
     raise exception
 
 
-def _set_index(cls: Type[PDBContainer], group: h5py.Group,
+def _set_index(cls: type[PDBContainer], group: h5py.Group,
                dtype: DTypeLike, length: int, **kwargs: Any) -> h5py.Dataset:
     scale = group.create_dataset('index', shape=(length,), maxshape=(None,), dtype=dtype, **kwargs)
     scale.make_scale('index')

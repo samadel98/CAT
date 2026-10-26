@@ -20,7 +20,8 @@ from os import PathLike
 from os.path import join, isfile
 from types import MappingProxyType
 from logging import Logger
-from typing import Dict, Any, Union, AnyStr, Mapping, Optional, Tuple, Literal, overload
+from typing import Any, Union, AnyStr, Literal, overload
+from collections.abc import Mapping
 
 import h5py
 import numpy as np
@@ -42,7 +43,7 @@ Ligand = Literal['ligand', 'ligand_no_opt']
 QD = Literal['qd', 'qd_no_opt']
 
 
-def create_csv(path: Union[str, PathLike], database: Union[Ligand, QD] = 'ligand') -> str:
+def create_csv(path: str | PathLike, database: Ligand | QD = 'ligand') -> str:
     """Create a ligand or qd database (csv format) if it does not yet exist.
 
     Parameters
@@ -135,13 +136,13 @@ IDX_DTYPE: Mapping[str, np.dtype] = MappingProxyType({
 
 
 #: The names of the MongoDB collections and their (unique) index keys.
-MONGO_COLLECTIONS: Mapping[str, Tuple[str, Tuple[str, ...]]] = MappingProxyType({
+MONGO_COLLECTIONS: Mapping[str, tuple[str, tuple[str, ...]]] = MappingProxyType({
     'ligand': ('ligand_database', ('smiles', 'anchor')),
     'qd': ('qd_database', ('core', 'core anchor', 'ligand smiles', 'ligand anchor')),
 })
 
 
-DEFAULT_PROPERTIES: Mapping[str, Optional[Tuple[str, np.dtype]]] = MappingProxyType({
+DEFAULT_PROPERTIES: Mapping[str, tuple[str, np.dtype] | None] = MappingProxyType({
     'core': None,
     'core_no_opt': None,
     'ligand': ('formula', FORMULA_DTYPE),
@@ -226,7 +227,7 @@ def create_hdf5(path, name='structures.hdf5'):  # noqa: E302
 
 
 def _update_pdb_dsets(file: h5py.File, name: str,
-                      logger: Optional[Logger] = None) -> Optional[PDBContainer]:
+                      logger: Logger | None = None) -> PDBContainer | None:
     """Check for and update pre dataCAT 0.3 style databases."""
     if not isinstance(file.get(name), h5py.Dataset):
         return None
@@ -250,7 +251,7 @@ def _update_pdb_dsets(file: h5py.File, name: str,
     return PDBContainer.from_molecules(mol_list, scale=scale)
 
 
-def _update_index_dset(group: h5py.Group, name: str, logger: Optional[Logger] = None) -> None:
+def _update_index_dset(group: h5py.Group, name: str, logger: Logger | None = None) -> None:
     """Check for and update pre dataCAT 0.4 style databases."""
     if 'index' in group:
         return None
@@ -275,7 +276,7 @@ def _update_property_dsets(group: h5py.Group, name: str) -> None:
         create_prop_dset(prop_grp, *args, compression='gzip')
 
 
-def create_mongodb(host: str = 'localhost', port: int = 27017, **kwargs: Any) -> Dict[str, Any]:
+def create_mongodb(host: str = 'localhost', port: int = 27017, **kwargs: Any) -> dict[str, Any]:
     """Create the the MongoDB collections and set their index.
 
     Paramaters

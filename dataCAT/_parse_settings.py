@@ -1,7 +1,7 @@
 
 """A private helper module for parsing job settings .inp files."""
 
-from typing import List, Sequence
+from collections.abc import Sequence
 from itertools import count
 
 import h5py
@@ -11,7 +11,7 @@ import pandas as pd
 from nanoutils import PathType
 from CAT.workflows import HDF5_INDEX
 
-__all__: List[str] = []
+__all__: list[str] = []
 
 
 def _update_hdf5_settings(f: h5py.File, df: pd.DataFrame, column: str) -> None:
@@ -54,9 +54,5 @@ def _read_inp(job_paths: Sequence[str], ax2: int = 0, ax3: int = 0) -> np.ndarra
 
 def _get_line_count(filename: PathType) -> int:
     """Return the total number of lines in **filename**."""
-    substract = 0
-    with open(filename, 'r') as f:
-        for i, j in enumerate(f, 1):
-            if j == '\n':
-                substract += 1
-    return i - substract
+    with open(filename) as f:
+        return sum(line != '\n' for line in f)

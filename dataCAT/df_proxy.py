@@ -13,7 +13,7 @@ API
 """  # noqa: E501
 
 from itertools import chain
-from typing import NoReturn, Tuple, Dict, Any, FrozenSet, TypeVar, Type, ClassVar, cast, final
+from typing import NoReturn, Any, TypeVar, ClassVar, cast, final
 from textwrap import indent
 
 import pandas as pd
@@ -25,21 +25,20 @@ TT = TypeVar('TT', bound='_DFMeta')
 
 
 class _DFMeta(type):
-    MAGIC: FrozenSet[str] = frozenset({
+    MAGIC: frozenset[str] = frozenset({
         '__array__', '__abs__', '__add__', '__and__', '__contains__', '__eq__',
         '__floordiv__', '__ge__', '__getitem__', '__gt__', '__hash__', '__iadd__', '__iand__',
         '__ifloordiv__', '__imod__', '__imul__', '__ior__', '__ipow__', '__isub__', '__iter__',
         '__itruediv__', '__ixor__', '__le__', '__len__', '__lt__', '__matmul__', '__mod__',
-        '__mul__', '__or__', '__pow__', '__setitem__', '__sub__', '__truediv__', '__xor__',
-        '__contains__', '__iter__', '__len__'
+        '__mul__', '__or__', '__pow__', '__setitem__', '__sub__', '__truediv__', '__xor__'
     })
 
-    SETTERS: FrozenSet[str] = frozenset({
+    SETTERS: frozenset[str] = frozenset({
         'index', 'columns'
     })
 
     # Should be implemented by the actual (non-meta) classes
-    NDTYPE: Type[NDFrame] = NotImplemented
+    NDTYPE: type[NDFrame] = NotImplemented
 
     @staticmethod
     def _construct_getter(cls_name: str, func_name: str, module: str = __name__) -> property:
@@ -66,8 +65,8 @@ class _DFMeta(type):
         setter.__module__ = module
         return prop.setter(setter)
 
-    def __new__(mcls: Type[TT], name: str, bases: Tuple[type, ...],  # noqa: N804
-                namespace: Dict[str, Any]) -> TT:
+    def __new__(mcls: type[TT], name: str, bases: tuple[type, ...],  # noqa: N804
+                namespace: dict[str, Any]) -> TT:
         """Construct a new :class:`_DFMeta` instance."""
         cls = cast(TT, super().__new__(mcls, name, bases, namespace))
         module = cls.__module__
@@ -107,7 +106,7 @@ class DFProxy(metaclass=_DFMeta):
     __slots__ = ('__weakref__', 'ndframe')
 
     #: The type of :class:`~pandas.core.generic.NDFrame` subclass contained within this class.
-    NDTYPE: ClassVar[Type[pd.DataFrame]] = pd.DataFrame
+    NDTYPE: ClassVar[type[pd.DataFrame]] = pd.DataFrame
 
     #: The embedded DataFrame.
     ndframe: pd.DataFrame

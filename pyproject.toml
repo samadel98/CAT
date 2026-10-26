@@ -61,8 +61,7 @@ test = [
     "build",
 ]
 lint = [
-    "flake8>=5.0",
-    "pydocstyle[toml]>=6.1",
+    "ruff>=0.15",
     "mypy",
 ]
 
@@ -92,7 +91,25 @@ markers = ["slow: A marker for slow tests."]
 branch = true
 source = ["dataCAT"]
 
-[tool.pydocstyle]
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# pycodestyle, Pyflakes, pydocstyle, pyupgrade, flake8-bugbear, flake8-comprehensions
+# and flake8-simplify
+select = ["E", "F", "W", "D", "UP", "B", "C4", "SIM"]
+ignore = [
+    "D401",  # First line of a docstring in imperative mood
+    "B905",  # `zip()` without `strict=`
+    "SIM118",  # `key in dict.keys()`; `PDBContainer.keys()` is a classmethod
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"conftest.py" = ["D"]
+"tools/*" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"
-add-ignore = ["D401"]
-ignore-decorators = "overload"
+ignore-decorators = ["typing.overload"]
