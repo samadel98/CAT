@@ -1,7 +1,7 @@
 .. image:: https://github.com/samadel98/nano-CAT/actions/workflows/pythonpackage.yml/badge.svg?branch=master
    :target: https://github.com/samadel98/nano-CAT/actions/workflows/pythonpackage.yml?query=branch%3Amaster
-.. image:: https://readthedocs.org/projects/cat/badge/?version=latest
-   :target: https://cat.readthedocs.io/en/latest/
+.. image:: https://github.com/samadel98/CAT/actions/workflows/docs.yml/badge.svg?branch=master
+   :target: https://samadel98.github.io/CAT/
 .. image:: https://badge.fury.io/py/nano-CAT.svg
    :target: https://badge.fury.io/py/nano-CAT
 

@@ -187,7 +187,10 @@ def _asa_uff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecule
     UFF(mol_min, ignoreInterfragInteractions=False).Minimize()
     E_ligand_opt = UFF(mol_min, ignoreInterfragInteractions=False).CalcEnergy()
 
-    E_core = UFF(molkit.to_rdmol(core), ignoreInterfragInteractions=False).CalcEnergy()
+    # Keep a reference to the RDKit molecule: the force field does not keep it alive,
+    # so a temporary molecule is freed before `CalcEnergy()` reads it (segfault)
+    rd_core = molkit.to_rdmol(core)
+    E_core = UFF(rd_core, ignoreInterfragInteractions=False).CalcEnergy()
     return E_complete, E_ligands, E_core, E_ligand_opt, ligand_count
 
 

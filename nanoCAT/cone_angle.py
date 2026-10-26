@@ -36,8 +36,6 @@ def init_cone_angle(ligand_df: SettingsDataFrame) -> None:
     workflow.keep_files = False
     dist = ligand_df.settings.optional.ligand.cone_angle.distance
 
-    # Import from the database and start the calculation
-    idx = workflow.from_db(ligand_df)
     if dist.ndim == 0:
         columns = pd.MultiIndex.from_tuples(
             [("cone_angle", f"dist={dist}")], names=ligand_df.columns.names
@@ -46,9 +44,12 @@ def init_cone_angle(ligand_df: SettingsDataFrame) -> None:
         columns = pd.MultiIndex.from_tuples(
             [("cone_angle", f"dist={i}") for i in dist], names=ligand_df.columns.names
         )
-    del ligand_df[CONE_ANGLE]
-    for i in columns:
-        ligand_df[i] = np.nan
+    if CONE_ANGLE in ligand_df.columns and CONE_ANGLE not in columns:
+        del ligand_df[CONE_ANGLE]
+
+    # Import the cone angles of all requested distances from the database
+    # and compute the missing ones
+    idx = workflow.from_db(ligand_df, columns={i: np.nan for i in columns})
     workflow(_start_cone_angle, ligand_df, index=idx, columns=columns, surface_dist=dist)
 
     # Export to the database

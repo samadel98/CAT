@@ -62,7 +62,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/samadel98/nano-CAT"
 "Bug Tracker" = "https://github.com/samadel98/nano-CAT/issues"
-Documentation = "https://cat.readthedocs.io/en/latest/"
+Documentation = "https://samadel98.github.io/CAT/"
 
 [project.optional-dependencies]
 lint = [
