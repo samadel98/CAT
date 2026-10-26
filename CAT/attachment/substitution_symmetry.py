@@ -39,10 +39,7 @@ def find_equivalent_atoms(mol, idx=None, idx_substract=0):
         mol = mol.as_array()
 
     # If **idx** is *None*, investigate all atoms in **mol**
-    if idx is None:
-        idx = slice(0, len(mol))
-    else:
-        idx = np.array(idx, dtype=int) - idx_substract
+    idx = slice(0, len(mol)) if idx is None else np.array(idx, dtype=int) - idx_substract
 
     # Create a distance matrix, round it to 2 decimals and isolate all unique rows
     dist = np.around(cdist(mol, mol), decimals=2)

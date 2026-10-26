@@ -39,7 +39,7 @@ def test_sphinx_build() -> None:
     except SphinxWarning as ex:
         str_ex = str(ex)
         if "requests.exceptions.HTTPError" in str_ex:
-            warnings.warn(str_ex)
+            warnings.warn(str_ex, stacklevel=2)
             pytest.xfail(str_ex)
         else:
             raise

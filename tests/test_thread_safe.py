@@ -16,7 +16,7 @@ DB_PATH = PATH / 'database'
 def test_thread_safe() -> None:
     """Tests for the ``optional.database.thread_safe`` option."""
     yaml_path = PATH / 'input4.yaml'
-    with open(yaml_path, 'r') as f:
+    with open(yaml_path) as f:
         arg = Settings(yaml.load(f, Loader=yaml.FullLoader))
 
     arg.path = PATH

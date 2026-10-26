@@ -17,7 +17,8 @@ API
 
 import copy
 import reprlib
-from typing import Iterable, Union, Dict, Tuple, NoReturn, Any, Type
+from typing import NoReturn, Any
+from collections.abc import Iterable
 from contextlib import AbstractContextManager
 
 from scm.plams import Molecule, Atom, PT, Bond, MoleculeError, PTError, rotation_matrix
@@ -121,8 +122,8 @@ class SplitMol(AbstractContextManager):
 
     """
 
-    def __init__(self, mol: Molecule, bond_list: Union[Bond, Iterable[Bond]],
-                 cap_type: Union[str, int, Atom] = 'H') -> None:
+    def __init__(self, mol: Molecule, bond_list: Bond | Iterable[Bond],
+                 cap_type: str | int | Atom = 'H') -> None:
         """Initialize a :class:`SplitMol` instance."""
         self.mol = mol
         self.bonds = bond_list
@@ -136,16 +137,16 @@ class SplitMol(AbstractContextManager):
     """####################################### Properties #######################################"""
 
     @property
-    def bonds(self) -> Dict[Bond, None]:
+    def bonds(self) -> dict[Bond, None]:
         """Getter: Return :attr:`SplitMol.bonds`. Setter: Assign the provided value as a dictionary with bonds as keys and their matching index as value."""  # noqa
         return self._bonds
 
     @bonds.setter
-    def bonds(self, value: Union[Bond, Iterable[Bond]]) -> None:
+    def bonds(self, value: Bond | Iterable[Bond]) -> None:
         if isinstance(value, Bond):
             self._bonds = {value: None}
         else:
-            self._bonds = {i: None for i in value}
+            self._bonds = dict.fromkeys(value)
 
     @property
     def cap_type(self) -> str:
@@ -153,7 +154,7 @@ class SplitMol(AbstractContextManager):
         return self._cap_type
 
     @cap_type.setter
-    def cap_type(self, value: Union[str, int, Atom]) -> None:
+    def cap_type(self, value: str | int | Atom) -> None:
         if isinstance(value, int):
             self._cap_type = PT.get_symbol(value)
 
@@ -170,7 +171,7 @@ class SplitMol(AbstractContextManager):
 
     """Methods for manipulating the molecule."""
 
-    def cap_fragments(self, bond: Bond) -> Dict[Atom, Atom]:
+    def cap_fragments(self, bond: Bond) -> dict[Atom, Atom]:
         """Delete a bond from :attr:`SplitMol.mol` and cap the resulting fragments with :attr:`SplitMol.cap_type`.
 
         Parameters
@@ -294,7 +295,7 @@ class SplitMol(AbstractContextManager):
 
     """############################# Context manager magic methods #############################"""
 
-    def __enter__(self) -> Tuple[Molecule]:
+    def __enter__(self) -> tuple[Molecule, ...]:
         """Enter the :class:`SplitMol` context manager; return a list of molecules."""
         # Create a backup of mols' instance variables
         mol = self.mol
@@ -332,7 +333,7 @@ class FrozenList(list):
     """A list subclass that will raise a |MoleculeError| upon modification of an instance."""
 
     def __init__(self, *args,
-                 exc_type: Type[Exception] = MoleculeError,
+                 exc_type: type[Exception] = MoleculeError,
                  exc_msg: str = ("'Molecule' objects are inaccessible while opened in "
                                  "the 'SplitMol' context manager"),
                  **kwargs) -> None:

@@ -15,7 +15,7 @@ API
 
 """
 
-from typing import Iterable, Union, Sequence
+from collections.abc import Iterable, Sequence
 from contextlib import AbstractContextManager
 from collections import abc
 
@@ -78,7 +78,7 @@ class AsArray(AbstractContextManager):
     """
 
     @property
-    def mol(self) -> Union[Molecule, Sequence[Atom]]:
+    def mol(self) -> Molecule | Sequence[Atom]:
         """Get or set the embedded molecule."""
         return self._mol
 

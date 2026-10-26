@@ -119,11 +119,8 @@ jobs:
             -   name: Installed packages
                 run: pip list
 
-            -   name: Run flake8
-                run: flake8 CAT tests
-
-            -   name: Run pydocstyle
-                run: pydocstyle CAT tests
+            -   name: Run ruff
+                run: ruff check --output-format=github .
 
     Type-check:
         runs-on: ubuntu-latest

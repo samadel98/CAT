@@ -26,7 +26,6 @@ API
 
 import os
 import io
-import sys
 import enum
 import yaml
 import inspect
@@ -43,9 +42,9 @@ from itertools import cycle, chain, repeat
 from contextlib import redirect_stdout
 from collections import abc, Counter
 from typing import (
-    Iterable, Union, TypeVar, Mapping, Type, Generator, Iterator, Optional,
-    Any, NoReturn, Dict, overload, Callable, NamedTuple, Tuple,
+    Union, TypeVar, Any, NoReturn, overload, NamedTuple,
 )
+from collections.abc import Iterable, Mapping, Generator, Iterator, Callable
 
 import numpy as np
 from scipy.spatial import cKDTree
@@ -65,10 +64,7 @@ from .mol_utils import to_atnum, rdkit_props
 from .gen_job_manager import GenJobManager
 from ._mol_str_parser import FormatEnum
 
-if sys.version_info >= (3, 8):
-    pformat = functools.partial(pprint.pformat, sort_dicts=False, compact=True)
-else:
-    pformat = functools.partial(pprint.pformat, compact=True)
+pformat = functools.partial(pprint.pformat, sort_dicts=False, compact=True)
 
 __all__ = [
     'JOB_MAP', 'check_sys_var', 'dict_concatenate', 'get_template',
@@ -77,7 +73,7 @@ __all__ = [
     'AllignmentTup', 'FormatEnum',
 ]
 
-JOB_MAP: Mapping[Type[Job], str] = MappingProxyType({
+JOB_MAP: Mapping[type[Job], str] = MappingProxyType({
     k: v for k, v in [
         (ADFJob, 'adf'),
         (AMSJob, 'ams'),
@@ -94,10 +90,10 @@ T2 = TypeVar('T2')
 KT = TypeVar('KT')
 VT = TypeVar('VT')
 P = TypeVar('P', str, bytes, os.PathLike)
-Dtype = Union[type, str, np.dtype]
+Dtype = type | str | np.dtype
 
 
-def type_to_string(job: Type[Job]) -> str:
+def type_to_string(job: type[Job]) -> str:
     """Turn a :class:`type` instance into a :class:`str`."""
     try:
         return JOB_MAP[job]
@@ -126,13 +122,13 @@ def check_sys_var() -> None:
             logger.error(f"The environment variable {sys_var[i]!r} has not been set")
 
     if not all(sys_var_exists):
-        raise EnvironmentError('One or more AMS environment variables have not been set, '
+        raise OSError('One or more AMS environment variables have not been set, '
                                'aborting AMS job')
 
 
-def dict_concatenate(dict_list: Iterable[Mapping[KT, VT]]) -> Dict[KT, VT]:
+def dict_concatenate(dict_list: Iterable[Mapping[KT, VT]]) -> dict[KT, VT]:
     """Concatenates a list of dictionaries."""
-    ret: Dict[KT, VT] = {}
+    ret: dict[KT, VT] = {}
     for item in dict_list:
         ret.update(item)
     return ret
@@ -143,9 +139,9 @@ def get_template(template_name: str, from_cat_data: bool = True) -> Settings:
     if from_cat_data:
         path = join('data', 'templates', template_name)
         xs = os.path.dirname(__file__)
-        with open(os.path.join(xs, path), "r", encoding="utf8") as f:
+        with open(os.path.join(xs, path), encoding="utf8") as f:
             return Settings(yaml.load(f.read(), Loader=yaml.FullLoader))
-    with open(template_name, 'r') as file:
+    with open(template_name) as file:
         return Settings(yaml.load(file, Loader=yaml.FullLoader))
 
 
@@ -193,7 +189,7 @@ def validate_path(path):  # noqa: E302
 def validate_core_atom(atom: int) -> int:
     ...
 @overload  # noqa: E302
-def validate_core_atom(atom: str) -> Union[Molecule, int]:
+def validate_core_atom(atom: str) -> Molecule | int:
     ...
 def validate_core_atom(atom):  # noqa: E302
     """Parse and validate the ``["optional"]["qd"]["dissociate"]["core_atom"]`` argument."""
@@ -221,7 +217,7 @@ def validate_core_atom(atom):  # noqa: E302
 
     # Only a single charged atom is allowed
     if len(charge_dict) > 1:
-        charge_count = sum([v for v in charge_dict.values()])
+        charge_count = sum(charge_dict.values())
         raise MoleculeError(f'The SMILES string {repr(atom)} contains more than one charged atom: '
                             f'charged atom count: {charge_count}')
     return mol
@@ -392,9 +388,9 @@ def iter_repeat(iterable: Iterable[T1], times: int) -> Iterator[T1]:
     return chain.from_iterable(repeat(i, times) for i in iterable)
 
 
-def get_nearest_neighbors(center: Union[Molecule, np.ndarray],
-                          neighbor: Union[Molecule, np.ndarray],
-                          k: Union[int, Iterable[int]],
+def get_nearest_neighbors(center: Molecule | np.ndarray,
+                          neighbor: Molecule | np.ndarray,
+                          k: int | Iterable[int],
                           distance_upper_bound: float = np.inf,
                           return_dist: bool = False, **kwargs: Any) -> np.ndarray:
     r"""Return the :math:`k` nearest-neighbors (from **neighbor**) for all user-specified atoms in **center**.
@@ -482,7 +478,7 @@ class SetEnviron:
 
     __slots__ = ('__weakref__', '_kwargs', '_kwargs_old')
     _kwargs: Mapping[str, str]
-    _kwargs_old: Mapping[str, Optional[str]]
+    _kwargs_old: Mapping[str, str | None]
 
     def __init__(self, **kwargs: str) -> None:
         r"""Initialize the context manager.
@@ -504,9 +500,9 @@ class SetEnviron:
 
     def __exit__(
         self,
-        __exc_type: Optional[Type[BaseException]],
-        __exc_value: Optional[BaseException],
-        __traceback: Optional[TracebackType],
+        __exc_type: type[BaseException] | None,
+        __exc_value: BaseException | None,
+        __traceback: TracebackType | None,
     ) -> None:
         """Exit the context manager."""
         for k, v in self._kwargs_old.items():
@@ -593,13 +589,13 @@ class AnchorTup(NamedTuple):
     group: "None | str" = None
 
     #: The indices of the anchoring atom(s) in :attr:`AnchorTup.group`.
-    group_idx: Tuple[int, ...] = (0,)
+    group_idx: tuple[int, ...] = (0,)
 
     #: The indices of the anchor inside a specific core or ligand.
-    anchor_idx: Tuple[int, ...] = ()
+    anchor_idx: tuple[int, ...] = ()
 
     #: The indices of the to-be removed atoms in :attr:`AnchorTup.group`.
-    remove: "None | Tuple[int, ...]" = None
+    remove: "None | tuple[int, ...]" = None
 
     #: How atoms are to-be attached when multiple anchor atoms are
     #: specified in :attr:`AnchorTup.group_idx`.

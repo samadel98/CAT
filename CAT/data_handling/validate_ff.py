@@ -13,7 +13,8 @@ API
 """  # noqa: E501
 
 import reprlib
-from typing import Union, Any, Mapping, TypeVar, Optional
+from typing import Any, TypeVar
+from collections.abc import Mapping
 from collections import abc
 
 from scm.plams import Settings, Cp2kJob
@@ -23,16 +24,16 @@ from CAT.utils import get_template
 try:
     from nanoCAT.ff.cp2k_utils import set_cp2k_param
 except Exception as ex:  # A broken Nano-CAT install should not break `import CAT`
-    NANO_CAT: Optional[Exception] = ex
+    NANO_CAT: Exception | None = ex
 else:
-    NANO_CAT: Optional[Exception] = None
+    NANO_CAT: Exception | None = None
 
 __all__ = ['validate_ff', 'update_ff_jobs']
 
 M = TypeVar('M', bound=Mapping)
 
 
-def validate_ff(s: M) -> Union[M, bool]:
+def validate_ff(s: M) -> M | bool:
     """Validate the ``["optional"]["forcefield"]`` block in the CAT input.
 
     Return ``False`` if an empty dictionary is provided.
@@ -112,16 +113,20 @@ def update_ff_jobs(s: Settings) -> None:
             optimize.s2 += ff
 
     dissociate = s.optional.qd.dissociate
-    if dissociate and dissociate.use_ff:
-        if dissociate.job1 and str(dissociate.job1) == str(Cp2kJob):
-            dissociate.s1 = Settings() if dissociate.s1 is None else dissociate.s1
-            dissociate.s1 += get_template('qd.yaml')['CP2K_CHARM_opt']
-            dissociate.s1 += ff
+    if (
+        dissociate and dissociate.use_ff
+        and dissociate.job1 and str(dissociate.job1) == str(Cp2kJob)
+    ):
+        dissociate.s1 = Settings() if dissociate.s1 is None else dissociate.s1
+        dissociate.s1 += get_template('qd.yaml')['CP2K_CHARM_opt']
+        dissociate.s1 += ff
 
     activation_strain = s.optional.qd.activation_strain
-    if activation_strain and activation_strain.use_ff:
-        if activation_strain.job1 and str(activation_strain.job1) == str(Cp2kJob):
-            key = 'CP2K_CHARM_singlepoint' if not activation_strain.md else 'CP2K_CHARM_md'
-            activation_strain.s1 = Settings() if activation_strain.s1 is None else activation_strain.s1  # noqa
-            activation_strain.s1 += get_template('qd.yaml')[key]
-            activation_strain.s1 += ff
+    if (
+        activation_strain and activation_strain.use_ff
+        and activation_strain.job1 and str(activation_strain.job1) == str(Cp2kJob)
+    ):
+        key = 'CP2K_CHARM_singlepoint' if not activation_strain.md else 'CP2K_CHARM_md'
+        activation_strain.s1 = Settings() if activation_strain.s1 is None else activation_strain.s1
+        activation_strain.s1 += get_template('qd.yaml')[key]
+        activation_strain.s1 += ff

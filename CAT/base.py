@@ -23,7 +23,6 @@ API
 """
 
 from time import time
-from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -61,13 +60,13 @@ try:
         from nanoCAT.cone_angle import init_cone_angle
         from nanoCAT.bulk.mol_graph2 import init_branch_distance
 
-    NANO_CAT: Optional[Exception] = None
+    NANO_CAT: Exception | None = None
 except Exception as ex:  # A broken Nano-CAT install should not break `import CAT`
     NANO_CAT = ex
 
 try:
     import dataCAT
-    DATA_CAT: Optional[Exception] = None
+    DATA_CAT: Exception | None = None
 except Exception as ex:  # A broken Data-CAT install should not break `import CAT`
     DATA_CAT = ex
 
@@ -75,7 +74,7 @@ __all__ = ['prep']
 
 
 def prep(arg: Settings, return_mol: bool = True
-         ) -> Optional[Tuple[SettingsDataFrame, SettingsDataFrame, SettingsDataFrame]]:
+         ) -> tuple[SettingsDataFrame, SettingsDataFrame, SettingsDataFrame] | None:
     """Function that handles all tasks related to the three prep functions.
 
     * :func:`.prep_core`
@@ -136,7 +135,7 @@ def prep(arg: Settings, return_mol: bool = True
     return None
 
 
-def prep_input(arg: Settings) -> Tuple[SettingsDataFrame, SettingsDataFrame, SettingsDataFrame]:
+def prep_input(arg: Settings) -> tuple[SettingsDataFrame, SettingsDataFrame, SettingsDataFrame]:
     """Interpret and extract the input settings. Returns a list of ligands and a list of cores.
 
     Parameters
@@ -158,7 +157,7 @@ def prep_input(arg: Settings) -> Tuple[SettingsDataFrame, SettingsDataFrame, Set
     core_list = read_mol(arg.get('input_cores'))
     qd_list = read_mol(arg.get('input_qd'))
 
-    is_qd = True if qd_list is not None else False
+    is_qd = qd_list is not None
 
     # Raises an error if lig_list or core_list is empty
     if is_qd:
@@ -312,9 +311,9 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     return ligand_df
 
 
-def prep_qd(ligand_df: Optional[SettingsDataFrame],
-            core_df: Optional[SettingsDataFrame],
-            qd_df: Optional[SettingsDataFrame]) -> SettingsDataFrame:
+def prep_qd(ligand_df: SettingsDataFrame | None,
+            core_df: SettingsDataFrame | None,
+            qd_df: SettingsDataFrame | None) -> SettingsDataFrame:
     """Function that handles all quantum dot (qd, i.e. core + all ligands) operations.
 
     * Constructing the quantum dots
@@ -413,7 +412,7 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
     return qd_df
 
 
-def val_nano_cat(error_message: Optional[str] = None) -> None:
+def val_nano_cat(error_message: str | None = None) -> None:
     """Raise an :exc:`ImportError` if Nano-CAT could not be imported (see ``NANO_CAT``)."""
     err = '' if error_message is None else error_message
     if NANO_CAT is not None:

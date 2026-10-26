@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import List
 
 import pytest
 from scm.plams import Cp2kResults, Units
@@ -19,8 +18,8 @@ PATH = Path('tests') / 'test_files' / 'cp2k'
 ], ids=["cp2k_2020", "cp2k_2026"])
 def test_get_energy_freq(mocker, filename: str, ref: float) -> None:
     """Test :meth:`Cp2kResults.get_energy` for frequency analyses."""
-    def grep_output(self, pattern: str = '', options: str = '') -> List[str]:
-        with open(PATH / filename, 'r') as f:
+    def grep_output(self, pattern: str = '', options: str = '') -> list[str]:
+        with open(PATH / filename) as f:
             return [i.rstrip('\n') for i in f if pattern in i]
 
     mocker.patch.object(Cp2kResults, 'grep_output', grep_output)

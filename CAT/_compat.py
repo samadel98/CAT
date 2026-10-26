@@ -3,7 +3,8 @@
 import os
 import importlib
 import itertools
-from typing import Iterable, Optional, Type, Union
+from typing import Union
+from collections.abc import Iterable
 
 import numpy as np
 import scm.plams.interfaces.molecule.rdkit as molkit
@@ -30,7 +31,7 @@ __all__ = [
 #: The value of the ``copy`` parameter in :func:`np.array` for only copying when needed.
 #: This is ``False`` in NumPy 1.x, but NumPy 2 changed its meaning to "never copy"
 #: in favor of ``None``.
-COPY_IF_NEEDED: Optional[bool] = None if np.lib.NumpyVersion(np.__version__) >= "2.0.0" else False
+COPY_IF_NEEDED: bool | None = None if np.lib.NumpyVersion(np.__version__) >= "2.0.0" else False
 
 
 def atoms_as_array(atoms: Iterable[Atom]) -> np.ndarray:
@@ -62,7 +63,7 @@ def get_conformation(rdmol: Chem.Mol) -> Molecule:
     embed molecules with different settings, which would make CAT's geometries depend on the
     PLAMS version.
     """
-    kwargs = dict(pruneRmsThresh=0.1, randomSeed=1, enforceChirality=False)
+    kwargs = {"pruneRmsThresh": 0.1, "randomSeed": 1, "enforceChirality": False}
     try:
         AllChem.EmbedMultipleConfs(rdmol, 1, **kwargs)
     except Exception:
@@ -91,7 +92,7 @@ def readpdb(filename: Union[str, "os.PathLike[str]"]) -> Molecule:
     return molkit.from_rdmol(rdmol)
 
 
-def _import_legacy_job(module: str, name: str) -> Optional[Type[Job]]:
+def _import_legacy_job(module: str, name: str) -> type[Job] | None:
     """Import a job class that newer PLAMS versions removed, returning ``None`` if it is absent."""
     try:
         return getattr(importlib.import_module(f"scm.plams.interfaces.adfsuite.{module}"), name)

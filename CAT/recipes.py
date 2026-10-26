@@ -13,7 +13,7 @@ Examples
 
 """
 
-# flake8: noqa: F403,F401
+# ruff: noqa: F403, F401
 
 try:
     from nanoCAT import recipes as _recipes
@@ -29,7 +29,7 @@ except Exception as ex:  # A broken Nano-CAT install should not break `import CA
 
     _warning = ImportWarning(str(ex))
     _warning.__cause__ = ex
-    _warnings.warn(_warning)
+    _warnings.warn(_warning, stacklevel=2)
     del _warning
     del _warnings
 

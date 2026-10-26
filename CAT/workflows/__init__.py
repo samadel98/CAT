@@ -8,4 +8,4 @@ from .workflow import WorkFlow
 __all__ = ['WorkFlow', 'WORKFLOW_TEMPLATE']
 __all__ += key_map.__all__
 
-# flake8: noqa: F403,F401
+# ruff: noqa: F403, F401

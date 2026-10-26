@@ -20,7 +20,8 @@ API
 
 """
 
-from typing import Tuple, Iterable, Optional, Type, NoReturn, Any
+from typing import NoReturn, Any
+from collections.abc import Iterable
 
 from scm.plams import Molecule, Settings, AMSJob
 from scm.plams.core.basejob import Job
@@ -63,7 +64,7 @@ def init_qd_opt(qd_df: SettingsDataFrame) -> None:
 
 
 def start_qd_opt(mol_list: Iterable[Molecule],
-                 jobs: Tuple[Optional[Type[Job]], ...], settings: Tuple[Optional[Settings], ...],
+                 jobs: tuple[type[Job] | None, ...], settings: tuple[Settings | None, ...],
                  use_ff: bool = False, **kwargs) -> None:
     """Loop over all molecules in **mol_list** and perform geometry optimizations."""
     for mol in mol_list:
@@ -71,8 +72,8 @@ def start_qd_opt(mol_list: Iterable[Molecule],
         qd_opt(mol, jobs, settings, use_ff=use_ff)
 
 
-def qd_opt(mol: Molecule, jobs: Tuple[Optional[Type[Job]], ...],
-           settings: Tuple[Optional[Settings], ...], use_ff: bool = False) -> None:
+def qd_opt(mol: Molecule, jobs: tuple[type[Job] | None, ...],
+           settings: tuple[Settings | None, ...], use_ff: bool = False) -> None:
     """Perform an optimization of the quantum dot.
 
     Performs an inplace update of **mol**.

@@ -12,15 +12,11 @@ API
 
 """
 
-import sys
 from os import mkdir
 from os.path import (join, isdir)
-from typing import Dict, Any
+from typing import Any
 
-if sys.version_info >= (3, 7):
-    from contextlib import nullcontext
-else:
-    from contextlib2 import nullcontext
+from contextlib import nullcontext
 
 import qmflows
 from scm.plams import Settings, Cp2kJob
@@ -83,7 +79,7 @@ def _validate_multi_lig(s: Settings) -> None:
         assert len(f) == len(s.optional.qd.multi_ligand.ligands) - 1
 
 
-def parse_qmflows_keywords(bde_dict: Dict[str, Any]) -> Dict[str, Any]:
+def parse_qmflows_keywords(bde_dict: dict[str, Any]) -> dict[str, Any]:
     """Parse qmflows generic keywords for the BDE workflow."""
     # TODO: Support QM packages other than qmflows
     if bde_dict["job1"] is Cp2kJob:
@@ -182,11 +178,10 @@ def validate_input(s: Settings, validate_only: bool = True) -> None:
             s.optional.qd.optimize = qd_opt_schema.validate(s.optional.qd.optimize)
         if s.optional.qd.dissociate:
             bde_dict = bde_schema.validate(s.optional.qd.dissociate)
-            if (
-                (bde_dict["core_atom"] is bde_dict["lig_count"] is None) or
-                (bde_dict["core_atom"] is not None and bde_dict["lig_count"] is not None)
-            ):
-                raise ValueError("One of `core_atom` and `lig_count` must be specified")
+            if (bde_dict["core_atom"] is None) is (bde_dict["core_index"] is None):
+                raise ValueError("Exactly one of `core_atom` and `core_index` must be specified")
+            elif bde_dict["lig_count"] is None:
+                raise ValueError("`lig_count` must be specified")
             s.optional.qd.dissociate = parse_qmflows_keywords(bde_dict)
         if s.optional.qd.activation_strain:
             s.optional.qd.activation_strain = asa_schema.validate(s.optional.qd.activation_strain)

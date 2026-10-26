@@ -51,7 +51,7 @@ def test_import_ethoxide(fmt: str, tmp_path: Path) -> None:
 
     # 26 ligands, each in its own residue, with bonds from the SMILES string only
     residues = Counter(rdkit_props(at).pdb_info.ResidueNumber for at in qd)
-    assert residues == {1: 123, **{i: 8 for i in range(2, 28)}}
+    assert residues == {1: 123, **dict.fromkeys(range(2, 28), 8)}
     assert len(qd.bonds) == 26 * 7
 
     # The anchors are oxygens with a formal charge of -1, next to the core

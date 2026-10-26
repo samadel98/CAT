@@ -2,7 +2,8 @@
 
 import re
 import operator
-from typing import Union, Tuple, Iterable, SupportsFloat
+from typing import Union, SupportsFloat
+from collections.abc import Iterable
 
 from rdkit import Chem
 from scm.plams import Units, PT
@@ -31,8 +32,8 @@ class _UnparsedAnchorDict(_UnparsedAnchorDictBase, total=False):
 
 class _AnchorDict(TypedDict):
     group: str
-    group_idx: Tuple[int, ...]
-    remove: "None | Tuple[int, ...]"
+    group_idx: tuple[int, ...]
+    remove: "None | tuple[int, ...]"
     kind: KindEnum
     angle_offset: "None | float"
     dihedral: "None | float"
@@ -40,7 +41,7 @@ class _AnchorDict(TypedDict):
     multi_anchor_filter: MultiAnchorEnum
 
 
-def _parse_group_idx(item: "SupportsIndex | Iterable[SupportsIndex]") -> Tuple[int, ...]:
+def _parse_group_idx(item: "SupportsIndex | Iterable[SupportsIndex]") -> tuple[int, ...]:
     """Parse the ``group_idx`` option."""
     try:
         return (operator.index(item),)
@@ -58,7 +59,7 @@ def _parse_group_idx(item: "SupportsIndex | Iterable[SupportsIndex]") -> Tuple[i
 
 def _parse_remove(
     item: "None | SupportsIndex | Iterable[SupportsIndex]"
-) -> "None | Tuple[int, ...]":
+) -> "None | tuple[int, ...]":
     """Parse the ``remove`` option."""
     if item is None:
         return None
@@ -180,7 +181,7 @@ def parse_anchors(
     ] = None,
     split: bool = True,
     is_core: bool = False,
-) -> Tuple[AnchorTup, ...]:
+) -> tuple[AnchorTup, ...]:
     """Parse the user-specified anchors."""
     if patterns is None:
         if is_core:
@@ -195,7 +196,7 @@ def parse_anchors(
             ret.append(p)
         elif isinstance(p, Chem.Mol):
             mol = p
-            remove: "None | Tuple[int, ...]" = (
+            remove: None | tuple[int, ...] = (
                 None if not split else (list(mol.GetAtoms())[-1].GetIdx(),)
             )
             ret.append(AnchorTup(mol=mol, remove=remove))
@@ -208,10 +209,7 @@ def parse_anchors(
             dihedral = kwargs["dihedral"]
             group_parser = kwargs["group_format"].value
             group = kwargs["group"]
-            if group in INVALID_SMILES_ATOMS:
-                mol = _symbol_to_rdmol(group)
-            else:
-                mol = group_parser(group)
+            mol = _symbol_to_rdmol(group) if group in INVALID_SMILES_ATOMS else group_parser(group)
 
             # Dihedral and angle-offset options are not supported for core anchors
             if is_core:

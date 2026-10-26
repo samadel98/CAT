@@ -20,7 +20,7 @@ import os
 import errno
 import hashlib
 from types import MappingProxyType
-from typing import Iterable, Container, Union, Callable
+from collections.abc import Iterable, Container, Callable
 from os.path import join, isdir, isfile, exists
 
 from rdkit import Chem, Geometry
@@ -32,10 +32,10 @@ from ..mol_utils import rdkit_props
 
 __all__ = ['mol_to_file', 'write_pdb', 'shorten_filename']
 
-MolExportFunc = Callable[[Molecule, Union[str, bytes, os.PathLike]], None]
+MolExportFunc = Callable[[Molecule, str | bytes | os.PathLike], None]
 
 
-def write_pdb(mol: Molecule, filename: Union[str, bytes, os.PathLike]) -> None:
+def write_pdb(mol: Molecule, filename: str | bytes | os.PathLike) -> None:
     """Write **mol** to a .pdb file.
 
     Produces the same file as PLAMS' :func:`~scm.plams.interfaces.molecule.rdkit.writepdb`,

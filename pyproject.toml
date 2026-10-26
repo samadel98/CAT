@@ -84,9 +84,7 @@ docs = [
     "sphinx_rtd_theme",
 ]
 lint = [
-    "flake8>=3.8.0",
-    "pydocstyle[toml]>=6.1",
-    "Flake8-pyproject>=1.2.2",
+    "ruff>=0.15",
 ]
 
 [tool.setuptools.packages.find]
@@ -126,16 +124,28 @@ module = [
 ]
 ignore_missing_imports = true
 
-[tool.pydocstyle]
-convention = "numpy"
-add_ignore = ["D401"]
-ignore_decorators = "overload"
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["docs/conf.py"]
 
-[tool.flake8]
-max-line-length = 100
-per-file-ignores = [
-    "CAT/test_utils.py: E501",
+[tool.ruff.lint]
+# pycodestyle, Pyflakes, pydocstyle, pyupgrade, flake8-bugbear, flake8-comprehensions
+# and flake8-simplify
+select = ["E", "F", "W", "D", "UP", "B", "C4", "SIM"]
+ignore = [
+    "D401",  # First line of a docstring in imperative mood
+    "B905",  # `zip()` without `strict=`
+    "SIM300",  # Yoda conditions; also flags comparisons with constructor calls, such as `Version()`
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"CAT/test_utils.py" = ["E501"]
+"tests/test_*.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+ignore-decorators = ["typing.overload"]
 
 [tool.pytest.ini_options]
 testpaths = ["CAT", "tests"]

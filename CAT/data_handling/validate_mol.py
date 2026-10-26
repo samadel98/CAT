@@ -19,7 +19,8 @@ API
 """  # noqa: E501
 
 from os.path import join, isfile, isdir, basename
-from typing import Sequence, Any, Union, Optional
+from typing import Any
+from collections.abc import Sequence
 
 from rdkit import Chem
 from scm.plams import Settings, Molecule
@@ -41,15 +42,14 @@ def santize_smiles(smiles: str) -> str:
             cis_trans_dict = {'//': 'trans-', '/\\': 'cis-'}
             for item in cis_trans[::-1]:
                 name = cis_trans_dict[item] + name
-    except KeyError:
+    except (KeyError, IndexError):  # Unpaired or unsupported bond directions
         pass
-    finally:
-        return name.replace('/', '').replace('\\', '')
+    return name.replace('/', '').replace('\\', '')
 
 
-def validate_mol(args: Sequence[Union[Any, Settings]],
+def validate_mol(args: Sequence[Any | Settings],
                  mol_type: str,
-                 path: Optional[str] = None,
+                 path: str | None = None,
                  validate_path: bool = True) -> None:
     r"""Validate the ``"input_ligands"``, ``"input_cores"`` and ``"input_qd"`` blocks in the input.
 
@@ -145,10 +145,7 @@ def validate_mol(args: Sequence[Union[Any, Settings]],
     # Validate arguments
     is_core = _check_core(mol_type)
     is_qd = _check_qd(mol_type)
-    if validate_path:
-        _path = validate_path_func(path)
-    else:
-        _path = path
+    _path = validate_path_func(path) if validate_path else path
 
     for i, dict_ in enumerate(args):
         if not isinstance(dict_, dict):  # No optional arguments provided

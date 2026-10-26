@@ -1,7 +1,6 @@
 """Tests for the various workflows within the CAT package."""
 
 from pathlib import Path
-from typing import Optional
 
 import yaml
 import pytest
@@ -12,7 +11,7 @@ from CAT.base import prep
 
 try:
     import nanoCAT  # noqa: F401
-    NANOCAT_EX: Optional[ImportError] = None
+    NANOCAT_EX: ImportError | None = None
 except ImportError as ex:
     NANOCAT_EX = ex
 
@@ -27,7 +26,7 @@ DB_PATH = PATH / 'database'
 def test_cat_fail() -> None:
     """Tests for the CAT package."""
     yaml_path = PATH / 'CAT.yaml'
-    with open(yaml_path, 'r') as f:
+    with open(yaml_path) as f:
         arg = Settings(yaml.load(f, Loader=yaml.FullLoader))
 
     arg.path = PATH
@@ -47,7 +46,7 @@ def test_cat_fail() -> None:
 def test_cat() -> None:
     """Tests for the CAT package."""
     yaml_path = PATH / 'CAT.yaml'
-    with open(yaml_path, 'r') as f:
+    with open(yaml_path) as f:
         arg = Settings(yaml.load(f, Loader=yaml.FullLoader))
 
     arg.path = PATH
@@ -59,7 +58,7 @@ def test_cat() -> None:
      "Ligand cone angle calculations require the nano-CAT package"),
     (None, ""),
 ])
-def test_val_nano_cat(monkeypatch: pytest.MonkeyPatch, msg: Optional[str], ref: str) -> None:
+def test_val_nano_cat(monkeypatch: pytest.MonkeyPatch, msg: str | None, ref: str) -> None:
     """Test that :func:`CAT.base.val_nano_cat` keeps its error message."""
     from CAT import base
 

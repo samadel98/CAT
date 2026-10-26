@@ -5,6 +5,7 @@ from pathlib import Path
 
 import yaml
 import pytest
+from schema import SchemaError
 from scm.plams import Settings
 
 from CAT.data_handling.entry_points import main, check_input, get_input_template
@@ -55,7 +56,7 @@ def test_invalid(input_file: Path) -> None:
     s = yaml.safe_load(input_file.read_text())
     s['optional']['qd']['optimize'] = 'bob'
     input_file.write_text(yaml.safe_dump(s))
-    with pytest.raises(Exception):
+    with pytest.raises(SchemaError):
         main(['--validate', str(input_file)])
     with pytest.raises(SystemExit):
         main([])

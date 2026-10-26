@@ -117,8 +117,8 @@ def _compare_atnums(
 
 def _compare_lattice(actual: Molecule, desired: Molecule, rtol: float, atol: float) -> np.bool_:
     """Compare the lattice vectors of two Molecules."""
-    a_lat: "None | ArrayLike" = actual.lattice
-    b_lat: "None | ArrayLike" = desired.lattice
+    a_lat: None | ArrayLike = actual.lattice
+    b_lat: None | ArrayLike = desired.lattice
     if a_lat is b_lat is None:
         return np.True_
     elif (a_lat is None and b_lat is not None) or (b_lat is None and a_lat is not None):

@@ -24,7 +24,7 @@ API
 
 from itertools import chain, repeat
 from collections import defaultdict
-from typing import Sequence, List, Tuple, Iterable, Callable, Iterator
+from collections.abc import Sequence, Iterable, Callable, Iterator
 
 import pandas as pd
 
@@ -122,7 +122,7 @@ def _get_df(
 def get_functional_groups(
     functional_groups: "None | Iterable[str]" = None,
     split: bool = True,
-) -> Tuple[Chem.Mol, ...]:
+) -> tuple[Chem.Mol, ...]:
     """Construct a list of RDKit molecules representing functional groups.
 
     Parameters
@@ -162,7 +162,7 @@ def find_substructure(
     func_groups: Iterable[AnchorTup],
     split: bool = True,
     condition: "None | Callable[[int], bool]" = None,
-) -> List[Molecule]:
+) -> list[Molecule]:
     """Identify interesting functional groups within the ligand.
 
     Parameters
@@ -184,7 +184,7 @@ def find_substructure(
     rdmol = molkit.to_rdmol(ligand, properties=False)
 
     # Searches for functional groups (defined by functional_group_list) within the ligand
-    matches: Iterator[Tuple[AnchorTup, Tuple[int, ...]]] = chain.from_iterable(
+    matches: Iterator[tuple[AnchorTup, tuple[int, ...]]] = chain.from_iterable(
         zip(repeat(anchor_tup), rdmol.GetSubstructMatches(anchor_tup.mol, useChirality=True))
         for anchor_tup in func_groups
     )
@@ -241,7 +241,7 @@ def find_substructure(
 
 def substructure_split(
     ligand: Molecule,
-    idx_tup: Tuple[int, ...],
+    idx_tup: tuple[int, ...],
     anchor_tup: AnchorTup,
 ) -> Molecule:
     """Delete the hydrogen or mono-/polyatomic counterion attached to the functional group.
@@ -272,7 +272,7 @@ def substructure_split(
         for i in remove_iter:
             lig.delete_atom(lig[i])
 
-        mol_list: Tuple[Molecule, ...] = lig.separate_mod()
+        mol_list: tuple[Molecule, ...] = lig.separate_mod()
         for mol in mol_list:
             if anchor not in mol:
                 continue

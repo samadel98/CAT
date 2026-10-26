@@ -25,7 +25,8 @@ import argparse
 from os import getcwd
 from os.path import join, exists
 from importlib import resources
-from typing import Any, Optional, List, Iterable, Tuple
+from typing import Any
+from collections.abc import Iterable
 
 import yaml
 
@@ -57,7 +58,7 @@ def extract_args(args: Any) -> Settings:
         input_file2 = join(getcwd(), input_file)
         raise FileNotFoundError(f'No file found at {input_file} or {input_file2}')
 
-    with open(input_file, 'r') as file:
+    with open(input_file) as file:
         return Settings(yaml.load(file, Loader=yaml.FullLoader))
 
 
@@ -79,7 +80,7 @@ def get_input_template() -> str:
     return ref.read_text(encoding='utf-8')
 
 
-def _job_names(block: Any, keys: Iterable[str] = ('job1', 'job2')) -> List[str]:
+def _job_names(block: Any, keys: Iterable[str] = ('job1', 'job2')) -> list[str]:
     """Return the names of the PLAMS jobs in a validated workflow block."""
     if not isinstance(block, dict):
         return []
@@ -91,7 +92,7 @@ def _job_names(block: Any, keys: Iterable[str] = ('job1', 'job2')) -> List[str]:
     return ret
 
 
-def _get_workflows(s: Settings) -> List[Tuple[str, List[str], bool]]:
+def _get_workflows(s: Settings) -> list[tuple[str, list[str], bool]]:
     """Return the name, jobs and whether Nano-CAT is required of every enabled workflow."""
     lig = s.optional.ligand
     qd = s.optional.qd
@@ -179,7 +180,7 @@ def check_input(s: Settings, read_molecules: bool = False) -> str:
     return '\n'.join(lines)
 
 
-def _log_summary(s: Settings, ret: Optional[tuple]) -> None:
+def _log_summary(s: Settings, ret: tuple | None) -> None:
     """Log the number of molecules produced by :func:`CAT.base.prep`."""
     if ret is None:
         return
@@ -193,7 +194,7 @@ def _log_summary(s: Settings, ret: Optional[tuple]) -> None:
         logger.info('Results: ' + ', '.join(parts))
 
 
-def main(args: Optional[List[str]] = None) -> None:
+def main(args: list[str] | None = None) -> None:
     """Launch CAT via the command line."""
     parser = argparse.ArgumentParser(
         prog='init_cat',

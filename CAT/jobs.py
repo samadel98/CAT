@@ -29,8 +29,8 @@ API
 """
 
 import re
+import contextlib
 from shutil import rmtree
-from typing import (Optional, Type)
 from os.path import join
 
 import numpy as np
@@ -51,7 +51,7 @@ __all__ = ['job_single_point', 'job_geometry_opt', 'job_freq']
 
 
 @add_to_class(Cp2kResults)
-def get_main_molecule(self) -> Optional[Molecule]:
+def get_main_molecule(self) -> Molecule | None:
     try:
         filename = self.files['cp2k-pos-1.xyz']
         return _xyz_to_mol(filename)
@@ -72,10 +72,9 @@ def get_frequencies(self, unit: str = "cm-1") -> np.ndarray:
 
 def _xyz_to_mol(filename: str) -> Molecule:
     """Grab the last geometry from an .xyz file and return it as a :class:`Molecule` instance."""
-    with open(filename, 'r') as f:
+    with open(filename) as f:
         atom_count = int(next(f))
-        for line_count, _ in enumerate(f, 2):
-            pass
+        line_count = 1 + sum(1 for _ in f)
 
     mol_count = line_count // (2 + atom_count)
     return Molecule(filename, geometry=mol_count)
@@ -89,7 +88,7 @@ def get_energy(
     self,
     index: int = -1,
     unit: str = 'Hartree',
-    job_preset: Optional[str] = None,
+    job_preset: str | None = None,
 ) -> float:
     """Return the energy of the last occurence of ``'ENERGY| Total FORCE_EVAL'`` in the output."""
     if job_preset == 'frequency analysis':
@@ -116,7 +115,7 @@ def _get_name(name: str) -> str:
 
 
 def pre_process_settings(mol: Molecule, s: Settings,
-                         job_type: Type[Job], template_name: str) -> Settings:
+                         job_type: type[Job], template_name: str) -> Settings:
     """Update all :class:`Settings`, **s**, with those from a QMFlows template (see **job**)."""
     ret = Settings()
     type_key = type_to_string(job_type)
@@ -235,7 +234,7 @@ def retrieve_results(mol: Molecule, results: Results, job_preset: str) -> None:
 def _get_results_error(results: Results) -> ResultsError:
     """Raise a :exc:`ResultsError` with the content of ``results['$JN.err']`` as error mesage."""
     filename = results['$JN.err']
-    with open(filename, 'r') as f:
+    with open(filename) as f:
         iterator = (i.rstrip('\n') for i in f)
         for item in iterator:
             if item:
@@ -269,11 +268,9 @@ def _finalize(self):
                 if self.settings.pickle:
                     self.pickle()
                     filename = join(self.path, f'{self.name}.hash')
-                    with open(filename, 'w') as f:
-                        try:  # Will raise a TypeError if rerun prevetion is disabled
-                            f.write(self.hash())
-                        except TypeError:
-                            pass
+                    # `hash()` raises a TypeError if rerun prevention is disabled
+                    with open(filename, 'w') as f, contextlib.suppress(TypeError):
+                        f.write(self.hash())
             else:
                 self.status = 'failed'
     else:
@@ -288,11 +285,11 @@ def _finalize(self):
 
 
 @add_to_class(Molecule)
-def job_single_point(self, job_type: Type[Job],
+def job_single_point(self, job_type: type[Job],
                      settings: Settings,
                      name: str = 'Single_point',
                      ret_results: bool = False,
-                     read_template: bool = True) -> Optional[Results]:
+                     read_template: bool = True) -> Results | None:
     """Function for running an arbritrary jobs, extracting total energies.
 
     Paramaters
@@ -344,11 +341,11 @@ def job_single_point(self, job_type: Type[Job],
 
 
 @add_to_class(Molecule)
-def job_geometry_opt(self, job_type: Type[Job],
+def job_geometry_opt(self, job_type: type[Job],
                      settings: Settings,
                      name: str = 'Geometry_optimization',
                      ret_results: bool = False,
-                     read_template: bool = True) -> Optional[Results]:
+                     read_template: bool = True) -> Results | None:
     """Function for running an arbritrary jobs, extracting total energies and final geometries.
 
     Paramaters
@@ -400,11 +397,11 @@ def job_geometry_opt(self, job_type: Type[Job],
 
 
 @add_to_class(Molecule)
-def job_md(self, job_type: Type[Job],
+def job_md(self, job_type: type[Job],
            settings: Settings,
            name: str = 'MD',
            ret_results: bool = False,
-           read_template: bool = False) -> Optional[Results]:
+           read_template: bool = False) -> Results | None:
     """Function for running an arbritrary jobs, extracting total energies and final geometries.
 
     Paramaters
@@ -455,12 +452,12 @@ def job_md(self, job_type: Type[Job],
 
 
 @add_to_class(Molecule)
-def job_freq(self, job_type: Type[Job],
+def job_freq(self, job_type: type[Job],
              settings: Settings,
              name: str = 'Frequency_analysis',
              opt: bool = True,
              ret_results: bool = False,
-             read_template: bool = True) -> Optional[Results]:
+             read_template: bool = True) -> Results | None:
     """Function for running an arbritrary Jobs.
 
     Extracts total energies, final geometries and

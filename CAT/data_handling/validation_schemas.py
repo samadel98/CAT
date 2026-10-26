@@ -56,7 +56,8 @@ API
 """
 
 from types import MappingProxyType
-from typing import Collection, Callable, Any, Optional, TypeVar, Mapping, Type, Tuple
+from typing import Any, TypeVar
+from collections.abc import Collection, Callable, Mapping
 from operator import __index__
 from collections import abc
 
@@ -128,7 +129,7 @@ def val_index(value: Any) -> bool:
 
 
 #: A dictionary for translating strings into :class:`plams.Job` types for third party software
-JOB_MAP: Mapping[str, Type[Job]] = MappingProxyType({
+JOB_MAP: Mapping[str, type[Job]] = MappingProxyType({
     'cp2k': Cp2kJob, 'cp2kjob': Cp2kJob,
     'orca': ORCAJob, 'orcajob': ORCAJob,
     'dirac': DiracJob, 'diracjob': DiracJob,
@@ -139,7 +140,7 @@ JOB_MAP: Mapping[str, Type[Job]] = MappingProxyType({
 
 #: A dictionary for translating strings into :class:`plams.Job` types for ADF.
 #: Only the job types available in the installed PLAMS version are included.
-JOB_MAP_SCM: Mapping[str, Type[Job]] = MappingProxyType({
+JOB_MAP_SCM: Mapping[str, type[Job]] = MappingProxyType({
     k: v for k, v in {
         'adf': ADFJob, 'adfjob': ADFJob,
         'ams': AMSJob, 'amsjob': AMSJob,
@@ -153,9 +154,9 @@ JOB_MAP_SCM: Mapping[str, Type[Job]] = MappingProxyType({
 })
 
 
-DB_NAMES: Tuple[str, ...] = ('core', 'ligand', 'qd')
-FORMAT_NAMES: Tuple[str, ...] = ('pdb', 'xyz')
-FORMAT_NAMES2: Tuple[str, ...] = ('pdb', 'xyz', 'mol', 'mol2')
+DB_NAMES: tuple[str, ...] = ('core', 'ligand', 'qd')
+FORMAT_NAMES: tuple[str, ...] = ('pdb', 'xyz')
+FORMAT_NAMES2: tuple[str, ...] = ('pdb', 'xyz', 'mol', 'mol2')
 
 
 def val_job_type(value: type) -> type:
@@ -200,17 +201,15 @@ def str_to_job_type(key: str) -> type:
 T = TypeVar('T')
 
 
-def to_tuple(collection: Collection[T], func: Optional[Callable[[T], Any]] = None) -> tuple:
+def to_tuple(collection: Collection[T], func: Callable[[T], Any] | None = None) -> tuple:
     """Convert a collection to a sorted tuple."""
     try:
         ret = sorted(collection)
     except TypeError:  # The collection contains a mix of sorting-incompatible objects
         ret = sorted(collection, key=str)
-    finally:
-        if func is None:
-            return tuple(ret)
-        else:
-            return tuple(func(i) for i in ret)
+    if func is None:
+        return tuple(ret)
+    return tuple(func(i) for i in ret)
 
 
 # The **default** parameter of schema.Optional() will automatically call any callable
@@ -768,7 +767,7 @@ bde_schema: Schema = Schema({
         Or(
             None,
             And(
-                abc.Mapping, lambda n: all(val_int(k) for k in n.keys()),
+                abc.Mapping, lambda n: all(val_int(k) for k in n),
                 Use(lambda n: {int(k): v for k, v in n.items()}),
                 error='optional.qd.dissociate.topology expects a dictionary with integers as keys'
                 )

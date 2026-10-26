@@ -19,7 +19,8 @@ API
 
 import copy
 import textwrap
-from typing import (NoReturn, Hashable)
+from typing import (NoReturn)
+from collections.abc import Hashable
 
 from scm.plams import Settings
 

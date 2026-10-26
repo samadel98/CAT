@@ -6,6 +6,7 @@ from pathlib import Path
 from itertools import chain
 
 import yaml
+import pytest
 from unittest import mock
 
 from rdkit import Chem
@@ -36,7 +37,7 @@ DB_PATH = PATH / 'database'
 @delete_finally(LIG_PATH, QD_PATH, DB_PATH)
 def test_validate_input() -> None:
     """Test :func:`CAT.data_handling.validate_input.validate_input`."""
-    with open(join(PATH, 'input1.yaml'), 'r') as f:
+    with open(join(PATH, 'input1.yaml')) as f:
         s = Settings(yaml.load(f, Loader=yaml.FullLoader))
     s.path = PATH
     validate_input(s, validate_only=False)
@@ -116,9 +117,45 @@ def test_validate_input() -> None:
 
 def test_validate_input2() -> None:
     """Test :func:`CAT.data_handling.validate_input.validate_input`."""
-    with open(join(PATH, 'input1.yaml'), 'r') as f:
+    with open(join(PATH, 'input1.yaml')) as f:
         s = Settings(yaml.load(f, Loader=yaml.FullLoader))
     validate_input(s, validate_only=True)
 
     s2 = s.copy()
     validate_input(s2, validate_only=True)
+
+
+BDE_PASS = {
+    "core_atom": {"core_atom": "Cd", "core_index": None, "lig_count": 2},
+    "core_index": {"core_atom": None, "core_index": [1, 2], "lig_count": 2},
+}
+
+BDE_RAISE = {
+    "neither": ({"core_atom": None, "core_index": None, "lig_count": 2}, "Exactly one of"),
+    "both": ({"core_atom": "Cd", "core_index": [1], "lig_count": 2}, "Exactly one of"),
+    "lig_count": ({"core_atom": "Cd", "core_index": None, "lig_count": None}, "`lig_count`"),
+}
+
+
+@pytest.mark.parametrize("bde", BDE_PASS.values(), ids=BDE_PASS)
+def test_validate_bde(bde: dict) -> None:
+    """Test the validation of ``optional.qd.dissociate``."""
+    with open(join(PATH, 'input1.yaml')) as f:
+        s = Settings(yaml.load(f, Loader=yaml.FullLoader))
+    s.optional.qd.dissociate = bde
+    validate_input(s, validate_only=True)
+
+    dissociate = s.optional.qd.dissociate
+    assertion.eq(dissociate.core_atom, None if bde["core_atom"] is None else 48)  # Cd
+    assertion.eq(dissociate.lig_count, bde["lig_count"])
+    assertion.eq(dissociate.core_index, None if bde["core_index"] is None else (1, 2))
+
+
+@pytest.mark.parametrize("bde,match", BDE_RAISE.values(), ids=BDE_RAISE)
+def test_validate_bde_raise(bde: dict, match: str) -> None:
+    """Test that invalid ``optional.qd.dissociate`` blocks are rejected."""
+    with open(join(PATH, 'input1.yaml')) as f:
+        s = Settings(yaml.load(f, Loader=yaml.FullLoader))
+    s.optional.qd.dissociate = bde
+    with pytest.raises(ValueError, match=match):
+        validate_input(s, validate_only=True)

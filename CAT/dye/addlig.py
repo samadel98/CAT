@@ -20,7 +20,7 @@ import os
 import gzip
 import math
 import pickle
-from typing import Iterator, Iterable, Collection, Optional, Dict
+from collections.abc import Iterator, Iterable, Collection
 from os.path import join, exists
 from itertools import chain
 
@@ -35,8 +35,6 @@ from CAT.attachment.dye import label_lig, label_core, substitution
 from CAT.attachment.substitution_symmetry import del_equiv_structures
 
 __all__ = ['add_ligands', 'export_dyes', 'sa_scores']
-
-# flake8: noqa: N806
 
 
 def add_ligands(core_dir: str,
@@ -86,7 +84,7 @@ def add_ligands(core_dir: str,
     new_mols = []
     new_mols.append(mono)
     if n > 1:
-        for i in range(1, n):
+        for _i in range(1, n):
             poli = substitution(input_ligands, mono, min_dist)
             new_mols.append(poli)
             mono = poli
@@ -150,7 +148,7 @@ def export_dyes(mol_list: Iterable[Molecule],
 ###########################################################################
 
 
-def _compute_sas(mol: Mol, sa_model: Dict[int, float]) -> float:
+def _compute_sas(mol: Mol, sa_model: dict[int, float]) -> float:
     fp = rdMolDescriptors.GetMorganFingerprint(mol, 2)
     fps = fp.GetNonzeroElements()
     score1 = 0.
@@ -213,12 +211,13 @@ def _compute_sas(mol: Mol, sa_model: Dict[int, float]) -> float:
     return sascore
 
 
-def _load_sa_model(filename: PathType) -> Dict[int, float]:
-    sa_score = pickle.load(gzip.open(filename))
+def _load_sa_model(filename: PathType) -> dict[int, float]:
+    with gzip.open(filename) as f:
+        sa_score = pickle.load(f)
     return {j: i0 for i0, *i in sa_score for j in i}
 
 
-def sa_scores(mols: Iterable[Molecule], filename: Optional[PathType] = None) -> np.ndarray:
+def sa_scores(mols: Iterable[Molecule], filename: PathType | None = None) -> np.ndarray:
     """Calculate the synthetic accessibility score for all molecules in **mols**."""
     sa_model = _load_sa_model(filename) if filename is not None else {}
     rdmols = (to_rdmol(mol) for mol in mols)

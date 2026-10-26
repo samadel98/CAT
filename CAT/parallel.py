@@ -89,9 +89,11 @@ def parallel_map(func: Callable[..., T], args: Iterable[tuple[Any, ...]],
     chunksize = max(1, math.ceil(len(arg_list) / (4 * n)))
     ctx = multiprocessing.get_context('spawn')
     try:
-        with _single_threaded_children():
-            with ProcessPoolExecutor(max_workers=n, mp_context=ctx) as executor:
-                return list(executor.map(func, *zip(*arg_list), chunksize=chunksize))
+        with (
+            _single_threaded_children(),
+            ProcessPoolExecutor(max_workers=n, mp_context=ctx) as executor,
+        ):
+            return list(executor.map(func, *zip(*arg_list), chunksize=chunksize))
     except BrokenProcessPool as ex:
         logger.warning(
             f"The worker processes failed ({ex}); continuing in a single process. Note that "
@@ -105,7 +107,7 @@ def parallel_map(func: Callable[..., T], args: Iterable[tuple[Any, ...]],
 def _single_threaded_children() -> Iterator[None]:
     """Set :data:`_THREAD_VARS` to 1 (unless set by the user) for processes started within."""
     new = [var for var in _THREAD_VARS if var not in os.environ]
-    os.environ.update({var: '1' for var in new})
+    os.environ.update(dict.fromkeys(new, '1'))
     try:
         yield
     finally:
