@@ -13,6 +13,7 @@ look into the customization of the various jobs.
     8_import_qd
     4_optional
     5_bde
+    20_xtb
     6_type_aliases
     7_database
     14_pdb_container

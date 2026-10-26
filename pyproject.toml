@@ -78,6 +78,7 @@ test = [
     "ipython>=5.0.0",
     "sphinx>=2.4",
     "sphinx_rtd_theme",
+    "tblite>=0.4; platform_system!='Windows'",  # No Windows wheels
 ]
 docs = [
     "sphinx>=2.4",
@@ -85,6 +86,9 @@ docs = [
 ]
 lint = [
     "ruff>=0.15",
+]
+xtb = [
+    "tblite>=0.4",
 ]
 
 [tool.setuptools.packages.find]
@@ -121,6 +125,7 @@ module = [
     "scm.*",
     "dill.*",
     "schema.*",
+    "tblite.*",
 ]
 ignore_missing_imports = true
 

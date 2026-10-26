@@ -58,24 +58,23 @@ def get_entropy(mol: Molecule,
     V_Na = ((R * T) / 10**5) / Units.constants['NA']  # Volume(1 mol ideal gas) / Avogadro's number
     pi = np.pi
 
-    # Extract atomic masses and Cartesian coordinates
+    # Extract atomic masses
     m = np.array([at.mass for at in mol]) * 1.6605390 * 10**-27
-    x, y, z = mol.as_array().T * 10**-10
 
-    # Calculate the rotational partition function: q_rot
-    inertia = np.array([
-        [sum(m*(y**2 + z**2)), -sum(m*x*y), -sum(m*x*z)],
-        [-sum(m*x*y), sum(m*(x**2 + z**2)), -sum(m*y*z)],
-        [-sum(m*x*z), -sum(m*y*z), sum(m*(x**2 + y**2))]
-    ])
-    # The inertia tensor is symmetric, so its eigenvalues are real
-    # (NumPy >= 2 `np.linalg.eig` returns them as complex numbers)
-    inertia_product = np.prod(np.linalg.eigvalsh(inertia))
-    q_rot = pi**0.5 * ((8 * pi**2 * kT) / h**2)**1.5 * inertia_product**0.5
+    # Calculate the rotational partition function, q_rot, and the rotational entropy (divided by R)
+    moments = _principal_moments(mol)
+    rot_dof = _rotational_dof(moments)
+    if rot_dof == 3:
+        q_rot = pi**0.5 * ((8 * pi**2 * kT) / h**2)**1.5 * np.prod(moments)**0.5
+        S_rot = 1.5 + np.log(q_rot)
+    elif rot_dof == 2:  # A linear molecule
+        q_rot = (8 * pi**2 * kT * moments[-1]) / h**2
+        S_rot = 1.0 + np.log(q_rot)
+    else:  # A single atom
+        S_rot = 0.0
 
-    # Calculate the translational, rotational and vibrational entropy (divided by R)
+    # Calculate the translational and vibrational entropy (divided by R)
     S_trans = 1.5 + np.log(V_Na * ((2 * pi * sum(m) * kT) / h**2)**1.5)
-    S_rot = 1.5 + np.log(q_rot)
     with np.errstate(divide='ignore', invalid='ignore'):
         S_vib_left = hv_kT / np.expm1(hv_kT)
         S_vib_left[np.isnan(S_vib_left)] = 0.0
@@ -144,7 +143,8 @@ def get_thermo(mol: Molecule,
 
     # Extract and/or calculate the various energies
     E = E * Units.conversion_ratio('kcal/mol', 'kj/mol') * 1000
-    U = E + RT * (3.0 + sum(0.5 * hv_kT + hv_kT / np.expm1(hv_kT)))
+    rot_dof = _rotational_dof(_principal_moments(mol))
+    U = E + RT * (1.5 + 0.5 * rot_dof + sum(0.5 * hv_kT + hv_kT / np.expm1(hv_kT)))
     H = U + RT
     S = sum(get_entropy(mol, freqs, T=T))
     G = H - T * S
@@ -154,3 +154,28 @@ def get_thermo(mol: Molecule,
     if len(export) == 1:
         return Units.convert(ret[export[0]], 'kj/mol', unit) / 1000
     return {i: Units.convert(ret[i], 'kj/mol', unit) / 1000 for i in ret if i in export}
+
+
+def _principal_moments(mol: Molecule) -> np.ndarray:
+    """Return the principal moments of inertia of **mol** in kg*m**2, in ascending order."""
+    m = np.array([at.mass for at in mol]) * 1.6605390 * 10**-27
+    xyz = mol.as_array() * 10**-10
+    x, y, z = (xyz - m @ xyz / m.sum()).T  # Relative to the center of mass
+
+    inertia = np.array([
+        [sum(m*(y**2 + z**2)), -sum(m*x*y), -sum(m*x*z)],
+        [-sum(m*x*y), sum(m*(x**2 + z**2)), -sum(m*y*z)],
+        [-sum(m*x*z), -sum(m*y*z), sum(m*(x**2 + y**2))]
+    ])
+    # The inertia tensor is symmetric, so its eigenvalues are real
+    # (NumPy >= 2 `np.linalg.eig` returns them as complex numbers)
+    return np.linalg.eigvalsh(inertia)
+
+
+def _rotational_dof(moments: np.ndarray) -> int:
+    """Return the number of rotational degrees of freedom: 3, 2 (linear molecules) or 0 (atoms)."""
+    if moments[-1] <= 0.0:
+        return 0
+    elif moments[0] < 1e-3 * moments[-1]:
+        return 2
+    return 3

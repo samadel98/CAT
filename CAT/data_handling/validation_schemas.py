@@ -84,6 +84,7 @@ except Exception:  # A broken Data-CAT install should not break `import CAT`
 from .str_to_func import str_to_func
 from .._compat import ADFJob, UFFJob, BANDJob, DFTBJob, MOPACJob, ReaxFFJob
 from ..utils import get_template, validate_path, validate_core_atom, check_sys_var
+from ..xtb import TBLiteJob, check_tblite
 from ..mol_utils import to_atnum
 from ..utils import AllignmentEnum, AllignmentTup
 
@@ -135,6 +136,7 @@ JOB_MAP: Mapping[str, type[Job]] = MappingProxyType({
     'dirac': DiracJob, 'diracjob': DiracJob,
     'gamess': GamessJob, 'gamessjob': GamessJob,
     'dftbplus': DFTBPlusJob, 'dftbplusjob': DFTBPlusJob,
+    'tblite': TBLiteJob, 'tblitejob': TBLiteJob, 'xtb': TBLiteJob,
 })
 
 
@@ -160,9 +162,16 @@ FORMAT_NAMES2: tuple[str, ...] = ('pdb', 'xyz', 'mol', 'mol2')
 
 
 def val_job_type(value: type) -> type:
-    """Call :func:`.check_sys_var` if value is in :data:`.JOB_MAP_SCM`."""
+    """Check that the software of **value** is available.
+
+    Calls :func:`.check_sys_var` if **value** is in :data:`.JOB_MAP_SCM` and
+    :func:`.check_tblite` if it is :class:`~CAT.xtb.TBLiteJob`.
+
+    """
     if value in JOB_MAP_SCM.values():
         check_sys_var()
+    elif isinstance(value, type) and issubclass(value, TBLiteJob):
+        check_tblite()
     return value
 
 
@@ -173,9 +182,8 @@ def str_to_job_type(key: str) -> type:
     ----------
     key : str
         An alias for a :class:`type` object of a PLAMS :class:`Job`.
-        **key** is converted by passing it into :data:`.JOB_MAP` or :data:`.JOB_MAP_SCM`.
-        The :func:`check_sys_var` function is called if **key** is present
-        in :data:`.JOB_MAP_SCM`.
+        **key** is converted by passing it into :data:`.JOB_MAP` or :data:`.JOB_MAP_SCM`,
+        after which the availability of its software is checked with :func:`val_job_type`.
 
     Returns
     -------
@@ -191,10 +199,9 @@ def str_to_job_type(key: str) -> type:
     """
     _key = key.lower()
     if _key in JOB_MAP:
-        return JOB_MAP[_key]
+        return val_job_type(JOB_MAP[_key])
     elif _key in JOB_MAP_SCM:
-        check_sys_var()
-        return JOB_MAP_SCM[_key]
+        return val_job_type(JOB_MAP_SCM[_key])
     raise KeyError(f'No Job type alias available for {_key!r}')
 
 

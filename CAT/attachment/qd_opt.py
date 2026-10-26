@@ -23,10 +23,10 @@ API
 from typing import NoReturn, Any
 from collections.abc import Iterable
 
-from scm.plams import Molecule, Settings, AMSJob
+from scm.plams import Molecule, Settings
 from scm.plams.core.basejob import Job
 
-from ..jobs import job_geometry_opt  # noqa: F401
+from ..jobs import job_geometry_opt, freeze_atoms  # noqa: F401
 from ..workflows import WorkFlow, MOL, JOB_SETTINGS_QD_OPT
 from ..mol_utils import fix_carboxyl, fix_h
 from ..settings_dataframe import SettingsDataFrame
@@ -100,13 +100,9 @@ def qd_opt(mol: Molecule, jobs: tuple[type[Job] | None, ...],
     job1, job2 = jobs
     s1, s2 = settings
 
-    # Extra options for AMSJob
-    if job1 is AMSJob:
-        s1 = Settings(s1)
-        s1.input.ams.constraints.atom = mol.properties.indices
-    if job2 is AMSJob:
-        s2 = Settings(s2)
-        s2.input.ams.constraints.atom = mol.properties.indices
+    # Freeze the core and the ligand anchors
+    s1 = freeze_atoms(job1, s1, mol.properties.indices)
+    s2 = freeze_atoms(job2, s2, mol.properties.indices)
 
     # Run the first job and fix broken angles
     mol.job_geometry_opt(job1, s1, name='QD_opt_part1')

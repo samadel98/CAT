@@ -63,6 +63,7 @@ from .logger import logger
 from .mol_utils import to_atnum, rdkit_props
 from .gen_job_manager import GenJobManager
 from ._mol_str_parser import FormatEnum
+from .xtb import TBLiteJob
 
 pformat = functools.partial(pprint.pformat, sort_dicts=False, compact=True)
 
@@ -82,6 +83,7 @@ JOB_MAP: Mapping[type[Job], str] = MappingProxyType({
         (GamessJob, 'gamess'),
         (ORCAJob, 'orca'),
         (CRSJob, 'cosmo-rs'),
+        (TBLiteJob, 'tblite'),
     ] if k is not None
 })
 

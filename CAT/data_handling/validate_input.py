@@ -15,6 +15,7 @@ API
 from os import mkdir
 from os.path import (join, isdir)
 from typing import Any
+from collections.abc import Mapping
 
 from contextlib import nullcontext
 
@@ -46,6 +47,7 @@ from .anchor_parsing import parse_anchors
 from ..utils import validate_path, SetEnviron
 from ..parallel import get_processes
 from ..logger import logger
+from ..xtb import TBLiteJob
 
 try:
     from dataCAT import Database
@@ -96,6 +98,21 @@ def parse_qmflows_keywords(bde_dict: dict[str, Any]) -> dict[str, Any]:
             s2.input.update(s2.pop("specific").pop(qmflows.cp2k.pkg_name))
         bde_dict["s2"] = s2
     return bde_dict
+
+
+def tblite_settings(raw: Mapping[str, Any], validated: dict[str, Any]) -> dict[str, Any]:
+    """Give a :class:`~CAT.xtb.TBLiteJob` without user-specified settings empty settings.
+
+    The default settings of ``s1`` and ``s2`` are meant for an
+    :class:`~scm.plams.interfaces.adfsuite.ams.AMSJob` (or are ``None``).
+    They are replaced by empty settings if ``job1`` or ``job2`` is a TBLiteJob,
+    while the matching settings are absent from the unvalidated block, **raw**.
+
+    """
+    for job_key, s_key in [("job1", "s1"), ("job2", "s2")]:
+        if validated.get(job_key) is TBLiteJob and s_key not in raw:
+            validated[s_key] = Settings()
+    return validated
 
 
 def validate_input(s: Settings, validate_only: bool = True) -> None:
@@ -175,16 +192,20 @@ def validate_input(s: Settings, validate_only: bool = True) -> None:
             s.optional.ligand.cone_angle = cone_angle_schema.validate(s.optional.ligand.cone_angle)
 
         if s.optional.qd.optimize:
-            s.optional.qd.optimize = qd_opt_schema.validate(s.optional.qd.optimize)
+            qd_opt = s.optional.qd.optimize
+            s.optional.qd.optimize = tblite_settings(qd_opt, qd_opt_schema.validate(qd_opt))
         if s.optional.qd.dissociate:
-            bde_dict = bde_schema.validate(s.optional.qd.dissociate)
+            bde_dict = tblite_settings(
+                s.optional.qd.dissociate, bde_schema.validate(s.optional.qd.dissociate)
+            )
             if (bde_dict["core_atom"] is None) is (bde_dict["core_index"] is None):
                 raise ValueError("Exactly one of `core_atom` and `core_index` must be specified")
             elif bde_dict["lig_count"] is None:
                 raise ValueError("`lig_count` must be specified")
             s.optional.qd.dissociate = parse_qmflows_keywords(bde_dict)
         if s.optional.qd.activation_strain:
-            s.optional.qd.activation_strain = asa_schema.validate(s.optional.qd.activation_strain)
+            asa = s.optional.qd.activation_strain
+            s.optional.qd.activation_strain = tblite_settings(asa, asa_schema.validate(asa))
         if s.optional.qd.multi_ligand:
             s.optional.qd.multi_ligand = multi_ligand_schema.validate(s.optional.qd.multi_ligand)
             _validate_multi_lig(s)

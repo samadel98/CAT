@@ -7,6 +7,7 @@ Index
 .. currentmodule:: CAT.frozen_settings
 .. autosummary::
     FrozenSettings
+    thaw_settings
 
 API
 ---
@@ -14,17 +15,18 @@ API
     :members:
     :private-members:
     :special-members:
+.. autofunction:: thaw_settings
 
 """  # noqa: E501
 
 import copy
 import textwrap
-from typing import (NoReturn)
-from collections.abc import Hashable
+from typing import Any, NoReturn
+from collections.abc import Hashable, Mapping
 
 from scm.plams import Settings
 
-__all__ = ['FrozenSettings']
+__all__ = ['FrozenSettings', 'thaw_settings']
 
 
 class FrozenSettings(Settings):
@@ -135,3 +137,24 @@ class FrozenSettings(Settings):
 
 
 _frozen_settings = FrozenSettings()
+
+
+def thaw_settings(settings: Mapping[str, Any] | None) -> Settings:
+    """Return a mutable copy of **settings**, converting all nested settings as well.
+
+    Use this function rather than the :class:`~scm.plams.core.settings.Settings` constructor
+    for modifying a copy of :class:`FrozenSettings`: the latter only converts nested
+    :class:`FrozenSettings` with PLAMS < 2024.
+    ``None`` is converted into empty settings.
+
+    """
+    ret = Settings()
+    if settings is None:
+        return ret
+    for key, value in settings.items():
+        if isinstance(value, Mapping):
+            value = thaw_settings(value)
+        elif isinstance(value, list):
+            value = [thaw_settings(i) if isinstance(i, Mapping) else i for i in value]
+        ret[key] = value
+    return ret

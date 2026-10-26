@@ -58,6 +58,18 @@ Unreleased
   the Nano-CAT, Data-CAT and Auto-FOX forks (``.github/workflows/integration.yml``).
 * Publish the documentation of this fork at https://samadel98.github.io/CAT/,
   including the new Nano-CAT ``ligand_descriptors()`` recipe and Data-CAT's file locking.
+* Add ``CAT.xtb.TBLiteJob``, which runs GFN2-xTB (or GFN1-xTB) single points, geometry
+  optimizations and frequency analyses with `tblite <https://github.com/tblite/tblite>`_,
+  without any external program (``pip install "nlesc-CAT[xtb]"``). It is available wherever CAT
+  accepts a job type, with the ``"tblite"`` alias, *e.g.* for the ligand and quantum dot
+  optimizations.
+* Fix the thermochemistry of ``get_thermo()`` and ``get_entropy()``: the moments of inertia are
+  now relative to the center of mass rather than the origin, which made the rotational entropy
+  of molecules away from the origin too large, and linear molecules (*e.g.* the CdCl\ :sub:`2`
+  of a bond dissociation energy) and single atoms no longer give a ``NaN`` entropy.
+* Fix the quantum dot optimization with AMS, and the ligand optimization with job settings of
+  its own, crashing with PLAMS 2024 and later, whose ``Settings`` constructor no longer converts
+  nested frozen settings (see the new ``CAT.frozen_settings.thaw_settings()``).
 
 
 1.1.1
