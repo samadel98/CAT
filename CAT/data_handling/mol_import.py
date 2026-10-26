@@ -487,10 +487,10 @@ def set_qd(qd: Molecule, mol_dict: Settings) -> Molecule:
 
     # Set the pdb_info (and the charges of the core atoms)
     alphabet = itertools.cycle(itertools.combinations(ascii_letters, 2))
-    for at, i in zip(qd.atoms[:len(core_idx)], alphabet):
-        set_atom_prop(at, i, 'COR')
-    for at, i in zip(qd.atoms[len(core_idx):], alphabet):
-        set_atom_prop(at, i, 'LIG')
+    for at, at_id in zip(qd.atoms[:len(core_idx)], alphabet):
+        set_atom_prop(at, at_id, 'COR')
+    for at, at_id in zip(qd.atoms[len(core_idx):], alphabet):
+        set_atom_prop(at, at_id, 'LIG')
 
     # Construct a list with the indices of all ligand anchor atoms
     core_idx_max = 1 + len(core_idx)
