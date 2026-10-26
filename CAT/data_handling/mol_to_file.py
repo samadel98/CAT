@@ -28,6 +28,7 @@ from scm.plams import Molecule
 from scm.plams.interfaces.molecule.rdkit import set_PDBresidueInfo
 
 from ..logger import logger
+from ..mol_utils import rdkit_props
 
 __all__ = ['mol_to_file', 'write_pdb', 'shorten_filename']
 
@@ -46,7 +47,7 @@ def write_pdb(mol: Molecule, filename: Union[str, bytes, os.PathLike]) -> None:
     atom_idx = {}
     for i, at in enumerate(mol.atoms):
         rd_atom = Chem.Atom(int(at.atnum))
-        props = at.properties.rdkit if 'rdkit' in at.properties else at.properties
+        props = rdkit_props(at)
         if 'charge' in props:
             rd_atom.SetFormalCharge(int(props.charge))
         if 'pdb_info' in props:

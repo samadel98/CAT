@@ -10,8 +10,10 @@ import pytest
 from scm.plams import Molecule, Settings
 
 from CAT.base import prep
+from CAT._compat import readpdb
 from CAT.data_handling.mol_import import read_mol
 from CAT.data_handling.validate_mol import validate_mol
+from CAT.mol_utils import rdkit_props
 from CAT.workflows import MOL
 
 PATH = Path('tests') / 'test_files' / 'core'
@@ -30,7 +32,7 @@ def _import_qd(filename: str | Path, **kwargs: object) -> Molecule:
 
 def _as_xyz(filename: Path, tmp_path: Path) -> Path:
     """Write **filename** as a bond-less .xyz file."""
-    mol = Molecule(str(filename))
+    mol = readpdb(filename)
     ret = tmp_path / f'{filename.stem}.xyz'
     mol.write(str(ret))
     return ret
@@ -44,11 +46,11 @@ def test_import_ethoxide(fmt: str, tmp_path: Path) -> None:
 
     assert len(qd) == 123 + 26 * 8
     assert Counter(at.symbol for at in qd.atoms[:123]) == {'Cd': 68, 'Se': 55}
-    assert sum(at.properties.charge for at in qd) == 0
+    assert sum(rdkit_props(at).charge for at in qd) == 0
     assert qd.properties.ligand_anchor == 'O3'
 
     # 26 ligands, each in its own residue, with bonds from the SMILES string only
-    residues = Counter(at.properties.pdb_info.ResidueNumber for at in qd)
+    residues = Counter(rdkit_props(at).pdb_info.ResidueNumber for at in qd)
     assert residues == {1: 123, **{i: 8 for i in range(2, 28)}}
     assert len(qd.bonds) == 26 * 7
 
@@ -56,7 +58,7 @@ def test_import_ethoxide(fmt: str, tmp_path: Path) -> None:
     anchors = [at for at in qd if at.properties.get('anchor')]
     assert len(anchors) == 26
     assert qd.properties.indices == list(range(1, 124)) + [qd.atoms.index(at) + 1 for at in anchors]
-    assert {(at.symbol, at.properties.charge) for at in anchors} == {('O', -1)}
+    assert {(at.symbol, rdkit_props(at).charge) for at in anchors} == {('O', -1)}
     core_xyz = np.array([at.coords for at in qd.atoms[:123]])
     for at in anchors:
         assert np.linalg.norm(core_xyz - at.coords, axis=1).min() < 3.0
@@ -75,8 +77,8 @@ def test_import_formate_anchor(tmp_path: Path) -> None:
         d_anchor = np.linalg.norm(core_xyz - anchor.coords, axis=1).min()
         d_other = np.linalg.norm(core_xyz - other.coords, axis=1).min()
         assert round(d_anchor, 1) <= round(d_other, 1)
-        assert anchor.properties.charge == -1
-        assert other.properties.charge == 0
+        assert rdkit_props(anchor).charge == -1
+        assert rdkit_props(other).charge == 0
 
 
 @pytest.mark.parametrize("kwargs,exc", [

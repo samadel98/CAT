@@ -21,6 +21,7 @@ from CAT.workflows import MOL
 from CAT import parallel
 from CAT.parallel import get_processes, parallel_map, pack_atom_refs, unpack_atom_refs
 from CAT.attachment.ligand_attach import _copy_mol
+from CAT.mol_utils import rdkit_props
 from CAT.data_handling.validation_schemas import processes_schema
 
 PATH = Path('tests') / 'test_files'
@@ -98,15 +99,15 @@ def test_copy_mol() -> None:
     mol = Molecule(str(PATH / 'core' / 'Cd68Cl26Se55__26_CC[O-]@O3.pdb'))
     mol.properties.name = 'test'
     for i, at in enumerate(mol, 1):
-        at.properties.pdb_info = Settings({'Name': f'{at.symbol}{i}', 'ResidueNumber': 1})
+        rdkit_props(at).pdb_info = Settings({'Name': f'{at.symbol}{i}', 'ResidueNumber': 1})
     ref, copy = mol.copy(), _copy_mol(mol)
     assert copy.as_dict() == ref.as_dict()
     assert copy.properties == ref.properties
     assert all(at.mol is copy for at in copy) and all(b.mol is copy for b in copy.bonds)
     assert all(b.atom1 in copy and b.atom2 in copy for b in copy.bonds)
 
-    copy[1].properties.pdb_info.ResidueNumber = 100
-    assert mol[1].properties.pdb_info.ResidueNumber == 1
+    rdkit_props(copy[1]).pdb_info.ResidueNumber = 100
+    assert rdkit_props(mol[1]).pdb_info.ResidueNumber == 1
 
 
 def _state(mol: Molecule) -> dict[str, Any]:
