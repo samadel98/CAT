@@ -26,11 +26,10 @@ API
 
 import os
 import warnings
+import contextlib
 from functools import wraps
 from collections import abc
-from typing import (
-    Collection, Iterable, Union, Dict, Tuple, List, Optional, Type, Callable
-)
+from collections.abc import Collection, Iterable, Callable, Sequence
 
 import numpy as np
 
@@ -46,8 +45,8 @@ from .ff.cp2k_utils import set_cp2k_element
 __all__ = ['qd_opt_ff']
 
 
-def qd_opt_ff(mol: Molecule, jobs: Tuple[Optional[Type[Job]], ...],
-              settings: Tuple[Optional[Settings], ...], name: str = 'QD_opt',
+def qd_opt_ff(mol: Molecule, jobs: type[Job] | Sequence[type[Job] | None],
+              settings: Settings | Sequence[Settings | None], name: str = 'QD_opt',
               new_psf: bool = False, job_func: Callable = Molecule.job_geometry_opt) -> Results:
     """Alternative implementation of :func:`.qd_opt` using CP2Ks' classical forcefields.
 
@@ -58,11 +57,11 @@ def qd_opt_ff(mol: Molecule, jobs: Tuple[Optional[Type[Job]], ...],
     mol : |plams.Molecule|_
         The to-be optimized molecule.
 
-    jobs : :class:`tuple`
-        A tuple of |plams.Job| types and/or ``None``.
+    jobs : |plams.Job| type or :class:`tuple`
+        A |plams.Job| type, or a tuple of them whose first element is used.
 
-    settings : :class:`tuple`
-        A tuple of |plams.Settings| types and/or ``None``.
+    settings : |plams.Settings| or :class:`tuple`
+        A |plams.Settings| instance, or a tuple of them whose first element is used.
 
     name : str
         The name of the job.
@@ -94,17 +93,15 @@ def qd_opt_ff(mol: Molecule, jobs: Tuple[Optional[Type[Job]], ...],
 
     # Pull any missing non-covalent parameters from UFF
     if s.input.force_eval.mm.forcefield.nonbonded.get('lennard-jones', None):
-        try:
+        with contextlib.suppress(TypeError):
             finalize_lj(mol, s.input.force_eval.mm.forcefield.nonbonded['lennard-jones'])
-        except TypeError:
-            pass
     results = job_func(mol, job, s, name=name, read_template=False, ret_results=True)
     mol.round_coords()
 
     return results
 
 
-def get_psf(mol: Molecule, charges: Union[None, Settings, Iterable[Settings]]) -> PSFContainer:
+def get_psf(mol: Molecule, charges: None | Settings | Iterable[Settings]) -> PSFContainer:
     """Construct and return a :class:`PSF` instance.
 
     .. _CHARGE: https://manual.cp2k.org/trunk/CP2K_INPUT/FORCE_EVAL/MM/FORCEFIELD/CHARGE.html
@@ -147,7 +144,7 @@ def get_psf(mol: Molecule, charges: Union[None, Settings, Iterable[Settings]]) -
 
 
 def constrain_charge(psf: PSFContainer, initial_charge: float = 0.0,
-                     atom_set: Optional[Collection[str]] = None) -> None:
+                     atom_set: Collection[str] | None = None) -> None:
     """Set the total molecular charge of **psf** to **initial_charge**.
 
     Atoms in **psf** whose atomic symbol intersects with **charge_set** will *not*
@@ -170,7 +167,7 @@ def constrain_charge(psf: PSFContainer, initial_charge: float = 0.0,
     # Check if the molecular charge has remained unchanged
     new_charge = psf.charge.sum()
     if (abs(new_charge) - abs(initial_charge)) < 10**-8:  # i.e. 0.0 +- 10**-8
-        return psf
+        return
 
     # Update atomic charges in order to reset the molecular charge to its initial value
     if atom_set is None:
@@ -187,11 +184,11 @@ def constrain_charge(psf: PSFContainer, initial_charge: float = 0.0,
 @wraps(constrain_charge)
 def _constrain_charge(*args, **kwargs):
     msg = "_constrain_charge() is deprecated; use constrain_charge() from now on"
-    warnings.warn(msg, category=DeprecationWarning)
+    warnings.warn(msg, stacklevel=2, category=DeprecationWarning)
     return constrain_charge(*args, **kwargs)
 
 
-def finalize_lj(mol: Molecule, s: List[Settings]) -> None:
+def finalize_lj(mol: Molecule, s: list[Settings]) -> None:
     """Assign UFF Lennard-Jones parameters to all missing non-bonded core/ligand interactions.
 
     .. _LENNARD_JONES: https://manual.cp2k.org/trunk/CP2K_INPUT/FORCE_EVAL/MM/FORCEFIELD/NONBONDED/LENNARD-JONES.html
@@ -232,7 +229,7 @@ def finalize_lj(mol: Molecule, s: List[Settings]) -> None:
             }))
 
 
-def _gather_core_lig_symbols(mol: Molecule) -> Tuple[Dict[str, str], Dict[str, str]]:
+def _gather_core_lig_symbols(mol: Molecule) -> tuple[dict[str, str], dict[str, str]]:
     """Create two dictionaries with atom types and atomic symbols.
 
     Both dictionaries contain atomic symbols as keys and matching atom types as values;

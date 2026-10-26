@@ -44,10 +44,7 @@ RDKIT_REF_VERSION = "2026.09"
 #: Whether the original reference geometries are used.
 RDKIT_OLD_REF = Version(rdkit.__version__) < Version("2024.03")
 
-if RDKIT_OLD_REF:
-    RDKIT_REF_PATH = PATH
-else:
-    RDKIT_REF_PATH = PATH / f"rdkit-{RDKIT_REF_VERSION}"
+RDKIT_REF_PATH = PATH if RDKIT_OLD_REF else PATH / f"rdkit-{RDKIT_REF_VERSION}"
 
 #: The absolute tolerance of the interatomic distances (in Angstrom).
 #: The coordinates pass through an RDKit MolBlock, which rounds them to 4 decimals.
@@ -61,7 +58,7 @@ def load_mol_array(path: Path = RDKIT_REF_PATH, platform: str = sys.platform) ->
     if not json_file.is_file():
         return ret
 
-    with open(json_file, "r") as f:
+    with open(json_file) as f:
         overrides: dict[str, dict[str, Any]] = json.load(f)
     for i, dct in overrides.items():
         n = len(dct["symbol"])

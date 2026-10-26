@@ -18,7 +18,6 @@ API
 
 """
 
-from typing import Dict, Tuple, List, Optional
 from itertools import combinations
 
 import numpy as np
@@ -31,25 +30,24 @@ from nanoCAT.bde.guess_core_dist import guess_core_core_dist
 __all__ = ['get_coordination_number', 'coordination_outer']
 
 #: A nested dictonary
-NestedDict = Dict[str, Dict[int, List[int]]]
+NestedDict = dict[str, dict[int, list[int]]]
 
 
-def get_indices(mol: Molecule) -> Dict[str, np.ndarray]:
+def get_indices(mol: Molecule) -> dict[str, np.ndarray]:
     """Construct a dictionary with atomic symbols as keys and arrays of indices as values."""
     elements = [at.symbol for at in mol.atoms]
     symbol_enumerator = enumerate(elements)
     idx_dict = group_by_values(symbol_enumerator)
-    for k, v in idx_dict.items():
-        idx_dict[k] = np.fromiter(v, dtype=int, count=len(v))
-    return idx_dict
+    return {k: np.fromiter(v, dtype=int, count=len(v)) for k, v in idx_dict.items()}
 
 
-def idx_pairs(idx_dict: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+def idx_pairs(idx_dict: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
     """Construct two arrays of indice-pairs of all possible combinations in idx_dict.
 
     The combinations, by definition, do not contain any atom pairs where ``at1.symbol == at2.symbol``
     """  # noqa
-    x, y = [], []
+    x: list[int] = []
+    y: list[int] = []
     symbol_combinations = combinations(idx_dict.keys(), r=2)
     for symbol1, symbol2 in symbol_combinations:
         idx1 = idx_dict[symbol1]
@@ -58,9 +56,7 @@ def idx_pairs(idx_dict: Dict[str, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
         x += _x.ravel().tolist()
         y += _y.ravel().tolist()
 
-    x = np.fromiter(x, dtype=int, count=len(x))
-    y = np.fromiter(y, dtype=int, count=len(y))
-    return x, y
+    return np.fromiter(x, dtype=int, count=len(x)), np.fromiter(y, dtype=int, count=len(y))
 
 
 def upper_dist(xyz: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -71,13 +67,13 @@ def upper_dist(xyz: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return dist
 
 
-def radius_inner(mol: Molecule, idx_dict: Dict[str, np.ndarray]) -> Dict[str, float]:
+def radius_inner(mol: Molecule, idx_dict: dict[str, np.ndarray]) -> dict[str, float]:
     """Search the threshold radius of the inner coordination shell for each atom type.
 
     This radius is calculated as the distance with the first neighbors:
     in case of heterogeneous coordinations, only the closest neighbors are considered.
     """
-    d_inner = {}
+    d_inner: dict[str, float] = {}
     symbol_combinations = combinations(idx_dict.keys(), r=2)
     for symbol1, symbol2 in symbol_combinations:
         d_pair = guess_core_core_dist(mol, (symbol1, symbol2))
@@ -88,8 +84,8 @@ def radius_inner(mol: Molecule, idx_dict: Dict[str, np.ndarray]) -> Dict[str, fl
     return d_inner
 
 
-def coordination_inner(dist: np.ndarray, d_inner: Dict[str, float],
-                       idx_dict: Dict[str, np.ndarray], length: int) -> NestedDict:
+def coordination_inner(dist: np.ndarray, d_inner: dict[str, float],
+                       idx_dict: dict[str, np.ndarray], length: int) -> np.ndarray:
     """Calculate the coordination number relative to the inner shell (first neighbors)."""
     coord_inner = np.empty(length, int)
     for k, v in idx_dict.items():
@@ -105,7 +101,7 @@ def coordination_outer(dist: np.ndarray, d_outer: float, length: int) -> np.ndar
     return np.bincount(a, minlength=length) + np.bincount(b, minlength=length)
 
 
-def map_coordination(coord: np.ndarray, idx_dict: Dict[str, np.ndarray]) -> NestedDict:
+def map_coordination(coord: np.ndarray, idx_dict: dict[str, np.ndarray]) -> NestedDict:
     """Map atoms according to their atomic symbols and coordination number.
 
     Construct a nested dictionary ``{'atom_type1': {coord1: [indices], ...}, ...}``.
@@ -119,7 +115,7 @@ def map_coordination(coord: np.ndarray, idx_dict: Dict[str, np.ndarray]) -> Nest
 
 
 def get_coordination_number(mol: Molecule, shell: str = 'inner',
-                            d_outer: Optional[float] = None) -> NestedDict:
+                            d_outer: float | None = None) -> NestedDict:
     """Take a molecule and identify the coordination number of each atom.
 
     The function first compute the pair distance between all reference atoms in **mol**.

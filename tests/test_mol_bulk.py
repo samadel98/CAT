@@ -3,7 +3,7 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
 import yaml
 import pytest
@@ -20,7 +20,7 @@ MOL = readpdb(PATH / 'hexanoic_acid.pdb')
 
 
 class TestMain:
-    with open(PATH / "bulk_settings.yaml", "r") as f:
+    with open(PATH / "bulk_settings.yaml") as f:
         SETTINGS = Settings(yaml.load(f, Loader=yaml.SafeLoader))
 
     @pytest.fixture(scope="function", autouse=True)

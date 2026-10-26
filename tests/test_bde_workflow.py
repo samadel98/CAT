@@ -34,7 +34,7 @@ BASE_SETTINGS = Settings(yaml.load(textwrap.dedent("""
         qd:
             dissociate:
                 core_atom: null
-                core_index: null
+                core_index: [3]
                 lig_count: 1
 
                 keep_files: True
@@ -102,13 +102,13 @@ def construct_df() -> SettingsDataFrame:
 @pytest.mark.skipif(shutil.which("cp2k.popt") is None, reason="requires CP2K")
 @pytest.mark.slow
 class TestBDEWorkflow:
-    PARAMS = dict(
-        core_index={"core_index": [3]},
-        core_atom={"core_atom": "H", "lig_core_dist": 2.0},
-        freq={"core_index": [3], "job2": Cp2kJob,
+    PARAMS = {
+        "core_index": {"core_index": [3]},
+        "core_atom": {"core_atom": "H", "core_index": None, "lig_core_dist": 2.0},
+        "freq": {"core_index": [3], "job2": Cp2kJob,
               "s2": BASE_SETTINGS.optional.qd.dissociate.s1.copy()},
-        qd_opt={"core_index": [3], "qd_opt": True},
-    )
+        "qd_opt": {"core_index": [3], "qd_opt": True},
+    }
 
     @pytest.fixture(scope="function", autouse=True)
     def clear_dirs(self) -> Generator[None, None, None]:

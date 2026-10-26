@@ -30,7 +30,8 @@ API
 
 from __future__ import annotations
 
-from typing import Iterable, Type, List, Tuple, Optional, Any
+from typing import Any
+from collections.abc import Iterable, Sequence
 from itertools import product
 
 import numpy as np
@@ -79,21 +80,18 @@ def init_bde(qd_df: SettingsDataFrame) -> None:
     workflow.to_db(qd_df, index=idx, columns=columns, job_recipe=job_recipe)
 
 
-def _construct_columns(workflow: WorkFlow, mol_list: Iterable[Molecule]) -> List[Tuple[str, str]]:
+def _construct_columns(workflow: WorkFlow, mol_list: Iterable[Molecule]) -> list[tuple[str, str]]:
     """Construct BDE columns for :func:`init_bde`."""
     if workflow.core_index:
         stop = len(workflow.core_index)
     else:  # This takes a but longer, unfortunetly
-        try:
-            mol = next(mol_list)
-        except TypeError:
-            mol = next(iter(mol_list))
+        mol = next(iter(mol_list))
 
         qd_iterator = dissociate_ligand(mol, **vars(workflow))
-        for stop, _ in enumerate(qd_iterator, 1):
+        for stop, _ in enumerate(qd_iterator, 1):  # noqa: B007
             pass
 
-    super_keys = ('BDE label', 'BDE dE')
+    super_keys: tuple[str, ...] = ('BDE label', 'BDE dE')
     if workflow.jobs[1]:  # i.e. thermochemical corrections are enabled
         super_keys += ('BDE ddG', 'BDE dG')
 
@@ -103,21 +101,23 @@ def _construct_columns(workflow: WorkFlow, mol_list: Iterable[Molecule]) -> List
 
 def start_bde(
     mol_list: Iterable[Molecule],
-    jobs: Tuple[Type[Job], ...],
-    settings: Tuple[Settings, ...],
-    forcefield=None,
-    lig_count: None | int = None,
+    jobs: tuple[type[Job], ...],
+    settings: tuple[Settings, ...],
+    forcefield: Any = None,
+    lig_count: int | None = None,
     core_atom: None | Molecule | str | int = None,
-    core_index: None | int = None,
+    core_index: None | Sequence[int] = None,
     xyn_pre_opt: bool = True,
     qd_opt: bool = False,
     **kwargs: Any,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """Calculate the BDEs with thermochemical corrections."""
+    if lig_count is None:
+        raise TypeError("`lig_count` must be specified")
     job1, job2 = jobs
     s1, s2 = settings
 
-    ret = []
+    ret: list[np.ndarray] = []
     ret_append = ret.append
     for qd_complete in mol_list:
         # Dissociate a XYn molecule from the quantum dot surface
@@ -130,7 +130,7 @@ def start_bde(
             )
 
         # Create all possible quantum dots where XYn is dissociated
-        qd_list: List[Molecule] = list(dissociate_ligand(
+        qd_list: list[Molecule] = list(dissociate_ligand(
             qd_complete, lig_count, core_atom=core_atom,
             core_index=core_index, **kwargs,
         ))
@@ -159,8 +159,8 @@ def start_bde(
     return ret
 
 
-def get_bde_dE(tot: Molecule, lig: Molecule, core: Iterable[Molecule],
-               job: Type[Job], s: Settings, forcefield: bool = False,
+def get_bde_dE(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
+               job: type[Job], s: Settings, forcefield: bool = False,
                qd_opt: bool = True) -> np.ndarray:
     """Calculate the bond dissociation energy: dE = dE(mopac) + (dG(uff) - dE(uff)).
 
@@ -189,7 +189,7 @@ def get_bde_dE(tot: Molecule, lig: Molecule, core: Iterable[Molecule],
         s_cp.input.ams.GeometryOptimization.coordinatetype = 'Cartesian'
         lig.job_geometry_opt(job, s_cp, name='E_XYn_opt')
     elif forcefield:
-        qd_opt_ff(lig, Settings({'job1': Cp2kJob, 's1': s}), name='E_XYn_opt')
+        qd_opt_ff(lig, Cp2kJob, s, name='E_XYn_opt')
     else:
         # TODO Generalize this to more QM packages
         if job is Cp2kJob:
@@ -206,7 +206,7 @@ def get_bde_dE(tot: Molecule, lig: Molecule, core: Iterable[Molecule],
 
     # Perform a single point on the full quantum dot
     if forcefield:
-        qd_opt_ff(tot, Settings({'job1': Cp2kJob, 's1': s}), name='E_QD_opt')
+        qd_opt_ff(tot, Cp2kJob, s, name='E_QD_opt')
     else:
         # TODO Generalize this to more QM packages
         if job is Cp2kJob:
@@ -229,7 +229,7 @@ def get_bde_dE(tot: Molecule, lig: Molecule, core: Iterable[Molecule],
     # Perform a single point on the quantum dot(s) - XYn
     for mol in core:
         if forcefield:
-            qd_opt_ff(mol, Settings({'job1': Cp2kJob, 's1': s}), name='E_QD-XYn_opt')
+            qd_opt_ff(mol, Cp2kJob, s, name='E_QD-XYn_opt')
         elif not qd_opt:
             mol.job_single_point(job, s_sp, name='E_QD-XYn_sp')
         else:
@@ -241,8 +241,8 @@ def get_bde_dE(tot: Molecule, lig: Molecule, core: Iterable[Molecule],
     return dE
 
 
-def get_bde_ddG(tot: Molecule, lig: Molecule, core: Iterable[Molecule],
-                job: Optional[Type[Job]] = None, s: Optional[Settings] = None) -> np.ndarray:
+def get_bde_ddG(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
+                job: type[Job] | None = None, s: Settings | None = None) -> np.ndarray:
     """Calculate the bond dissociation energy: dG = dE(lvl1) + (dG(lvl2) - dE(lvl2)).
 
     Parameters
@@ -269,6 +269,7 @@ def get_bde_ddG(tot: Molecule, lig: Molecule, core: Iterable[Molecule],
     len_core = len(core)
     if job is None:
         return np.full(len_core, np.nan)
+    assert s is not None
 
     # Optimize XYn
     if job is AMSJob:

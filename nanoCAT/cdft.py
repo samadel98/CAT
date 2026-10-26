@@ -1,5 +1,8 @@
+"""Conceptual DFT (CDFT) descriptors of ligands, calculated with ADF."""
+
 from math import nan
-from typing import Iterable, Any, Type, List, Union
+from typing import Any
+from collections.abc import Iterable
 
 import yaml
 import pandas as pd
@@ -66,8 +69,8 @@ def init_cdft(ligand_df: SettingsDataFrame) -> None:
 
 
 def start_crs_jobs(mol_list: Iterable[Molecule],
-                   jobs: Iterable[Type[Job]], settings: Iterable[Settings],
-                   **kwargs: Any) -> List[pd.Series]:
+                   jobs: Iterable[type[Job]], settings: Iterable[Settings],
+                   **kwargs: Any) -> list[pd.Series]:
     # Parse the job type
     job, *_ = jobs
     if job is not ADFJob:
@@ -106,7 +109,7 @@ _BACKUP.index = pd.MultiIndex.from_product(
 )
 
 
-def run_cdft_job(mol: Molecule, job: Type[ADFJob], s: Settings) -> pd.Series:
+def run_cdft_job(mol: Molecule, job: type[ADFJob], s: Settings) -> pd.Series:
     """Run a conceptual DFT job and extract & return all global descriptors."""
     results = mol.job_single_point(job, s.copy(), name='CDFT',
                                    ret_results=True, read_template=False)
@@ -121,7 +124,7 @@ def run_cdft_job(mol: Molecule, job: Type[ADFJob], s: Settings) -> pd.Series:
     return ret
 
 
-def get_global_descriptors(results: Union[ADFResults, ADF_Result]) -> pd.Series:
+def get_global_descriptors(results: ADFResults | ADF_Result) -> pd.Series:
     """Extract a dictionary with all ADF conceptual DFT global descriptors from **results**.
 
     Examples
@@ -167,6 +170,8 @@ def get_global_descriptors(results: Union[ADFResults, ADF_Result]) -> pd.Series:
     """
     if not isinstance(results, Results):
         results = results.results
+        if results is None:
+            raise TypeError("The QMFlows result does not contain any PLAMS results")
     file = results['$JN.out']
 
     with open(file) as f:

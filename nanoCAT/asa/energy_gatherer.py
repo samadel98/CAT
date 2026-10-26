@@ -1,9 +1,11 @@
+"""A mapping that calculates and stores the forcefield energy terms of an MD trajectory."""
+
 import textwrap
 from os import PathLike
 from io import TextIOBase
 from types import MappingProxyType
-from typing import (ClassVar, FrozenSet, Mapping, Optional, Any, Callable, Union, AnyStr, TypeVar,
-                    Iterator, KeysView, ItemsView, ValuesView, Dict, SupportsFloat)
+from typing import (ClassVar, Optional, Any, AnyStr, SupportsFloat)
+from collections.abc import Mapping, Callable, Iterator
 from collections import abc
 from itertools import combinations_with_replacement
 
@@ -17,9 +19,6 @@ from FOX import (MultiMolecule, PSFContainer, PRMContainer,
 
 __all__ = ['EnergyGatherer']
 
-# TypeVars for keys and values
-KT = TypeVar('KT', bound=str)
-KV = TypeVar('KV', None, pd.DataFrame)
 
 
 def _return_true(value: Any) -> bool: return True
@@ -124,7 +123,7 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
     """  # noqa
 
     #: A :class:`frozenset` of potenial energy terms.
-    E_SET: ClassVar[FrozenSet[str]] = frozenset({
+    E_SET: ClassVar[frozenset[str]] = frozenset({
         'inter_elstat', 'inter_lj', 'intra_elstat', 'intra_lj',
         'bonds', 'angles', 'urey_bradley', 'dihedrals', 'impropers'
     })
@@ -132,17 +131,17 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
     #: A :class:`frozenset` with the names of private instance variables.
     #: These attributes will be excluded whenever calling :meth:`EnergyGatherer.as_dict`,
     #: printing or comparing objects.
-    _PRIVATE_ATTR: ClassVar[FrozenSet[str]] = frozenset({'_vars_view'})
+    _PRIVATE_ATTR = frozenset({'_vars_view'})  # type: ignore[assignment]
 
     @property
-    def vars_view(self) -> Mapping[KT, KV]:
+    def vars_view(self) -> Mapping[str, pd.DataFrame | None]:
         """Return a read-only view of all attributes specified in :attr:`EnergyGatherer.E_SET`."""
         return MappingProxyType(self._vars_view)
 
-    def __init__(self, **kwargs: Optional[pd.DataFrame]) -> None:
+    def __init__(self, **kwargs: pd.DataFrame | None) -> None:
         """Initialize the :class:`EnergyGatherer` instance."""
         super().__init__()
-        self._vars_view: Dict[str, Optional[pd.DataFrame]] = {}
+        self._vars_view: dict[str, pd.DataFrame | None] = {}
 
         self.inter_elstat = None
         self.inter_lj = None
@@ -160,7 +159,7 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
             setattr(self, k, df)
 
     @classmethod
-    def _validate_keys(cls, kwargs: Mapping[KT, KV]) -> None:
+    def _validate_keys(cls, kwargs: Mapping[str, pd.DataFrame | None]) -> None:
         """Validate the variable keyword arguments of :meth:`EnergyGatherer.__init__`."""
         difference = set(kwargs.keys()).difference(cls.E_SET)
         if len(difference) == 1:
@@ -182,55 +181,32 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
             del self._vars_view[name]
         super().__delattr__(name)
 
-    @property
-    def __getitem__(self) -> Callable[[KT], KV]:
-        """Get the :meth:`__getitem__<types.MappingProxyType.__getitem__>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.__getitem__
+    def __getitem__(self, key: str) -> pd.DataFrame | None:
+        """Implement :code:`self[key]`."""
+        return self._vars_view[key]
 
-    @property
-    def __iter__(self) -> Callable[[], Iterator[KT]]:
-        """Get the :meth:`__iter__<types.MappingProxyType.__iter__>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.__iter__
+    def __iter__(self) -> Iterator[str]:
+        """Implement :code:`iter(self)`."""
+        return iter(self._vars_view)
 
-    @property
-    def __len__(self) -> Callable[[], int]:
-        """Get the :meth:`__len__<types.MappingProxyType.__len__>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.__len__
+    def __len__(self) -> int:
+        """Implement :code:`len(self)`."""
+        return len(self._vars_view)
 
-    @property
-    def __contains__(self) -> Callable[[KT], bool]:
-        """Get the :meth:`__contains__<types.MappingProxyType.__contains__>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.__contains__
-
-    @property
-    def get(self) -> Callable[[KT, Optional[Any]], KV]:
-        """Get the :meth:`get<types.MappingProxyType.get>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.get
-
-    @property
-    def keys(self) -> Callable[[], KeysView[KT]]:
-        """Get the :meth:`keys<types.MappingProxyType.keys>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.keys
-
-    @property
-    def items(self) -> Callable[[], ItemsView[KT, KV]]:
-        """Get the :meth:`items<types.MappingProxyType.items>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.items
-
-    @property
-    def values(self) -> Callable[[], ValuesView[KV]]:
-        """Get the :meth:`values<types.MappingProxyType.values>` method of :attr:`EnergyGatherer.vars_view`."""  # noqa
-        return self.vars_view.values
+    def __contains__(self, key: object) -> bool:
+        """Implement :code:`key in self`."""
+        return key in self._vars_view
 
     @staticmethod
     @AbstractDataClass.inherit_annotations()
     def _str(key: str, value: Any,
-             width: Optional[int] = None,
-             indent: Optional[int] = None) -> str:
+             width: int | None = None,
+             indent: int | None = None) -> str:
         """Return a string representation of a single **key**/**value** pair."""
         key_str = f'{key} = ' if width is None else f'{key:{width}} = '
         val = repr(value) if not isinstance(value, pd.DataFrame) else f'{value.__class__.__name__}(..., shape={value.shape})'  # noqa
-        value_str = textwrap.indent(val, ' ' * indent)[indent:]
+        indent_ = indent or 0
+        value_str = textwrap.indent(val, ' ' * indent_)[indent_:]
         return f'{key_str}{value_str}'  # e.g.: "key   =     'value'"
 
     @staticmethod
@@ -238,7 +214,9 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
     def _eq(v1, v2): np.testing.assert_array_equal(v1, v2)
 
     @AbstractDataClass.inherit_annotations()
-    def __copy__(self): return self.copy(deep=True)
+    def __copy__(self):
+        """Return a deep copy of this instance."""
+        return self.copy(deep=True)
 
     def inter_nonbonded(self, multi_mol: MultiMolecule, s: Settings, psf: PSFContainer,
                         prm: PRMContainer, **kwargs) -> float:
@@ -271,8 +249,8 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
 
         return sum((df.mean().sum() if df is not None else 0.0) for df in E_tup)
 
-    def write_csv(self, path_or_buf: Union[None, AnyStr, PathLike, TextIOBase] = None,
-                  drop_zero: bool = True, **kwargs: Any) -> Optional[str]:
+    def write_csv(self, path_or_buf: None | AnyStr | PathLike | TextIOBase = None,
+                  drop_zero: bool = True, **kwargs: Any) -> str | None:
         r"""Export this instances :meth:`values<EnergyGatherer.values>` to a .csv file.
 
         Serves as wrapper arround the :meth:`pandas.DataFrame.to_csv` method.
@@ -314,7 +292,7 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
             raise TypeError("No DataFrames available in this instance; all values are None")
 
     @classmethod
-    def read_csv(cls, filepath_or_buffer: Union[AnyStr, PathLike, TextIOBase],
+    def read_csv(cls, filepath_or_buffer: AnyStr | PathLike | TextIOBase,
                  **kwargs: Any) -> Optional['EnergyGatherer']:
         r"""Update this instance's :meth:`values<EnergyGatherer.values>` with data from a .csv file.
 
@@ -368,7 +346,7 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
             return None
 
     @staticmethod
-    def separate(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    def separate(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         """Separate a :meth:`concatenated<EnergyGatherer.concatenate>` DataFrame into a dictionary of DataFrames.
 
         The keys on the first level of its columns will be used as the new dictionary keys.
@@ -387,7 +365,7 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
             A dictionary of DataFrames.
 
         """  # noqa
-        ret: Dict[str, pd.DataFrame] = {}
+        ret: dict[str, pd.DataFrame] = {}
 
         try:
             assert len(df.columns.levels) == 2
@@ -403,7 +381,7 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
             sub_df.columns = pd.MultiIndex.from_tuples(i.split() for i in sub_df.columns)
         return ret
 
-    def concatenate(self, drop_zero: bool = True) -> Optional[pd.DataFrame]:
+    def concatenate(self, drop_zero: bool = True) -> pd.DataFrame | None:
         """Concatenate all DataFrames stored in this instances' :meth:`values<EnergyGatherer.values>` into a single DataFrame.
 
         Parameters
@@ -468,64 +446,78 @@ class EnergyGatherer(AbstractDataClass, abc.Mapping):
                 func(df, value_)
 
     def __iadd__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Implement ``self += value`` for all energy terms."""
         self._imap(value, func=pd.DataFrame.__iadd__)
         return self
 
     def __isub__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Implement ``self -= value`` for all energy terms."""
         self._imap(value, func=pd.DataFrame.__isub__)
         return self
 
     def __imul__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Implement ``self *= value`` for all energy terms."""
         self._imap(value, func=pd.DataFrame.__imul__)
         return self
 
     def __ifloordiv__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Implement ``self //= value`` for all energy terms."""
         self._imap(value, func=pd.DataFrame.__ifloordiv__)
         return self
 
     def __itruediv__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Implement ``self /= value`` for all energy terms."""
         self._imap(value, func=pd.DataFrame.__itruediv__)
         return self
 
     def __ipow__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Implement ``self **= value`` for all energy terms."""
         self._imap(value, func=pd.DataFrame.__ipow__)
         return self
 
     def __imod__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Implement ``self %= value`` for all energy terms."""
         self._imap(value, func=pd.DataFrame.__imod__)
         return self
 
     def __add__(self, value: SupportsFloat) -> 'EnergyGatherer':
-        ret = self.copy()
+        """Return a copy with ``value`` applied to all energy terms with ``+``."""
+        ret = self.copy(deep=True)
         ret += value
         return ret
 
     def __sub__(self, value: SupportsFloat) -> 'EnergyGatherer':
-        ret = self.copy()
+        """Return a copy with ``value`` applied to all energy terms with ``-``."""
+        ret = self.copy(deep=True)
         ret -= value
         return ret
 
     def __mul__(self, value: SupportsFloat) -> 'EnergyGatherer':
-        ret = self.copy()
+        """Return a copy with ``value`` applied to all energy terms with ``*``."""
+        ret = self.copy(deep=True)
         ret *= value
         return ret
 
     def __floordiv__(self, value: SupportsFloat) -> 'EnergyGatherer':
-        ret = self.copy()
-        ret /= value
-        return ret
-
-    def __truediv__(self, value: SupportsFloat) -> 'EnergyGatherer':
-        ret = self.copy()
+        """Return a copy with ``value`` applied to all energy terms with ``//``."""
+        ret = self.copy(deep=True)
         ret //= value
         return ret
 
+    def __truediv__(self, value: SupportsFloat) -> 'EnergyGatherer':
+        """Return a copy with ``value`` applied to all energy terms with ``/``."""
+        ret = self.copy(deep=True)
+        ret /= value
+        return ret
+
     def __pow__(self, value: SupportsFloat) -> 'EnergyGatherer':
-        ret = self.copy()
+        """Return a copy with ``value`` applied to all energy terms with ``**``."""
+        ret = self.copy(deep=True)
         ret **= value
         return ret
 
     def __mod__(self, value: SupportsFloat) -> 'EnergyGatherer':
-        ret = self.copy()
+        """Return a copy with ``value`` applied to all energy terms with ``%``."""
+        ret = self.copy(deep=True)
         ret %= value
         return ret

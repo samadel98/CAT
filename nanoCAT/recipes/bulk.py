@@ -20,23 +20,17 @@ API
 
 from __future__ import annotations
 
-import sys
 import warnings
 import functools
 from itertools import chain
 from typing import (
-    Iterable,
-    List,
-    Iterator,
-    Callable,
-    Generator,
-    Tuple,
+    Any,
     Union,
-    Sequence,
     SupportsFloat,
     TYPE_CHECKING,
     TypeVar,
 )
+from collections.abc import Iterable, Iterator, Callable, Generator, Sequence
 
 
 import numpy as np
@@ -56,10 +50,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
     from typing_extensions import SupportsIndex
 
-if sys.version_info > (3, 8):
-    _WeightReturn = Union[str, bytes, SupportsFloat, "SupportsIndex"]
-else:
-    _WeightReturn = Union[str, bytes, SupportsFloat]
+_WeightReturn = Union[str, bytes, SupportsFloat, "SupportsIndex"]
 
 _WT = TypeVar("_WT", bound=_WeightReturn)
 _WeightFunc1 = Callable[[np.float64], _WT]
@@ -76,7 +67,7 @@ def bulk_workflow(
     diameter: None | float = 4.5,
     height_lim: None | float = 10.0,
     optimize: bool = True,
-) -> Tuple[List[Molecule], npt.NDArray[np.float64]]:
+) -> tuple[list[Molecule], npt.NDArray[np.float64]]:
     """Start the CAT ligand bulkiness workflow with an iterable of smiles strings.
 
     Examples
@@ -151,7 +142,7 @@ def fast_bulk_workflow(
     diameter: None | float = 4.5,
     height_lim: None | float = 10.0,
     func: None | _WeightFunc1 = np.exp,
-) -> Tuple[List[Molecule], npt.NDArray[np.float64]]:
+) -> tuple[list[Molecule], npt.NDArray[np.float64]]:
     """Start the ligand fast-bulkiness workflow with an iterable of smiles strings.
 
     Examples
@@ -212,7 +203,8 @@ def fast_bulk_workflow(
         diameter = -np.inf
 
     if func is None:
-        w_func = lambda x, y: x
+        def w_func(x, y):
+            return x
     else:
         w_func = functools.partial(_weight, h_max=height_lim, r_min=diameter, w_func=func)
 
@@ -223,9 +215,9 @@ def fast_bulk_workflow(
 
 
 def _fast_bulkiness_iter(
-    iterator: Iterator[Tuple[Molecule, Atom]],
-    func: _WeightFunc2[_WT],
-) -> Generator[_WT | float, None, None]:
+    iterator: Iterator[tuple[Molecule, Atom]],
+    func: _WeightFunc2[Any],
+) -> Generator[Any, None, None]:
     for mol, atom in iterator:
         try:
             graph = GraphConstructor(mol)
@@ -250,7 +242,7 @@ def _fast_bulkiness_iter(
             yield ret
 
 
-def read_smiles(smiles_list: Iterable[str]) -> List[Molecule]:
+def read_smiles(smiles_list: Iterable[str]) -> list[Molecule]:
     """Convert smiles strings into CAT-compatible plams molecules."""
     input_mol = list(smiles_list)
     validate_mol(input_mol, 'input_ligands')
@@ -260,7 +252,7 @@ def read_smiles(smiles_list: Iterable[str]) -> List[Molecule]:
 def _iter_mol_block(
     mol_block: str,
     size: int,
-) -> Generator[Tuple[str, Tuple[str, str, str]], None, None]:
+) -> Generator[tuple[str, tuple[str, str, str]], None, None]:
     """Yield the symbols and coordinates embedded within the passed ``MolBlock``."""
     slc = np.s_[4:4 + size]
     lst = mol_block.split("\n")[slc]
@@ -290,14 +282,14 @@ def _molecule_from_rdmol(
             rdmol_edit = Chem.EditableMol(rdmol)
             rdmol_edit.RemoveAtom(j)
             rdmol_new = rdmol_edit.GetMol()
-            anchor = rdmol_new.GetAtoms()[i]
+            anchor = rdmol_new.GetAtomWithIdx(i)
             anchor.SetFormalCharge(anchor.GetFormalCharge() - 1)
         else:
             rdmol_new = rdmol
 
         # Parse the .mol block and convert it into a PLAMS molecule
         mol_block = Chem.MolToMolBlock(rdmol)
-        iterator = _iter_mol_block(mol_block, size=len(rdmol.GetAtoms()))
+        iterator = _iter_mol_block(mol_block, size=rdmol.GetNumAtoms())
         mol = Molecule()
         mol.atoms = [Atom(symbol=symbol, coords=xyz, mol=mol) for symbol, xyz in iterator]
         for bond in rdmol.GetBonds():
@@ -392,7 +384,7 @@ def bulkiness(
     def _iterate(mol_list: Iterable[Molecule]) -> Generator[float, None, None]:
         for mol in mol_list:
             radius, height = get_lig_radius(mol)  # From cartesian to cylindrical
-            yield get_V(radius, height, diameter, None, h_lim=height_lim)
+            yield float(get_V(radius, height, diameter, None, h_lim=height_lim))
 
     try:
         count = len(mol_list)  # type: ignore

@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 
 def init_cone_angle(ligand_df: SettingsDataFrame) -> None:
+    """Initialize the ligand cone angle workflow."""
     workflow = WorkFlow.from_template(ligand_df, name='cone_angle')
     workflow.keep_files = False
     dist = ligand_df.settings.optional.ligand.cone_angle.distance
@@ -49,7 +50,7 @@ def init_cone_angle(ligand_df: SettingsDataFrame) -> None:
 
     # Import the cone angles of all requested distances from the database
     # and compute the missing ones
-    idx = workflow.from_db(ligand_df, columns={i: np.nan for i in columns})
+    idx = workflow.from_db(ligand_df, columns=dict.fromkeys(columns, np.nan))
     workflow(_start_cone_angle, ligand_df, index=idx, columns=columns, surface_dist=dist)
 
     # Export to the database
@@ -60,9 +61,9 @@ def _start_cone_angle(
     lig_series: pd.Series,
     surface_dist: float = 0.0,
     **kwargs: Any,
-) -> list[f8] | list[NDArray[f8]]:
+) -> list[NDArray[f8] | f8]:
     """Start the main loop for the ligand cone angle calculation."""
-    ret = []
+    ret: list[NDArray[f8] | f8] = []
     for ligand in lig_series:
         anchor = ligand.atoms.index(ligand.properties.dummies)
         angle = get_cone_angle(ligand, anchor, surface_dist)
@@ -78,9 +79,10 @@ def _get_angle(xyz: NDArray[f8]) -> NDArray[f8] | f8:
     return np.nanmax(angles, axis=-1)
 
 
-def _minimize_func(vec: NDArray[f8], xyz: NDArray[f8], i: int) -> f8:
+def _minimize_func(vec: NDArray[f8], xyz: NDArray[f8], i: int) -> NDArray[f8] | f8:
     """Rotate the X-axis in ``xyz`` to ``vec`` and \
-    compute the maximum angle w.r.t. to the X-axis."""
+    compute the maximum angle w.r.t. to the X-axis.
+    """
     rotmat = rotation_matrix([1, 0, 0], vec)
     xyz_rot = xyz @ rotmat.T
     xyz_rot -= xyz_rot[i]

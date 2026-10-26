@@ -18,7 +18,8 @@ API
 
 """
 
-from typing import Optional, Iterable, Tuple, Any, Type
+from typing import Any, cast
+from collections.abc import Iterable, Callable
 
 import numpy as np
 
@@ -26,7 +27,7 @@ from scm.plams import Settings, Molecule
 from scm.plams.core.basejob import Job
 import scm.plams.interfaces.molecule.rdkit as molkit
 
-from rdkit.Chem import AllChem
+from rdkit.Chem import rdForceFieldHelpers
 
 from CAT.jobs import job_single_point, job_geometry_opt  # noqa: F401
 from CAT.workflows import WorkFlow, MOL, JOB_SETTINGS_ASA
@@ -38,7 +39,10 @@ from ..qd_opt_ff import qd_opt_ff
 
 __all__ = ['init_asa']
 
-UFF = AllChem.UFFGetMoleculeForceField
+UFF = rdForceFieldHelpers.UFFGetMoleculeForceField
+
+#: The signature shared by :func:`_asa_uff`, :func:`_asa_plams` and :func:`_asa_plams_ff`.
+_ASAFunc = Callable[..., tuple[float, float, float, float, int]]
 
 
 def init_asa(qd_df: SettingsDataFrame) -> None:
@@ -69,10 +73,10 @@ def init_asa(qd_df: SettingsDataFrame) -> None:
 
 def get_asa_energy(mol_list: Iterable[Molecule],
                    read_template: bool = True,
-                   jobs: Tuple[Optional[Type[Job]], ...] = (None,),
-                   settings: Tuple[Optional[Settings], ...] = (None,),
+                   jobs: tuple[type[Job] | None, ...] = (None,),
+                   settings: tuple[Settings | None, ...] = (None,),
                    use_ff: bool = False,
-                   **kwargs: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+                   **kwargs: Any) -> np.ndarray:
     r"""Perform an activation strain analyses (ASA).
 
     The ASA calculates the interaction, strain and total energy.
@@ -103,24 +107,26 @@ def get_asa_energy(mol_list: Iterable[Molecule],
         for all *n* molecules in **mol_series**.
 
     """
+    job: type[Job] | None
+    s: Settings | None
     if jobs == (None,):
-        asa_func = _asa_uff
-        job = settings = None
+        asa_func = cast(_ASAFunc, _asa_uff)
+        job = s = None
     else:
-        asa_func = _asa_plams if not use_ff else _asa_plams_ff
+        asa_func = cast(_ASAFunc, _asa_plams if not use_ff else _asa_plams_ff)
         job = jobs[0]
-        settings = settings[0]
+        s = settings[0]
 
     # Perform the activation strain analyses
-    E_intermediate = []
+    E_list: list[float] = []
     for qd in mol_list:
         ligand_list, core = get_asa_fragments(qd)
-        E_intermediate += asa_func(
-            qd, ligand_list, core, read_template=read_template, job=job, settings=settings
+        E_list += asa_func(
+            qd, ligand_list, core, read_template=read_template, job=job, settings=s
         )
 
     # Cast into an array and reshape into n*4
-    E_intermediate = np.array(E_intermediate, dtype=float).reshape(-1, 5)
+    E_intermediate = np.array(E_list, dtype=float).reshape(-1, 5)
 
     # Calclate the ASA terms
     E_int = E_intermediate[:, 0] - (E_intermediate[:, 1] + E_intermediate[:, 2])
@@ -137,8 +143,8 @@ def get_asa_energy(mol_list: Iterable[Molecule],
 
 
 def _asa_uff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecule,
-             read_template: bool, job: Type[Job],
-             settings: Settings) -> Tuple[float, float, float, float, int]:
+             read_template: bool, job: type[Job] | None,
+             settings: Settings | None) -> tuple[float, float, float, float, int]:
     r"""Perform an activation strain analyses using RDKit UFF.
 
     Parameters
@@ -173,7 +179,7 @@ def _asa_uff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecule
     E_ligands = 0.0
     E_min = np.inf
     mol_min = None
-    for ligand_count, rdmol in enumerate(rd_ligands, 1):
+    for ligand_count, rdmol in enumerate(rd_ligands, 1):  # noqa: B007
         E = UFF(rdmol, ignoreInterfragInteractions=False).CalcEnergy()
         E_ligands += E
         if E < E_min:
@@ -195,8 +201,8 @@ def _asa_uff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecule
 
 
 def _asa_plams(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecule,
-               read_template: bool, job: Type[Job],
-               settings: Settings) -> Tuple[float, float, float, float, int]:
+               read_template: bool, job: type[Job],
+               settings: Settings) -> tuple[float, float, float, float, int]:
     """Perform an activation strain analyses with custom Job and Settings.
 
     Parameters
@@ -237,8 +243,8 @@ def _asa_plams(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecu
     # Calculate the (summed) energy of each individual fragment in the total system
     E_ligands = 0.0
     E_min = np.inf
-    mol_min = None
-    for ligand_count, mol in enumerate(ligands, 1):
+    mol_min: Molecule | None = None
+    for ligand_count, mol in enumerate(ligands, 1):  # noqa: B007
         mol.round_coords()
         mol.job_single_point(job, s)
         E = mol.properties.energy.E
@@ -252,9 +258,10 @@ def _asa_plams(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecu
 
     # Calculate the energy of the core
     core.job_single_point(job, s)
-    E_core = mol.properties.energy.E
+    E_core = core.properties.energy.E
 
     # Calculate the energy of an optimizes fragment
+    assert mol_min is not None
     mol_min.job_geometry_opt(job, s)
     E_ligand_opt = mol_min.properties.energy.E
 
@@ -262,8 +269,8 @@ def _asa_plams(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecu
 
 
 def _asa_plams_ff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Molecule,
-                  read_template: bool, job: Type[Job],
-                  settings: Settings) -> Tuple[float, float, float, float, int]:
+                  read_template: bool, job: type[Job],
+                  settings: Settings) -> tuple[float, float, float, float, int]:
     """Perform an activation strain analyses with custom Job, Settings and forcefield.
 
     Parameters
@@ -298,8 +305,8 @@ def _asa_plams_ff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Mol
     # Calculate the (summed) energy of each individual ligand fragment in the total system
     E_ligands = 0.0
     E_min = np.inf
-    mol_min = None
-    for ligand_count, mol in enumerate(ligands, 1):
+    mol_min: Molecule | None = None
+    for ligand_count, mol in enumerate(ligands, 1):  # noqa: B007
         mol.round_coords()
         qd_opt_ff(mol, job, s, name='ASA_sp', new_psf=True, job_func=Molecule.job_single_point)
         E = mol.properties.energy.E
@@ -329,6 +336,7 @@ def _asa_plams_ff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Mol
         'lbfgs': {'max_h_rank': 100}
     })
     s.input['global'].run_type = 'geometry_optimization'
+    assert mol_min is not None
     qd_opt_ff(mol_min, job, s, name='ASA_opt')
     E_ligand_opt = mol_min.properties.energy.E
 

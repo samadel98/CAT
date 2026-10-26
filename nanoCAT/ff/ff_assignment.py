@@ -18,7 +18,8 @@ API
 
 """
 
-from typing import Tuple, Iterable, Any, Type
+from typing import Any
+from collections.abc import Iterable
 
 from scm.plams import Molecule, Settings
 from scm.plams.core.basejob import Job
@@ -78,8 +79,8 @@ def init_ff_assignment(ligand_df: SettingsDataFrame,
     workflow(start_ff_assignment, ligand_df, columns=[])
 
 
-def start_ff_assignment(mol_list: Iterable[Molecule], jobs: Tuple[Type[Job], ...],
-                        settings: Tuple[Settings, ...], **kwargs: Any) -> None:
+def start_ff_assignment(mol_list: Iterable[Molecule], jobs: tuple[type[Job], ...],
+                        settings: tuple[Settings, ...], **kwargs: Any) -> None:
     """Start the forcefield assignment."""
     job = jobs[0]
     s = settings[0]
@@ -88,7 +89,7 @@ def start_ff_assignment(mol_list: Iterable[Molecule], jobs: Tuple[Type[Job], ...
 
 
 def run_match_job(mol: Molecule, s: Settings,
-                  job_type: Type[Job] = MatchJob,
+                  job_type: type[Job] = MatchJob,
                   action: str = 'warn') -> None:
     """Assign atom types and charges to **mol** based on the results of MATCH_.
 

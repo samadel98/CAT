@@ -17,7 +17,7 @@ API
 """
 
 from os import PathLike
-from typing import Optional, Union, Iterable
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -31,11 +31,11 @@ __all__ = ['get_lig_charge']
 
 def get_lig_charge(ligand: Molecule,
                    desired_charge: float,
-                   ligand_idx: Union[None, int, Iterable[int], slice] = None,
+                   ligand_idx: None | int | Iterable[int] | slice = None,
                    invert_idx: bool = False,
-                   settings: Optional[Settings] = None,
-                   path: Union[None, str, PathLike] = None,
-                   folder: Union[None, str, PathLike] = None) -> pd.Series:
+                   settings: Settings | None = None,
+                   path: None | str | PathLike = None,
+                   folder: None | str | PathLike = None) -> pd.Series:
     """Calculate and rescale the **ligand** charges using MATCH_.
 
     The atomic charges in **ligand_idx** wil be altered such that the molecular
@@ -138,7 +138,7 @@ def get_lig_charge(ligand: Molecule,
     return pd.Series(charge, index=symbol, name='charge')
 
 
-def _parse_ligand_idx(idx: Union[None, slice, int, Iterable[int]]) -> Union[slice, np.ndarray]:
+def _parse_ligand_idx(idx: None | slice | int | Iterable[int]) -> slice | np.ndarray:
     """Parse the **ligand_idx** parameter in :func:`get_lig_charge`."""
     if idx is None:
         return slice(None)
@@ -147,7 +147,7 @@ def _parse_ligand_idx(idx: Union[None, slice, int, Iterable[int]]) -> Union[slic
     return as_nd_array(idx, dtype=int)
 
 
-def _invert_idx(idx: np.ndarray, count: int) -> np.ndarray:
+def _invert_idx(idx: slice | np.ndarray, count: int) -> np.ndarray:
     """Parse the **invert_idx** parameter in :func:`get_lig_charge`."""
     ret = np.ones(count, dtype=bool)
     ret[idx] = False

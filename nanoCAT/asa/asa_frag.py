@@ -16,7 +16,6 @@ API
 
 """
 
-from typing import Tuple, List
 from itertools import chain
 
 from scm.plams import Molecule
@@ -24,7 +23,7 @@ from scm.plams import Molecule
 __all__ = ['get_asa_fragments']
 
 
-def get_asa_fragments(qd: Molecule) -> Tuple[List[Molecule], Molecule]:
+def get_asa_fragments(qd: Molecule) -> tuple[list[Molecule], Molecule]:
     """Construct the fragments for an activation strain analyses.
 
     Parameters

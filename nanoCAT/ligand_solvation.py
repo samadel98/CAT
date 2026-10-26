@@ -42,8 +42,9 @@ import logging
 from itertools import product
 from os.path import join
 from typing import (
-    Optional, Sequence, Collection, Tuple, List, Iterable, Any, Type, Generator
+    Any
 )
+from collections.abc import Sequence, Collection, Iterable, Generator
 
 import numpy as np
 from scipy import constants
@@ -68,7 +69,7 @@ __all__ = ['init_solv']
 
 
 def init_solv(ligand_df: SettingsDataFrame,
-              solvent_list: Optional[Sequence[str]] = None) -> None:
+              solvent_list: Sequence[str] | None = None) -> None:
     """Initialize the ligand solvation energy calculation.
 
     Performs an inplace update of **ligand_df**, creating 2 sets of columns (*E_solv* & *gamma*)
@@ -99,7 +100,7 @@ def init_solv(ligand_df: SettingsDataFrame,
     ]
 
     # Create new import and export columns
-    import_columns = {k: np.nan for k in columns}
+    import_columns = dict.fromkeys(columns, np.nan)
     import_columns.update(workflow.import_columns)
     export_columns = columns + list(workflow.import_columns)
 
@@ -114,8 +115,8 @@ def init_solv(ligand_df: SettingsDataFrame,
 
 
 def start_crs_jobs(mol_list: Iterable[Molecule],
-                   jobs: Tuple[Type[Job], ...], settings: Tuple[Settings, ...],
-                   solvent_list: Sequence[str] = (), **kwargs: Any) -> List[List[float]]:
+                   jobs: tuple[type[Job], ...], settings: tuple[Settings, ...],
+                   solvent_list: Sequence[str] = (), **kwargs: Any) -> list[list[float]]:
     """Loop over all molecules in **mol_list** and perform COSMO-RS calculations."""
     j1, j2 = jobs
     s1, s2 = settings
@@ -132,10 +133,7 @@ def start_crs_jobs(mol_list: Iterable[Molecule],
         # Calculate the COSMO surface
         mol_conj = _protonate_mol(mol)
         coskf = get_surface_charge(mol, job=j1, s=s1)
-        if mol_conj is not None:
-            coskf_conj = get_surface_charge(mol_conj, job=j1, s=s1)
-        else:
-            coskf_conj = None
+        coskf_conj = get_surface_charge(mol_conj, job=j1, s=s1) if mol_conj is not None else None
 
         # Perform the actual COSMO-RS calculation
         lst = get_solv(mol, solvent_list, coskf, job=j2, s=s2)
@@ -144,7 +142,7 @@ def start_crs_jobs(mol_list: Iterable[Molecule],
     return ret
 
 
-def get_solvent_columns(solvent_list: Iterable[str]) -> List[Tuple[str, str]]:
+def get_solvent_columns(solvent_list: Iterable[str]) -> list[tuple[str, str]]:
     """Create a list of column names from an iterable containing .coskf names.
 
     Parameters
@@ -165,18 +163,12 @@ def get_solvent_columns(solvent_list: Iterable[str]) -> List[Tuple[str, str]]:
     return list(product(('E_solv', 'gamma'), clm_tups))
 
 
-def get_solvent_list(solvent_list: Optional[Sequence[str]] = None) -> Sequence[str]:
+def get_solvent_list(solvent_list: Iterable[str] | None = None) -> list[str]:
     """Construct a sorted list of solvents; pull them from ``CAT.data.coskf`` if ``None``."""
     if solvent_list is None:
         base = join(CAT.__path__[0], 'data', 'coskf')
         solvent_list = [join(base, solv) for solv in os.listdir(base) if solv.endswith('coskf')]
-
-    try:
-        solvent_list.sort()
-    except AttributeError:  # It's not a list but a generic iterable
-        return sorted(solvent_list)
-    else:
-        return solvent_list
+    return sorted(solvent_list)
 
 
 def _protonate_mol(mol: Molecule) -> Molecule | None:
@@ -191,7 +183,7 @@ def _protonate_mol(mol: Molecule) -> Molecule | None:
     return add_Hs(mol_cp, forcefield="uff")
 
 
-def get_surface_charge(mol: Molecule, job: Type[Job], s: Settings) -> Optional[str]:
+def get_surface_charge(mol: Molecule, job: type[Job], s: Settings) -> str | None:
     """Construct the COSMO surface of the **mol**.
 
     Parameters
@@ -236,19 +228,17 @@ def _iter_coskf(
     base: str,
     solvent: str,
     solvent_conj: str
-) -> Generator[Tuple[str, str], None, None]:
+) -> Generator[tuple[str, str], None, None]:
     yield "acid", acid
     yield "base", base
     yield "solvent", solvent
     yield "solvent_conj", solvent_conj
 
 
-def get_pka(mol: Molecule, coskf_mol: Optional[str], coskf_mol_conj: Optional[str],
+def get_pka(mol: Molecule, coskf_mol: str | None, coskf_mol_conj: str | None,
             water: str, hydronium: str,
-            job: Type[Job], s: Settings) -> List[float]:
-    if coskf_mol is None:
-        return 5 * [np.nan]
-    elif coskf_mol_conj is None:
+            job: type[Job], s: Settings) -> list[float]:
+    if coskf_mol is None or coskf_mol_conj is None:
         return 5 * [np.nan]
 
     s = Settings(s)
@@ -315,9 +305,9 @@ def _get_pka(acid: float, base: float, solvent: float, solvent_conj: float,
     return fit_a * delta_G / (R * T * math.log(10)) + fit_b
 
 
-def get_solv(mol: Molecule, solvent_list: Iterable[str],
-             coskf: Optional[str], job: Type[Job], s: Settings
-             ) -> List[float]:
+def get_solv(mol: Molecule, solvent_list: Sequence[str],
+             coskf: str | None, job: type[Job], s: Settings
+             ) -> list[float]:
     """Calculate the solvation energy of *mol* in various *solvents*.
 
     Parameters
@@ -409,7 +399,7 @@ def _get_logp(s: Settings, name: str, logger: logging.Logger) -> float:
     return logp
 
 
-def get_surface_charge_adf(mol: Molecule, job: Type[Job], s: Settings) -> Settings:
+def get_surface_charge_adf(mol: Molecule, job: type[Job], s: Settings) -> Settings:
     """Perform a gas-phase ADF single point and return settings for a COSMO-ADF single point.
 
     The previous gas-phase calculation as moleculair fragment.
@@ -444,7 +434,7 @@ def get_surface_charge_adf(mol: Molecule, job: Type[Job], s: Settings) -> Settin
     return s
 
 
-def get_coskf(results: Results, extensions: Collection[str] = ('.coskf', '.t21')) -> Optional[str]:
+def get_coskf(results: Results, extensions: Collection[str] = ('.coskf', '.t21')) -> str | None:
     """Return the file in **results** containing the COSMO surface.
 
     Parameters

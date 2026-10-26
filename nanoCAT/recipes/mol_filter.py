@@ -16,7 +16,8 @@ API
 
 """
 
-from typing import Union, Iterable, Dict, TypeVar, Callable
+from typing import TypeVar
+from collections.abc import Iterable, Callable
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -27,8 +28,8 @@ __all__ = ['get_mol_length', 'filter_mol', 'filter_data']
 T = TypeVar('T')
 
 
-def get_mol_length(mol: Union[np.ndarray, Molecule],
-                   atom: Union[np.ndarray, Atom]) -> float:
+def get_mol_length(mol: np.ndarray | Molecule,
+                   atom: np.ndarray | Atom) -> float:
     """Return the distance between **atom** and the atom in **mol** which it is furthest removed from.
 
     Examples
@@ -75,7 +76,7 @@ def get_mol_length(mol: Union[np.ndarray, Molecule],
 
 
 def filter_mol(mol_list: Iterable[Molecule], data: Iterable[T],
-               filter: Callable[[Molecule], bool]) -> Dict[Molecule, T]:
+               filter: Callable[[Molecule], bool]) -> dict[Molecule, T]:
     """Filter **mol_list** and **data** based on elements from **mol_list**.
 
     Examples
@@ -128,7 +129,7 @@ def filter_mol(mol_list: Iterable[Molecule], data: Iterable[T],
 
 
 def filter_data(mol_list: Iterable[Molecule], data: Iterable[T],
-                filter: Callable[[T], bool]) -> Dict[Molecule, T]:
+                filter: Callable[[T], bool]) -> dict[Molecule, T]:
     """Filter **mol_list** and **data** based on elements from **data**.
 
     Examples

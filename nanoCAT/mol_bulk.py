@@ -24,13 +24,12 @@ API
 
 """
 
-from typing import Tuple, Optional, Any, List, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 
-from nanoutils import Literal
 from scm.plams import Molecule
 
 from CAT.settings_dataframe import SettingsDataFrame
@@ -95,16 +94,16 @@ def start_lig_bulkiness(
     qd_series: pd.Series,
     lig_series: pd.Series,
     core_series: pd.Series,
-    h_lim: Optional[float] = 10,
-    d: Union[None, Literal['auto'], float, np.ndarray] = "auto",
+    h_lim: float | None = 10,
+    d: None | Literal['auto'] | float | np.ndarray = "auto",
     **kwargs: Any,
-) -> List[float]:
+) -> list[float | np.ndarray]:
     """Start the main loop for the ligand bulkiness calculation."""
-    V_list: List[float] = []
+    V_list: list[float | np.ndarray] = []
     V_list_append = V_list.append
-    for (i, j, k, l) in qd_series.index:
+    for (i, j, k, m) in qd_series.index:
         # Extract the core and ligand
-        ij, kl = (i, j), (k, l)
+        ij, kl = (i, j), (k, m)
         core = core_series[ij]
         ligand = lig_series[kl]
 
@@ -113,8 +112,10 @@ def start_lig_bulkiness(
                 "`optional.qd.bulkiness.d = 'auto'` is not allowed for cores with <= 1 anchor atoms"
             )
 
+        angle: Any
+        r_ref: None | float | np.ndarray
         if isinstance(d, str) and d == "auto":
-            angle, r_ref = get_core_angle(core)  # type: Any, Optional[np.ndarray]
+            angle, r_ref = get_core_angle(core)
         else:
             angle = None
             r_ref = np.asarray(d, dtype=np.float64) if d is not None else None
@@ -126,7 +127,7 @@ def start_lig_bulkiness(
     return V_list
 
 
-def get_lig_radius(ligand: Molecule, anchor: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray]:
+def get_lig_radius(ligand: Molecule, anchor: int | None = None) -> tuple[np.ndarray, np.ndarray]:
     r"""Return all half-cone angles defined according to :math:`\phi = \angle_{ABC}`.
 
     :math:`A` represents a set of all ligand atoms,
@@ -161,7 +162,7 @@ def get_lig_radius(ligand: Molecule, anchor: Optional[int] = None) -> Tuple[np.n
     return r, h
 
 
-def get_core_angle(core: Molecule) -> Tuple[float, float]:
+def get_core_angle(core: Molecule) -> tuple[float, float]:
     """Return the mean."""
     # Find all nearest anchor neighbours
     anchors = np.array([at.coords for at in core.properties.dummies])
@@ -206,8 +207,8 @@ def get_V(
     height_array: np.ndarray,
     d: "None | float | np.ndarray",
     angle: Any,
-    h_lim: Optional[float] = 10.0,
-) -> float:
+    h_lim: float | None = 10.0,
+) -> float | np.ndarray:
     r"""Calculate the :math:`V_{bulk}`, a ligand- and core-sepcific descriptor of a ligands' bulkiness.
 
     .. math::
@@ -260,18 +261,19 @@ def get_V(
     h = np.atleast_1d(np.asarray(height_array, dtype=float))
     ndim_1 = getattr(d, "ndim", 0) == 1
 
+    step1: float | np.ndarray
+    step2: float | np.ndarray
     if d is not None:
-        if ndim_1:
-            step1 = (2 * r[..., None]) / d[None, ...] - 1
+        if ndim_1:  # noqa: SIM108
+            step1 = (2 * r[..., None]) / np.asarray(d)[None, ...] - 1
         else:
             step1 = (2 * r) / d - 1
-        step1[step1 < 0] = 0
+        step1 = np.clip(step1, 0, None)
     else:
         step1 = 1
 
     if h_lim is not None:
-        step2 = 1 - (h / h_lim)
-        step2[step2 < 0] = 0
+        step2 = np.clip(1 - (h / h_lim), 0, None)
         if ndim_1:
             step2 = step2[..., None]
     else:

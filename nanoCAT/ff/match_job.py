@@ -30,7 +30,8 @@ API
 import os
 import io
 import stat
-from typing import Generator, Any, List, Tuple, Hashable, Optional
+from typing import Any
+from collections.abc import Generator
 from os.path import join, isfile
 from itertools import chain
 
@@ -39,7 +40,7 @@ from scm.plams import SingleJob, JobError, Results, Settings, Molecule, FileErro
 
 try:
     from scm.plams import writepdb, readpdb
-    RDKIT_EX: Optional[ImportError] = None
+    RDKIT_EX: ImportError | None = None
 except ImportError as ex:
     RDKIT_EX = ex
 
@@ -63,7 +64,7 @@ class MatchResults(Results):
         runfile = self['$JN.run']
 
         # Ignore the first 2 lines
-        with open(runfile, 'r') as f:
+        with open(runfile) as f:
             for i in f:
                 if 'MATCH.pl' in i:
                     args = next(f).split()
@@ -83,15 +84,15 @@ class MatchResults(Results):
 
         return s
 
-    def get_atom_names(self) -> List[str]:
+    def get_atom_names(self) -> list[str]:
         """Return a list of atom names extracted from ``"$JN.rtf"``."""
         return self._parse_rtf(1)
 
-    def get_atom_types(self) -> List[str]:
+    def get_atom_types(self) -> list[str]:
         """Return a list of atom types extracted from ``"$JN.rtf"``."""
         return self._parse_rtf(2)
 
-    def get_atom_charges(self) -> List[float]:
+    def get_atom_charges(self) -> list[float]:
         """Return a list of atomic charges extracted from ``"$JN.rtf"``."""
         return self._parse_rtf(3, as_type=float)
 
@@ -101,7 +102,7 @@ class MatchResults(Results):
         ret = []
         i, j = len(block), column
 
-        with open(filename, 'r') as f:
+        with open(filename) as f:
             for item in f:
                 if item[:i] == block:
                     item_list = item.split()
@@ -179,7 +180,8 @@ class MatchJob(SingleJob):
                                   f"see `{cls_name}.get_runscript()`")
 
     def hash_input(self) -> str:
-        def get_2tups() -> Generator[Tuple[str, Hashable], None, None]:
+        """Hash the input settings, the .pdb file and the job type."""
+        def get_2tups() -> Generator[tuple[str, object], None, None]:
             for k, v in self.settings.input.items():
                 if isinstance(v, list):
                     v = tuple(v)

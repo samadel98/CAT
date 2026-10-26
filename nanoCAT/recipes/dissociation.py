@@ -22,16 +22,13 @@ API
 
 from __future__ import annotations
 
-import sys
 from typing import (
-    Iterable,
-    Generator,
     Any,
     TypeVar,
     cast,
-    Tuple,
     TYPE_CHECKING,
 )
+from collections.abc import Iterable, Generator
 
 import numpy as np
 from scm.plams import Molecule, MoleculeError
@@ -44,10 +41,7 @@ from nanoCAT.bde.identify_surface import identify_surface_ch
 
 if TYPE_CHECKING:
     import numpy.typing as npt
-    if sys.version_info >= (3, 8):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
+    from typing import Literal
 
     _IT1 = TypeVar("_IT1", bound=np.integer[Any])
     _IT2 = TypeVar("_IT2", bound=np.integer[Any])
@@ -457,7 +451,7 @@ def _get_opposite_neighbor2(
     n: int = 2,
     r_max: float = np.inf,
     **kwargs: Any,
-) -> Tuple[_NDArray[_IT1], _NDArray[_IT2]]:
+) -> tuple[_NDArray[_IT1], _NDArray[_IT2]]:
     """Identify the **k** nearest neighbors of **idx_center** and return those furthest removed from each other."""  # noqa
     # Indices of the **k** nearest neighbors in **neighbor** with respect to **center**
     xyz1 = mol[idx_neighbor]

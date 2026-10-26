@@ -25,8 +25,8 @@ API
 from __future__ import annotations
 
 import re
+import errno
 import os
-import sys
 import copy
 import types
 import hashlib
@@ -37,7 +37,7 @@ import warnings
 import contextlib
 import functools
 import multiprocessing
-from typing import Any, ContextManager, cast, overload, TYPE_CHECKING, TypeVar
+from typing import Any, cast, overload, TYPE_CHECKING, TypeVar
 from pathlib import Path
 from itertools import chain, repeat
 from collections.abc import Iterable, Mapping, Callable, Iterator, Sequence, Hashable
@@ -51,10 +51,7 @@ from rdkit.Chem import CanonSmiles
 from CAT.utils import get_template
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 8):
-        from typing import Literal, TypedDict, SupportsIndex
-    else:
-        from typing_extensions import Literal, TypedDict, SupportsIndex
+    from typing import Literal, TypedDict, SupportsIndex
 
     _SCT = TypeVar("_SCT", bound=np.generic)
     _NDArray = np.ndarray[Any, np.dtype[_SCT]]
@@ -238,6 +235,7 @@ def _set_properties(
         ]] = _get_gamma_e(solutes, solv, name)
 
     prop_array = _get_compkf_prop(solutes)
+    assert prop_array.dtype.fields is not None  # A structured array
     iterator = ((k, prop_array[k]) for k in prop_array.dtype.fields)
     for k, v in iterator:
         df[k, None] = v
@@ -292,7 +290,7 @@ def _get_compkf_prop(solutes: list[str]) -> _NDArray[np.void]:
                     f'Failed to extract the "{section}%{variable}" property of {smiles!r}'
                 )
                 warn.__cause__ = ex
-                warnings.warn(warn)
+                warnings.warn(warn, stacklevel=2)
     return ret
 
 
@@ -347,7 +345,7 @@ def _run_crs(
 
             warn = RuntimeWarning(msg)
             warn.__cause__ = ex
-            warnings.warn(warn)
+            warnings.warn(warn, stacklevel=2)
         else:
             ret[i] = value
     return ret.T if ret.shape[0] != 1 else np.squeeze(ret, 0)
@@ -357,8 +355,9 @@ def _abspath(path: str | bytes | os.PathLike[Any], isfile: bool = False) -> str:
     """Path sanitizing."""
     ret = os.path.abspath(os.path.expandvars(os.fsdecode(path)))
     if isfile and not os.path.isfile(ret):
-        open(ret, "r")  # This will raise
-        raise
+        if os.path.isdir(ret):
+            raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR), ret)
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), ret)
     return ret
 
 
@@ -384,7 +383,9 @@ def _inner_loop(
 
     # Parse the ams directory
     if ams_dir is None:
-        ams_dir_cm: ContextManager[str] = tempfile.TemporaryDirectory(dir=output_dir)
+        ams_dir_cm: contextlib.AbstractContextManager[str] = tempfile.TemporaryDirectory(
+            dir=output_dir
+        )
     else:
         ams_dir_cm = contextlib.nullcontext(ams_dir)
 
@@ -618,7 +619,7 @@ def run_fast_sigma(  # noqa: E302
             for _ in pool.imap_unordered(func, enumerator):
                 pass
         else:
-            df_idx_list = [i_df for i_df in pool.imap_unordered(func, enumerator)]
+            df_idx_list = list(pool.imap_unordered(func, enumerator))
             df_idx_list.sort(key=lambda i_df: i_df[0])
             ret = pd.concat(df for _, df in df_idx_list)
     _concatenate_csv(output_dir)
@@ -739,7 +740,7 @@ def read_csv(
         df = pd.read_csv(file, usecols=columns_idx, index_col=0, skiprows=2, **kwargs)
         df = df.sort_index(
             axis=1,
-            key=lambda i: i.str.strip("Unnamed: ").astype(np.int64)[argsort],
+            key=lambda i: i.str.removeprefix("Unnamed: ").astype(np.int64)[argsort],
         )
         df.columns = columns_superset[columns_idx2]
 
@@ -756,7 +757,7 @@ def _canonicalize_smiles(smiles: str) -> None | str:
     except Exception as ex:
         warn = RuntimeWarning(f"Failed to canonicalize {smiles!r}")
         warn.__cause__ = ex
-        warnings.warn(warn)
+        warnings.warn(warn, stacklevel=2)
         return None
 
 
@@ -836,7 +837,7 @@ def sanitize_smiles_df(
     else:
         columns = df.columns.copy()
 
-    mask = ~df.index.duplicated(keep='first') & (df.index != None)
+    mask = ~df.index.duplicated(keep='first') & (df.index != None)  # noqa: E711
     ret = df[mask]
     ret.index = index[mask]
     ret.columns = columns

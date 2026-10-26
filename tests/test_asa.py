@@ -1,11 +1,13 @@
 """Tests for :mod:`nanoCAT.asa.asa`."""
 
 from pathlib import Path
+from typing import Any
 
+import pytest
 import numpy as np
-from scm.plams import Molecule, from_smiles
+from scm.plams import Atom, Molecule, from_smiles
 
-from nanoCAT.asa.asa import _asa_uff
+from nanoCAT.asa.asa import _asa_uff, _asa_plams
 
 PATH = Path('tests') / 'test_files'
 
@@ -34,3 +36,31 @@ def test_asa_uff() -> None:
     assert count == 3
     assert np.isfinite([E_complete, E_ligands, E_core, E_ligand_opt]).all()
     assert E_ligand_opt <= E_ligands / 3 + 1e-8
+
+
+def _fake_job(self: Molecule, *args: Any, **kwargs: Any) -> None:
+    """Set the energy of a molecule to its number of atoms."""
+    self.properties.energy.E = float(len(self))
+
+
+def test_asa_plams(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that the PLAMS-based activation strain analysis reports the energy of the core."""
+    monkeypatch.setattr(Molecule, "job_single_point", _fake_job, raising=False)
+    monkeypatch.setattr(Molecule, "job_geometry_opt", _fake_job, raising=False)
+
+    core = Molecule()
+    core.add_atom(Atom(symbol="Cd", coords=(0.0, 0.0, 0.0)))
+    ligands = [from_smiles("CC(=O)[O-]"), from_smiles("CC(=O)[O-]")]
+    complete = core.copy()
+    for lig in ligands:
+        complete += lig.copy()
+    complete.properties.name = "QD"
+
+    E_complete, E_ligands, E_core, E_ligand_opt, count = _asa_plams(
+        complete, ligands, core, read_template=False, job=None, settings=None,
+    )
+    assert count == 2
+    assert E_complete == len(complete)
+    assert E_ligands == len(ligands[0]) + len(ligands[1])
+    assert E_core == len(core)
+    assert E_ligand_opt == len(ligands[0])

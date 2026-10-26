@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import sys
 import dataclasses
-import functools
 import itertools
 from typing import TYPE_CHECKING, Any
 from collections.abc import Iterable
@@ -17,11 +15,6 @@ from CAT.attachment.mol_split_cm import SplitMol
 from CAT.attachment.ligand_opt import split_mol
 from CAT.workflows import WorkFlow
 from CAT.settings_dataframe import SettingsDataFrame
-
-if sys.version_info >= (3, 10):
-    dataclass = functools.partial(dataclasses.dataclass, slots=True)
-else:
-    dataclass = dataclasses.dataclass
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -61,7 +54,7 @@ def _start_branch_jobs(mol_list: Iterable[Molecule], **kwargs: Any) -> list[tupl
     return ret
 
 
-@dataclass
+@dataclasses.dataclass(slots=True)
 class BranchGraph:
     """A dataclass for containing branching-related information for a given molecule."""
 

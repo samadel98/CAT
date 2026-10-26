@@ -6,7 +6,7 @@ A collection of tools for the analysis of nanocrystals.
 
 """
 
-# flake8: noqa: E402
+# ruff: noqa: E402
 
 from nanoutils import VersionInfo
 

@@ -27,7 +27,8 @@ import inspect
 import textwrap
 from os import PathLike
 from os.path import join
-from typing import Mapping, Any, Union, Optional, TypeVar, FrozenSet
+from typing import Any, TypeVar
+from collections.abc import Mapping
 
 from scm.plams import Molecule, config
 from qmflows import adf, Settings
@@ -47,16 +48,16 @@ _VT = TypeVar("_VT")
 
 #: A :class:`frozenset` with all parameters of the
 #: :func:`~noodles.run.threading.sqlite3.run_parallel` function. `
-_RUN_PARALLEL_KEYS: FrozenSet[str] = frozenset(
+_RUN_PARALLEL_KEYS: frozenset[str] = frozenset(
     inspect.signature(run_parallel).parameters.keys()
 )
 
 
 def run_jobs(mol: Molecule, *settings: Mapping,
              job_type: Package = adf,
-             job_name: Optional[str] = None,
-             path: Union[None, str, PathLike] = None,
-             folder: Union[None, str, PathLike] = None,
+             job_name: str | None = None,
+             path: None | str | PathLike = None,
+             folder: None | str | PathLike = None,
              **kwargs: Any) -> Result:
     r"""Run multiple jobs in succession.
 
