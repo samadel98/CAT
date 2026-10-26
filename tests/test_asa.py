@@ -5,7 +5,9 @@ from typing import Any
 
 import pytest
 import numpy as np
-from scm.plams import Atom, Molecule, from_smiles
+from scm.plams import Atom, Molecule
+from CAT._compat import from_smiles
+from CAT.mol_utils import rdkit_props
 
 from nanoCAT.asa.asa import _asa_uff, _asa_plams
 
@@ -16,7 +18,7 @@ def test_asa_uff() -> None:
     """Test the RDKit UFF-based activation strain analysis of a core with ligands."""
     core = Molecule(PATH / 'Cd68Se55.xyz')
     for at in core:
-        at.properties.charge = 2 if at.symbol == 'Cd' else -2
+        rdkit_props(at).charge = 2 if at.symbol == 'Cd' else -2
 
     ligands = []
     for i in range(3):

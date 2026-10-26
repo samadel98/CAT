@@ -291,7 +291,8 @@ def _molecule_from_rdmol(
         mol_block = Chem.MolToMolBlock(rdmol)
         iterator = _iter_mol_block(mol_block, size=rdmol.GetNumAtoms())
         mol = Molecule()
-        mol.atoms = [Atom(symbol=symbol, coords=xyz, mol=mol) for symbol, xyz in iterator]
+        # Fill the existing list: `Molecule.as_array()` of PLAMS >= 2024 keeps the original list
+        mol.atoms[:] = [Atom(symbol=symbol, coords=xyz, mol=mol) for symbol, xyz in iterator]
         for bond in rdmol.GetBonds():
             at1 = mol.atoms[bond.GetBeginAtomIdx()]
             at2 = mol.atoms[bond.GetEndAtomIdx()]

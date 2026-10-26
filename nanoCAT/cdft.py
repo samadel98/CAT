@@ -9,8 +9,9 @@ import pandas as pd
 
 from qmflows import templates as _templates
 from qmflows.packages import ADF_Result
-from scm.plams import Molecule, Settings, ADFJob, ADFResults, Units, Results
+from scm.plams import Molecule, Settings, Units, Results
 from scm.plams.core.basejob import Job
+from CAT._compat import ADFJob
 from CAT.workflows import WorkFlow, JOB_SETTINGS_CDFT, MOL
 from CAT.jobs import job_single_point  # noqa: F401
 from CAT.settings_dataframe import SettingsDataFrame
@@ -73,7 +74,9 @@ def start_crs_jobs(mol_list: Iterable[Molecule],
                    **kwargs: Any) -> list[pd.Series]:
     # Parse the job type
     job, *_ = jobs
-    if job is not ADFJob:
+    if ADFJob is None:
+        raise NotImplementedError("The conceptual DFT workflow requires the ADFJob of PLAMS < 2024")
+    elif job is not ADFJob:
         raise NotImplementedError(f"job: {job.__class__.__name__} = {job!r}")
 
     # Parse and update the input settings
@@ -109,7 +112,7 @@ _BACKUP.index = pd.MultiIndex.from_product(
 )
 
 
-def run_cdft_job(mol: Molecule, job: type[ADFJob], s: Settings) -> pd.Series:
+def run_cdft_job(mol: Molecule, job: type[Job], s: Settings) -> pd.Series:
     """Run a conceptual DFT job and extract & return all global descriptors."""
     results = mol.job_single_point(job, s.copy(), name='CDFT',
                                    ret_results=True, read_template=False)
@@ -124,7 +127,7 @@ def run_cdft_job(mol: Molecule, job: type[ADFJob], s: Settings) -> pd.Series:
     return ret
 
 
-def get_global_descriptors(results: ADFResults | ADF_Result) -> pd.Series:
+def get_global_descriptors(results: Results | ADF_Result) -> pd.Series:
     """Extract a dictionary with all ADF conceptual DFT global descriptors from **results**.
 
     Examples

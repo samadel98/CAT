@@ -34,6 +34,12 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Fix the BDE workflow with CP2K crashing when applying the QMFlows geometry template.
 * Fix the BDE, activation strain, COSMO-RS and MD-ASA workflows crashing with PLAMS 2024 and later
   when modifying copies of their job settings.
+* Add support for PLAMS 2024 and later (tested with 2026.104), when used with a QMFlows version
+  that supports them, like CAT: import ``ADFJob`` only where PLAMS still has it, read the formal
+  charges and PDB info of atoms with ``CAT.mol_utils.rdkit_props()``, and keep
+  ``Molecule.as_array()`` in sync with the atoms of the molecules that Nano-CAT builds.
+  The conceptual DFT workflow, which needs ``ADFJob``, still requires PLAMS < 2024.
+* Test with the latest PLAMS in CI.
 
 
 0.7.2

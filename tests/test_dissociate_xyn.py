@@ -5,7 +5,9 @@ from collections.abc import Generator
 
 import numpy as np
 
-from scm.plams import readpdb, Molecule, MoleculeError
+from scm.plams import Molecule, MoleculeError
+from CAT._compat import readpdb
+from CAT.mol_utils import rdkit_props
 from assertionlib import assertion
 
 from nanoCAT.bde.dissociate_xyn import _lig_mapping, MolDissociater, dissociate_ligand
@@ -13,14 +15,13 @@ from nanoCAT.bde.dissociate_xyn import _lig_mapping, MolDissociater, dissociate_
 
 def _get_idx_iter(mol: Molecule) -> Generator[int, None, None]:
     for i, at in enumerate(mol, 1):
-        if at.properties.charge == -1:
+        if rdkit_props(at).charge == -1:
             at.properties.anchor = True
             yield i
 
 
 PATH = Path('tests') / 'test_files' / 'bde'
-with open(PATH / 'mol.pdb') as f:
-    MOL: Molecule = readpdb(f)
+MOL: Molecule = readpdb(PATH / 'mol.pdb')
 
 LIG_IDX = np.fromiter(_get_idx_iter(MOL), dtype=int)
 LIG_IDX.setflags(write=False)

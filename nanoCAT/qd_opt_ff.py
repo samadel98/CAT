@@ -38,6 +38,7 @@ from scm.plams.core.basejob import Job
 from scm.plams.core.results import Results
 
 from CAT.frozen_settings import thaw_settings
+from CAT.mol_utils import rdkit_props
 from FOX import PSFContainer
 from FOX.ff.lj_uff import combine_sigma, combine_epsilon
 
@@ -246,16 +247,16 @@ def _gather_core_lig_symbols(mol: Molecule) -> tuple[dict[str, str], dict[str, s
 
     # Fill the set with all core atom types
     for at in iterator:  # Iterate until the first ligand is encountered
-        if at.properties.pdb_info.ResidueName != 'COR':
+        if rdkit_props(at).pdb_info.ResidueName != 'COR':
             break
         if at.symbol not in core_at:
             core_at[at.symbol] = at.symbol
 
     # Fill the set with all ligand atom types
-    res_number = at.properties.pdb_info.ResidueNumber
+    res_number = rdkit_props(at).pdb_info.ResidueNumber
     lig_at[at.properties.symbol] = at.symbol
     for at in iterator:  # Iterate through a single ligand until the next ligand is encountered
-        if at.properties.pdb_info.ResidueNumber != res_number:
+        if rdkit_props(at).pdb_info.ResidueNumber != res_number:
             break
         if at.symbol not in lig_at:
             lig_at[at.properties.symbol] = at.symbol

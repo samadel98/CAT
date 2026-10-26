@@ -50,7 +50,7 @@ import numpy as np
 from scipy import constants
 
 from scm.plams import (
-    Settings, Molecule, Results, CRSJob, CRSResults, JobRunner, ADFJob, Units, add_Hs
+    Settings, Molecule, Results, CRSJob, CRSResults, JobRunner, Units, add_Hs
 )
 from scm.plams.core.basejob import Job
 
@@ -65,6 +65,8 @@ from CAT.logger import logger
 from CAT.workflows import WorkFlow, MOL, JOB_SETTINGS_CRS
 from CAT.settings_dataframe import SettingsDataFrame
 from CAT.frozen_settings import thaw_settings
+from CAT._compat import ADFJob
+from CAT.mol_utils import rdkit_props
 
 __all__ = ['init_solv']
 
@@ -177,10 +179,10 @@ def _protonate_mol(mol: Molecule) -> Molecule | None:
 
     i = mol.index(mol.properties.dummies)
     anchor = mol_cp[i]
-    if anchor.properties.charge != -1:
+    if rdkit_props(anchor).charge != -1:
         return None
 
-    anchor.properties.charge = 0
+    rdkit_props(anchor).charge = 0
     return add_Hs(mol_cp, forcefield="uff")
 
 

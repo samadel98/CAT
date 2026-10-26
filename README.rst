@@ -53,6 +53,13 @@ Finally, install **Nano-CAT**, together with its CAT_ and Auto-FOX_ dependencies
   - ``pip install nano-CAT`` installs the last release on PyPI, which (just like the CAT and
     Auto-FOX releases on PyPI) predates the fixes in these repositories (*e.g.* NumPy 2 and pandas 2 support).
 
+  - Like CAT, Nano-CAT works with PLAMS 1.5.1 as well as PLAMS 2024 and later, but installs PLAMS 1.5.1
+    by default, as no QMFlows release supports the newer PLAMS versions yet.
+    To use a newer PLAMS, install it with uv and CAT's
+    `latest-plams-overrides.txt <https://github.com/samadel98/CAT/blob/master/.github/latest-plams-overrides.txt>`_
+    (``uv pip install ... --override latest-plams-overrides.txt``), which swaps in the QMFlows fork.
+    The conceptual DFT workflow needs PLAMS 1.5.1.
+
 Now you are ready to use **Nano-CAT**.
 
 

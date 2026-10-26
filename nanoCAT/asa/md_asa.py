@@ -34,6 +34,7 @@ from FOX import MultiMolecule, PSFContainer, PRMContainer, get_intra_non_bonded,
 from CAT.jobs import job_md  # noqa: F401
 from CAT.logger import logger
 from CAT.frozen_settings import thaw_settings
+from CAT.mol_utils import rdkit_props
 
 from .asa_frag import get_asa_fragments
 from .energy_gatherer import EnergyGatherer
@@ -288,7 +289,7 @@ def _get_neutral_frag(frag: Molecule) -> Molecule:
     frag_neutral = frag.copy()
     for anchor in frag_neutral:
         if anchor.properties.anchor:
-            charge = anchor.properties.charge
+            charge = rdkit_props(anchor).charge
 
             if charge > 0:
                 run_ff_cationic(frag_neutral, anchor, MATCH_SETTINGS)

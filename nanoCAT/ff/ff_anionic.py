@@ -17,6 +17,7 @@ API
 """
 
 from scm.plams import Molecule, Atom, Bond, Settings, MoleculeError, add_Hs
+from CAT.mol_utils import rdkit_props
 
 from .ff_assignment import run_match_job
 
@@ -61,7 +62,7 @@ def run_ff_anionic(mol: Molecule, anchor: Atom, s: Settings) -> None:
     """  # noqa
     if anchor not in mol:
         raise MoleculeError("Passed 'anchor' is not part of 'mol'")
-    anchor.properties.charge = 0
+    rdkit_props(anchor).charge = 0
 
     # Cap the anion with a proton
     mol_with_h = add_Hs(mol)
@@ -71,8 +72,8 @@ def run_ff_anionic(mol: Molecule, anchor: Atom, s: Settings) -> None:
                  mol=mol)
 
     cap_h.properties = mol[1].properties.copy()
-    cap_h.properties.pdb_info.IsHeteroAtom = False
-    cap_h.properties.pdb_info.Name = 'Hxx '
+    rdkit_props(cap_h).pdb_info.IsHeteroAtom = False
+    rdkit_props(cap_h).pdb_info.Name = 'Hxx '
     mol.add_atom(cap_h)
     mol.add_bond(Bond(anchor, cap_h, mol=mol))
 

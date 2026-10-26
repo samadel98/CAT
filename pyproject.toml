@@ -52,7 +52,9 @@ dependencies = [
     "AssertionLib>=2.3",
     "noodles>=0.3.3",
     "more-itertools>=1.0",
-    "plams>=1.5.1,<2024",  # PLAMS 2025 removed `ADFJob` (used by QMFlows)
+    # Nano-CAT supports PLAMS >= 2024, but no QMFlows release does (they need the removed `ADFJob`);
+    # see the README for using the QMFlows fork with a newer PLAMS
+    "plams>=1.5.1,<2024",
     "qmflows>=0.12.0",
     "nlesc-CAT>=0.11.1",
     "Auto-FOX>=0.10.0",

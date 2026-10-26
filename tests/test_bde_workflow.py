@@ -14,12 +14,14 @@ import numpy as np
 import pandas as pd
 from assertionlib import assertion
 from nanoutils import UniqueLoader
-from scm.plams import readpdb, Settings, Cp2kJob
+from scm.plams import Settings, Cp2kJob
 
 from CAT.base import validate_input
 from CAT.settings_dataframe import SettingsDataFrame
 from CAT.workflows import MOL
 from CAT.xtb import TBLiteJob
+from CAT.frozen_settings import thaw_settings
+from CAT._compat import readpdb
 from nanoCAT.bde import init_bde
 
 PATH = Path("tests") / "test_files"
@@ -97,7 +99,7 @@ def construct_df() -> SettingsDataFrame:
     )
     df = SettingsDataFrame(index=index, columns=columns, settings=settings)
     df[MOL] = [qd]
-    df.settings = Settings(df.settings)  # unfreeze the settings
+    df.settings = thaw_settings(df.settings)
     return df
 
 
