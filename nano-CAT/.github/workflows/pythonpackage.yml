@@ -1,0 +1,180 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Tests
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+    workflow_dispatch:
+    schedule:
+        # Weekly, to catch breaking releases of dependencies and changes in the other forks
+        -   cron: '0 5 * * 1'
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+    cancel-in-progress: true
+
+defaults:
+    run:
+        shell: bash
+
+env:
+    PY_COLORS: '1'
+    CP2K_VERSION: '2026.2'
+    # The CAT and Auto-FOX releases on PyPI predate NumPy 2 and pandas 2 support,
+    # so test against the forks
+    CAT_URL: 'git+https://github.com/samadel98/CAT@master'
+    FOX_URL: 'git+https://github.com/samadel98/auto-FOX@master'
+
+jobs:
+    build:
+        name: ${{ matrix.os }} (py ${{ matrix.version }}${{ matrix.special }})
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest]
+                version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+                special: ['']
+                include:
+                    -   os: ubuntu-latest
+                        special: '; slow'
+                        version: '3.13'
+                    -   os: ubuntu-latest
+                        special: '; latest PLAMS'
+                        version: '3.14'
+
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
+
+            -   name: Set up Python
+                uses: actions/setup-python@v7
+                with:
+                    python-version: ${{ matrix.version }}
+
+            -   name: Install CP2K
+                if: matrix.special == '; slow'
+                run: |
+                    curl -Lsf "https://github.com/cp2k/cp2k/releases/download/v${CP2K_VERSION}/cp2k-${CP2K_VERSION}-Linux-gnu-x86_64.ssmp" -o /usr/local/bin/cp2k.ssmp
+                    chmod a+rx /usr/local/bin/cp2k.ssmp
+                    # PLAMS < 2024 calls CP2K as `cp2k.popt`
+                    ln -s /usr/local/bin/cp2k.ssmp /usr/local/bin/cp2k.popt
+
+                    # The basis sets and pseudopotentials
+                    git clone -q --depth 1 --branch "v${CP2K_VERSION}" --filter=blob:none --sparse https://github.com/cp2k/cp2k "$RUNNER_TEMP/cp2k"
+                    git -C "$RUNNER_TEMP/cp2k" sparse-checkout set data
+                    echo "CP2K_DATA_DIR=$RUNNER_TEMP/cp2k/data" >> "$GITHUB_ENV"
+
+            -   name: Install MATCH
+                if: matrix.special == '; slow'
+                run: |
+                    git clone -q --depth 1 https://github.com/nlesc-nano/MATCH "$RUNNER_TEMP/MATCH"
+                    chmod -R a+rx "$RUNNER_TEMP/MATCH/MATCH/scripts"
+                    echo "$RUNNER_TEMP/MATCH/MATCH/scripts" >> "$GITHUB_PATH"
+                    echo "MATCH=$RUNNER_TEMP/MATCH/MATCH" >> "$GITHUB_ENV"
+                    echo "PerlChemistry=$RUNNER_TEMP/MATCH/PerlChemistry" >> "$GITHUB_ENV"
+
+            -   name: Info CP2K
+                if: matrix.special == '; slow'
+                run: cp2k.popt --version
+
+            # The reference geometries of the tests were made with RDKit 2026.09
+            # (see tests/rdkit_references.py)
+            -   name: Install dependencies
+                run: |
+                    if [[ "${{ matrix.special }}" == '; latest PLAMS' ]]; then
+                        # Lift the `plams<2024` cap and use the QMFlows fork, with the overrides of CAT,
+                        # as no QMFlows release supports PLAMS >= 2024 yet; pip cannot override requirements
+                        curl -Lsf https://raw.githubusercontent.com/samadel98/CAT/master/.github/latest-plams-overrides.txt \
+                            -o "${RUNNER_TEMP}/latest-plams-overrides.txt"
+                        pip install uv
+                        uv pip install --system -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" \
+                            "rdkit==2026.9.*" --override "${RUNNER_TEMP}/latest-plams-overrides.txt"
+                    else
+                        pip install -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*"
+                    fi
+
+            -   name: Info Python
+                run: |
+                    which python
+                    python --version
+
+            -   name: Info installed packages
+                run: pip list
+
+            -   name: Run tests
+                id: tests
+                run: |
+                    if [[ "${{ matrix.special }}" == '; slow' ]]; then
+                        pytest -m "slow"
+                    else
+                        pytest -m "not slow"
+                    fi
+
+            # Print the coordinates of the molecules that RDKit lays out differently
+            # from the reference geometries (see tests/rdkit_references.py)
+            -   name: Show RDKit geometries that differ from the references
+                if: failure() && steps.tests.outcome == 'failure' && matrix.special != '; slow'
+                run: python tests/rdkit_references.py --diff
+
+            -   name: Run codecov
+                uses: codecov/codecov-action@v7
+                with:
+                    files: ./coverage.xml
+                    name: codecov-umbrella
+                    token: ${{ secrets.CODECOV_TOKEN }}
+
+    Linting:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
+
+            -   name: Set up Python on ubuntu-latest
+                uses: actions/setup-python@v7
+                with:
+                    python-version: '3.x'
+
+            -   name: Install linters
+                run: pip install "ruff>=0.15"
+
+            -   name: Python info
+                run: |
+                    which python
+                    python --version
+
+            -   name: Installed packages
+                run: pip list
+
+            -   name: Run ruff
+                run: ruff check --output-format=github .
+
+    Type-check:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
+
+            -   name: Set up Python on ubuntu-latest
+                uses: actions/setup-python@v7
+                with:
+                    python-version: '3.13'
+
+            -   name: Install dependencies
+                run: pip install -e . "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" mypy types-PyYAML
+
+            -   name: Installed packages
+                run: pip list
+
+            -   name: Run mypy
+                run: mypy nanoCAT

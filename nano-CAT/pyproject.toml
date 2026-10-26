@@ -1,0 +1,140 @@
+# Minimum requirements for the build system to execute.
+[build-system]
+requires = [
+    "setuptools>=77.0",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Nano-CAT"
+dynamic = [
+    "version",
+    "readme",
+]
+description = "A collection of tools for the analysis of nanocrystals."
+license = "LGPL-3.0-or-later"
+license-files = ["LICENSE.md", "NOTICE"]
+authors = [
+    { name = "Bas van Beek", email = "b.f.van.beek@vu.nl" },
+]
+keywords = [
+    "quantum-mechanics",
+    "molecular-mechanics",
+    "science",
+    "chemistry",
+    "python-3",
+    "automation",
+    "scientific-workflows",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "Nano-Utils>=2.3.1",
+    "numpy>=1.21.2",
+    "numpy>=2.1; python_version>='3.13'",  # NumPy 1.x has no wheels for Python >= 3.13
+    "scipy>=1.7.2",
+    "pandas>=1.4.0",
+    "pyyaml>=6.0",
+    "AssertionLib>=2.3",
+    "noodles>=0.3.3",
+    "more-itertools>=1.0",
+    # Nano-CAT supports PLAMS >= 2024, but no QMFlows release does (they need the removed `ADFJob`);
+    # see the README for using the QMFlows fork with a newer PLAMS
+    "plams>=1.5.1,<2024",
+    "qmflows>=0.12.0",
+    "nlesc-CAT>=0.11.1",
+    "Auto-FOX>=0.10.0",
+    "rdkit>=2022.3.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/samadel98/nano-CAT"
+"Bug Tracker" = "https://github.com/samadel98/nano-CAT/issues"
+Documentation = "https://samadel98.github.io/CAT/"
+
+[project.optional-dependencies]
+lint = [
+    "ruff>=0.15",
+]
+test = [
+    "pytest>=6.2.5",
+    "pytest-cov",
+    "tblite>=0.4; platform_system!='Windows'",  # No Windows wheels
+]
+
+[tool.setuptools.packages.find]
+include = ["nanoCAT*"]
+
+[tool.setuptools.package-data]
+nanoCAT = [
+    "py.typed",
+    "*.pyi",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "nanoCAT.__version__.__version__" }
+readme = { file = ["README.rst"], content-type = "text/x-rst" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: slow tests that need CP2K or MATCH; skip them with `pytest -m 'not slow'`",
+]
+addopts = "--tb=short --cov --cov-report xml --cov-report term --cov-report html"
+filterwarnings = [
+    "ignore::DeprecationWarning:numpy.distutils.*",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["nanoCAT"]
+
+[tool.mypy]
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "scipy.*",
+    "pandas.*",
+    "rdkit.*",
+    "scm.*",
+    "noodles.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# pycodestyle, Pyflakes, pydocstyle, pyupgrade, flake8-bugbear, flake8-comprehensions
+# and flake8-simplify
+select = ["E", "F", "W", "D", "UP", "B", "C4", "SIM"]
+ignore = [
+    "D205",  # Blank line after the summary line and
+    "D400",  # first line ending with a period: the module docstrings start with an RST title
+    "D401",  # First line of a docstring in imperative mood
+    "B905",  # `zip()` without `strict=`
+    "SIM300",  # Yoda conditions; also flags comparisons with constructor calls, such as `Version()`
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_*.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+ignore-decorators = ["typing.overload"]
