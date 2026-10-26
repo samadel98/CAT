@@ -45,15 +45,16 @@ import scm.plams.interfaces.molecule.rdkit as molkit
 from rdkit.Chem import AllChem, Mol
 from scm.plams.core.basejob import Job
 from scm.plams import (Molecule, Atom, Bond, MoleculeError, add_to_class, Units,
-                       Settings, AMSJob, ADFJob, Cp2kJob, axis_rotation_matrix)
+                       Settings, AMSJob, Cp2kJob, axis_rotation_matrix)
 
 from .mol_split_cm import SplitMol
 from .remove_atoms_cm import RemoveAtoms
 from .optimize_rotmat import optimize_rotmat
 from .edge_distance import edge_dist
+from .._compat import ADFJob
 from ..logger import logger
 from ..workflows import WorkFlow, MOL
-from ..mol_utils import fix_carboxyl, to_atnum
+from ..mol_utils import fix_carboxyl, to_atnum, rdkit_props
 from ..settings_dataframe import SettingsDataFrame
 from ..data_handling.mol_to_file import mol_to_file
 from ..jobs import job_geometry_opt  # noqa: F401
@@ -109,9 +110,11 @@ def _set_charge_cp2kjob(s: Settings, charge: int) -> None:
 
 ChargeFunc = Callable[[Settings, int], None]
 CHARGE_FUNC_MAPPING: Mapping[Type[Job], ChargeFunc] = MappingProxyType({
-    ADFJob: _set_charge_adfjob,
-    AMSJob: _set_charge_amsjob,
-    Cp2kJob: _set_charge_cp2kjob,
+    k: v for k, v in [
+        (ADFJob, _set_charge_adfjob),
+        (AMSJob, _set_charge_amsjob),
+        (Cp2kJob, _set_charge_cp2kjob),
+    ] if k is not None
 })
 
 
@@ -123,7 +126,7 @@ def start_ligand_jobs(ligand_list: Iterable[Molecule],
     _j1, job = jobs
     _s1, s = settings
 
-    if job not in {None, AMSJob, ADFJob, Cp2kJob}:
+    if job is not None and job not in CHARGE_FUNC_MAPPING:
         raise NotImplementedError(f"job1: {job.__class__} = {job!r}")
     elif use_ff:
         raise NotImplementedError(f"use_ff: {use_ff.__class__} = {use_ff!r}")
@@ -149,7 +152,7 @@ def _start_ligand_jobs_plams(ligand_list: Iterable[Molecule],
             continue
 
         s = Settings(settings)
-        charge_func(s, int(sum(at.properties.get('charge', 0) for at in ligand)))
+        charge_func(s, int(sum(rdkit_props(at).get('charge', 0) for at in ligand)))
         ligand.job_geometry_opt(job, s, name='ligand_opt')
         ligand.round_coords()  # `.is_opt = True` is set by `ligand.job_geometry_opt()``
         allign_axis(ligand)

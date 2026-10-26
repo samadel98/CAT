@@ -10,6 +10,7 @@ import scm.plams.interfaces.molecule.rdkit as molkit
 from assertionlib import assertion
 
 from CAT.utils import get_formula
+from CAT.mol_utils import rdkit_props
 from CAT.data_handling.mol_import import (
     read_mol_xyz, read_mol_pdb, read_mol_mol, read_mol_smiles, read_mol_plams, read_mol_rdkit,
     read_mol_folder, read_mol_txt, get_charge_dict, set_mol_prop, canonicalize_mol
@@ -165,8 +166,9 @@ def test_set_mol_prop() -> None:
                      'ResidueNumber': 1, 'ChainId': 'A', 'IsHeteroAtom': True},
     })
     for at in mol:
-        del at.properties.pdb_info.Name
+        props = rdkit_props(at)
+        del props.pdb_info.Name
         if at.symbol == 'O':
-            assertion.eq(at.properties, ref2)
+            assertion.eq(props, ref2)
         else:
-            assertion.eq(at.properties, ref1)
+            assertion.eq(props, ref1)

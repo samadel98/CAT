@@ -41,6 +41,9 @@ jobs:
                     -   os: ubuntu-latest
                         special: '; minimum version'
                         version: '3.10'
+                    -   os: ubuntu-latest
+                        special: '; latest PLAMS'
+                        version: '3.14'
 
         steps:
             -   uses: actions/checkout@v7
@@ -60,6 +63,12 @@ jobs:
                         pip install -r ./test_requirement_min_version.txt
                         # Use the minimum versions as constraints so that no other package can upgrade them
                         pip install -e .[test] -c ./test_requirement_min_version.txt
+                    elif [[ "${{ matrix.special }}" == '; latest PLAMS' ]]; then
+                        # Lift the `plams<2024` cap and use the QMFlows fork, as no QMFlows release
+                        # supports PLAMS >= 2024 yet; pip has no way to override requirements
+                        pip install uv
+                        uv pip install --system -e .[test] "rdkit==2026.9.*" \
+                            --override .github/latest-plams-overrides.txt
                     else
                         # The reference geometries of the tests were made with RDKit 2026.09
                         # (see tests/rdkit_references.py); the pre-release job tests newer versions

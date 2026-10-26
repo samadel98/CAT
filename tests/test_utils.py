@@ -6,15 +6,15 @@ from pathlib import Path
 
 from unittest import mock
 
-from scm.plams import config, Molecule
+from scm.plams import config
 from scm.plams.interfaces.adfsuite.ams import AMSJob
-from scm.plams.interfaces.adfsuite.adf import ADFJob
 from scm.plams.interfaces.thirdparty.orca import ORCAJob
 from scm.plams.interfaces.thirdparty.cp2k import Cp2kJob
 from scm.plams.interfaces.thirdparty.dirac import DiracJob
 from scm.plams.interfaces.thirdparty.gamess import GamessJob
 from assertionlib import assertion
 
+from CAT._compat import ADFJob, readpdb
 from CAT.utils import (
     type_to_string,
     dict_concatenate,
@@ -32,13 +32,14 @@ FOLDER = 'test_plams_workdir'
 def test_type_to_string() -> None:
     """Test :func:`CAT.utils.type_to_string`."""
     ref = {
-        ADFJob: 'adf',
         AMSJob: 'ams',
         DiracJob: 'dirac',
         Cp2kJob: 'cp2k',
         GamessJob: 'gamess',
         ORCAJob: 'orca'
     }
+    if ADFJob is not None:  # Removed in PLAMS 2024
+        ref[ADFJob] = 'adf'
 
     for k, j in ref.items():
         i = type_to_string(k)
@@ -90,6 +91,7 @@ def test_restart_init() -> None:
 
 
 def test_get_formula() -> None:
-    formula = get_formula(Molecule(PATH / "multi_ligand.pdb"))
+    # Not `Molecule()`, as the PLAMS >= 2024 PDB parser reads Cd and Se as C and S
+    formula = get_formula(readpdb(PATH / "multi_ligand.pdb"))
     matches = re.findall("([a-zA-Z]+)[0-9+]", formula)
     assertion.eq(matches, ["C", "Cd", "F", "H", "O", "Se"])

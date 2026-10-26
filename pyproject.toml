@@ -52,7 +52,9 @@ dependencies = [
     "pyyaml>=6.0",
     "schema>=0.7.2,!=0.7.5",
     "AssertionLib>=2.2.3",
-    "plams>=1.5.1,<2024",  # No QMFlows release supports PLAMS >= 2024 (which removed `ADFJob`)
+    # CAT supports PLAMS >= 2024, but no QMFlows release does (they need the removed `ADFJob`);
+    # see `.github/latest-plams-overrides.txt` for using the QMFlows fork with a newer PLAMS
+    "plams>=1.5.1,<2024",
     "typing-extensions>=3.7.4.3",
     "qmflows>=0.13.0",  # QMFlows 0.12 needs `pkg_resources`, which setuptools 82 removed
     "rdkit>=2022.3.3",

@@ -17,17 +17,21 @@ API
 
 import os
 import errno
+import inspect
 from typing import (Optional, Callable)
 from os.path import (join, isfile, abspath, isdir, exists, normpath)
 
 import dill as pickle
 
 from scm.plams import (JobManager, FileError, Settings, PlamsError)
-from scm.plams.core.basejob import Job
+from scm.plams.core.basejob import Job, MultiJob
 
 from .logger import logger
 
 __all__ = ['GenJobManager']
+
+#: Whether :class:`JobManager` can reuse an existing working folder (PLAMS >= 2024)
+_USE_EXISTING_FOLDER = "use_existing_folder" in inspect.signature(JobManager.__init__).parameters
 
 
 class GenJobManager(JobManager):
@@ -74,6 +78,17 @@ class GenJobManager(JobManager):
                  folder: Optional[str] = None,
                  hashing: str = 'input') -> None:
         """Initialize the :class:`GenJobManager` instance."""
+        if _USE_EXISTING_FOLDER:
+            super().__init__(settings, path, folder, use_existing_folder=True)
+        else:
+            self._init_legacy(settings, path, folder)
+        # Accessing `workdir` also creates the working folder in PLAMS >= 2024
+        self.input = join(self.workdir, hashing)
+
+    def _init_legacy(self, settings: Settings,
+                     path: Optional[str] = None,
+                     folder: Optional[str] = None) -> None:
+        """Initialize for PLAMS < 2024, whose :class:`JobManager` cannot reuse a folder."""
         self.settings = settings
         self.jobs = []
         self.names = {}
@@ -90,7 +105,6 @@ class GenJobManager(JobManager):
         self.foldername = basename
         self.workdir = join(self.path, self.foldername)
         self.logfile = join(self.workdir, 'logfile')
-        self.input = join(self.workdir, hashing)
         if not exists(self.workdir):
             os.mkdir(self.workdir)
 
@@ -99,9 +113,25 @@ class GenJobManager(JobManager):
         """Attempt to unpickle and return a :class:`Job` containing file."""
         with open(filename, 'rb') as f:
             try:
-                return pickle.load(f)
+                job = pickle.load(f)
             except Exception as ex:
                 raise FileError(f'Failed to unpickle {filename!r}') from ex
+        GenJobManager._resolve_missing_attributes(job)
+        return job
+
+    @staticmethod
+    def _resolve_missing_attributes(job: Job) -> None:
+        """Add the attributes that PLAMS >= 2024 expects to jobs pickled by older PLAMS versions."""
+        if isinstance(getattr(type(job), 'status', None), property) and not hasattr(job, '_status'):
+            job._status = job.__dict__.pop('status')
+            job._status_log = []
+        if not hasattr(job, '_error_msg'):
+            job._error_msg = None
+        if isinstance(job, MultiJob):
+            for child in job:
+                GenJobManager._resolve_missing_attributes(child)
+            for other_job in job.other_jobs():
+                GenJobManager._resolve_missing_attributes(other_job)
 
     def _get_job(self, filename: str) -> Callable[[], Job]:
         """Return a callable which converts **filename** into a :class:`Job` instance."""
@@ -137,12 +167,9 @@ class GenJobManager(JobManager):
 
     def remove_job(self, job: Job) -> None:
         """Remove **job** from the job manager; forget its hash."""
-        if job in self.jobs:
-            self.jobs.remove(job)
-            job.jobmanager = None
-        h = job.hash()
-        if h in self.hashes:
-            del self.hashes[h]
+        super().remove_job(job)
+        # The base class only forgets the hash if it maps to **job** itself rather than a callable
+        self.hashes.pop(job.hash(), None)
 
     def _check_hash(self, job: Job) -> Optional[Job]:
         """Calculate and check the hash of **job**.

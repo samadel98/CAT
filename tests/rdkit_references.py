@@ -22,7 +22,7 @@ import h5py
 import rdkit
 import numpy as np
 from packaging.version import Version
-from scm.plams import Settings, Molecule, from_smiles
+from scm.plams import Settings, Molecule
 
 __all__ = ["RDKIT_REF_PATH", "RDKIT_REF_VERSION"]
 
@@ -131,6 +131,8 @@ def regenerate_ligand_anchoring(out: Path) -> None:
     from CAT.attachment.ligand_anchoring import find_substructure
     from CAT.attachment.ligand_opt import optimize_ligand
     from CAT.data_handling.anchor_parsing import parse_anchors
+    from CAT.mol_utils import rdkit_props
+    from CAT._compat import from_smiles
 
     with h5py.File(out / "test_ligand_anchoring.hdf5", "w") as f:
         for name, kwargs in ANCHOR_OPTIONS.items():
@@ -139,7 +141,7 @@ def regenerate_ligand_anchoring(out: Path) -> None:
             optimize_ligand(mol_out)
 
             atoms = np.fromiter(
-                ((at.properties.get("charge", 0.0), at.symbol) for at in mol_out),
+                ((rdkit_props(at).get("charge", 0.0), at.symbol) for at in mol_out),
                 dtype=[("charge", "f8"), ("symbol", "S2")],
             )
             try:

@@ -2,13 +2,14 @@
 
 from os.path import join
 
+import numpy as np
 from scm.plams import Molecule, PeriodicTable, PTError
 import scm.plams.interfaces.molecule.rdkit as molkit
 from assertionlib import assertion
 
 from CAT.mol_utils import (  # noqa: F401
     from_mol_other, from_rdmol, get_index, separate_mod,
-    to_atnum, to_symbol, adf_connectivity, fix_carboxyl, fix_h
+    to_atnum, to_symbol, adf_connectivity, fix_carboxyl, fix_h, rdkit_props
 )
 
 PATH = join('tests', 'test_files')
@@ -67,6 +68,20 @@ def test_separate_mod() -> None:
             assertion.contains(mol.bonds, bond)
 
 
+def test_round_coords() -> None:
+    """Test :meth:`Molecule.round_coords`."""
+    mol = MOL.copy()
+    ref = np.round(MOL.as_array(), decimals=1)
+
+    mol_round = mol.round_coords(decimals=1, inplace=False)
+    np.testing.assert_array_equal(mol_round.as_array(), ref)
+    np.testing.assert_array_equal(mol.as_array(), MOL.as_array())
+    np.testing.assert_array_equal(round(mol, 1).as_array(), ref)
+
+    assertion.is_(mol.round_coords(decimals=1), None)
+    np.testing.assert_array_equal(mol.as_array(), ref)
+
+
 def test_to_atnum() -> None:
     """Test :func:`CAT.mol_utils.to_atnum`."""
     for j, (symbol, *_) in enumerate(PeriodicTable.data):
@@ -107,7 +122,7 @@ def test_fix_carboxyl() -> None:
     mol[1, 3].order = 2
     mol[1, 4].order = 1
     mol[4].move_to([0.200000, -1.129666, 0.605745])
-    mol[4].properties.charge = -1
+    rdkit_props(mol[4]).charge = -1
 
     fix_carboxyl(mol)
     C, O1, O2 = mol[1], mol[3], mol[4]
