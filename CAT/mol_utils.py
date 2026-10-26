@@ -319,7 +319,7 @@ def adf_connectivity(mol: Molecule) -> List[str]:
 
     # Create list of indices of all aromatic bonds
     try:
-        rdmol = molkit.to_rdmol(mol)
+        rdmol = molkit.to_rdmol(mol, properties=False)
     except Exception as ex:
         if type(ex) is ValueError or ex.__class__.__name__ == 'ArgumentError':
             # Plan B: ignore aromatic bonds
@@ -356,7 +356,7 @@ def fix_carboxyl(mol: Molecule) -> None:
         A PLAMS molecule.
 
     """
-    rdmol = molkit.to_rdmol(mol)
+    rdmol = molkit.to_rdmol(mol, properties=False)
     conf = rdmol.GetConformer()
     matches = rdmol.GetSubstructMatches(_CARBOXYLATE)
 
@@ -384,7 +384,7 @@ def fix_h(mol: Molecule) -> None:
     h_list = [atom for atom in mol if atom.atnum == 1 and 2.0 in
               [bond.order for bond in mol.neighbors(atom)[0].bonds]]
 
-    rdmol = molkit.to_rdmol(mol)
+    rdmol = molkit.to_rdmol(mol, properties=False)
     conf = rdmol.GetConformer()
     get_idx = mol.atoms.index
     set_angle = rdMolTransforms.SetAngleDeg

@@ -1,0 +1,104 @@
+# Install CAT together with the Nano-CAT, Data-CAT and Auto-FOX forks, run a CAT input end to end
+# and run the test suites of CAT, Nano-CAT and Data-CAT against each other
+
+name: Integration
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+    workflow_dispatch:
+    schedule:
+        # Weekly, to catch breaking changes in any of the forks or their dependencies
+        -   cron: '30 5 * * 1'
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+    cancel-in-progress: true
+
+defaults:
+    run:
+        shell: bash
+
+env:
+    PY_COLORS: '1'
+    # Branches of the other forks; CAT itself is the checked-out commit.
+    NANOCAT_REF: master
+    DATACAT_REF: master
+    FOX_REF: master
+
+jobs:
+    integration:
+        name: CAT + Nano-CAT + Data-CAT + Auto-FOX (py ${{ matrix.version }})
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+        strategy:
+            fail-fast: false
+            matrix:
+                version: ['3.10', '3.14']
+
+        services:
+            mongodb:
+                # MongoDB 8 does not start on the kernel of the ubuntu-latest images
+                image: mongo:7
+                ports:
+                    - 27017:27017
+
+        steps:
+            -   name: Check out CAT
+                uses: actions/checkout@v7
+                with:
+                    path: CAT
+                    persist-credentials: false
+
+            -   name: Check out Nano-CAT
+                uses: actions/checkout@v7
+                with:
+                    repository: samadel98/nano-CAT
+                    ref: ${{ env.NANOCAT_REF }}
+                    path: nano-CAT
+                    persist-credentials: false
+
+            -   name: Check out Data-CAT
+                uses: actions/checkout@v7
+                with:
+                    repository: samadel98/data-CAT
+                    ref: ${{ env.DATACAT_REF }}
+                    path: data-CAT
+                    persist-credentials: false
+
+            -   name: Set up Python
+                uses: actions/setup-python@v7
+                with:
+                    python-version: ${{ matrix.version }}
+
+            -   name: Install dependencies
+                # The test suites contain reference geometries made with RDKit 2026.09
+                run: |
+                    pip install -e "./CAT[test]" -e "./nano-CAT[test]" -e "./data-CAT[test]" \
+                        "Auto-FOX @ git+https://github.com/samadel98/auto-FOX@${FOX_REF}" \
+                        "rdkit==2026.9.*"
+
+            -   name: Info installed packages
+                run: pip list
+
+            -   name: Run CAT end to end
+                run: python CAT/.github/integration/check_stack.py "${RUNNER_TEMP}/cat_run" --mongodb
+
+            -   name: Test CAT
+                working-directory: CAT
+                run: pytest -m "not slow" --no-cov
+
+            -   name: Test Nano-CAT
+                working-directory: nano-CAT
+                run: pytest -m "not slow" --no-cov
+
+            -   name: Test Data-CAT
+                working-directory: data-CAT
+                env:
+                    DATACAT_REQUIRE_MONGODB: '1'
+                run: pytest --no-cov

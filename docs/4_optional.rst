@@ -16,6 +16,8 @@ Index
 ========================================= =========================================================================================================
 Option                                    Description
 ========================================= =========================================================================================================
+:attr:`optional.processes`                The number of processes for the RDKit UFF ligand optimization.
+
 :attr:`optional.database.dirname`         The name of the directory where the database will be stored.
 :attr:`optional.database.read`            Attempt to read results from the database before starting calculations.
 :attr:`optional.database.write`           Export results to the database.
@@ -53,6 +55,8 @@ Default Settings
 .. code:: yaml
 
     optional:
+        processes: 1
+
         database:
             dirname: database
             read: True
@@ -88,6 +92,41 @@ Default Settings
 Arguments
 ~~~~~~~~~
 
+Processes
+---------
+
+.. attribute:: optional.processes
+
+    :Parameter:     * **Type** - :class:`int` or ``None``
+                    * **Default Value** - ``1``
+
+    The number of processes for optimizing the ligands with RDKit UFF
+    (*i.e.* :attr:`optional.ligand.optimize` without any jobs).
+    ``None`` or ``0`` use one process per CPU core.
+
+    The ligands are optimized exactly as with a single process, so the results do not change.
+    Starting the processes takes a few seconds, so this pays off from about a hundred ligands on.
+
+    .. note::
+        The worker processes are started with the ``"spawn"`` method, so a Python script that
+        runs CAT with more than one process must guard its entry point:
+
+        .. code:: python
+
+            from CAT.base import prep
+
+            if __name__ == "__main__":
+                prep(settings)
+
+    Example:
+
+    .. code:: yaml
+
+        optional:
+            processes: null  # One process per CPU core
+
+|
+
 Database
 --------
 
@@ -96,7 +135,7 @@ Database
     All database-related settings.
 
     .. note::
-        For :attr:`optional.database` settings to take effect the `Data-CAT <https://github.com/nlesc-nano/data-CAT>`_ package has to be installed.
+        For :attr:`optional.database` settings to take effect the `Data-CAT <https://github.com/samadel98/data-CAT>`_ package has to be installed.
 
     Example:
 

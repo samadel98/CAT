@@ -34,6 +34,7 @@ API
 
 """
 
+import copy
 from typing import List, Any, Optional, NoReturn, Union
 from collections import abc
 
@@ -210,7 +211,7 @@ def ligand_to_qd(core: Molecule, ligand: Molecule, path: str) -> Molecule:
         lig_array = lig_array[:, :-1]
 
     # Combine the ligands and core
-    qd = core.copy()
+    qd = _copy_mol(core)
     array_to_qd(ligand, lig_array, mol_out=qd)
     qd.round_coords()
 
@@ -654,7 +655,7 @@ def array_to_qd(mol: Molecule, xyz_array: np.ndarray,
         start = 1 + rdkit_props(mol_out[-1]).get('pdb_info', {}).get('ResidueNumber', 1)
 
     for i, xyz in enumerate(xyz_array, start=start):
-        mol_cp = mol.copy()
+        mol_cp = _copy_mol(mol)
         mol_cp.from_array(xyz)
         for at in mol_cp:
             rdkit_props(at).pdb_info.ResidueNumber = i
@@ -667,6 +668,64 @@ def array_to_qd(mol: Molecule, xyz_array: np.ndarray,
         for m in mol_list:
             mol_out.add_molecule(m)
         return None
+
+
+#: Types whose instances :func:`copy.deepcopy` returns as they are
+_IMMUTABLE = frozenset({int, float, bool, str, type(None)})
+
+
+def _copy_attrs(obj: object, ret: object, without: "frozenset[str]") -> None:
+    """Copy the attributes of **obj** to **ret** like :func:`scm.plams.core.private.smart_copy`."""
+    attrs = ret.__dict__
+    for k, v in vars(obj).items():
+        if k in without:
+            continue
+        elif k == 'properties':
+            attrs[k] = _copy_settings(v)
+        elif type(v) in _IMMUTABLE or (type(v) is tuple and all(type(i) in _IMMUTABLE for i in v)):
+            attrs[k] = v  # e.g. `Atom.coords`
+        else:
+            attrs[k] = copy.deepcopy(v)
+
+
+def _copy_settings(s: Settings) -> Settings:
+    """Return the same as :meth:`Settings.copy`, but without its (slow) key lookups."""
+    ret = Settings()
+    for k, v in dict.items(s):
+        dict.__setitem__(ret, k, _copy_settings(v) if isinstance(v, Settings) else v)
+    return ret
+
+
+_MOL_SKIP = frozenset({'atoms', 'bonds', '_as_array'})
+_ATOM_SKIP = frozenset({'mol', 'bonds'})
+_BOND_SKIP = frozenset({'atom1', 'atom2', 'mol'})
+
+
+def _copy_mol(mol: Molecule) -> Molecule:
+    """Return the same as :meth:`Molecule.copy`, about 3 times faster.
+
+    :func:`array_to_qd` copies every ligand once for each anchor of the core,
+    which made :meth:`Molecule.copy` the slowest step of the quantum dot construction.
+
+    """
+    # `Molecule()` creates (PLAMS >= 2025) `_as_array`, which refers back to the molecule
+    ret = type(mol)()
+    _copy_attrs(mol, ret, _MOL_SKIP)
+
+    atom_map = {}
+    for at in mol.atoms:
+        at_copy = type(at)()
+        _copy_attrs(at, at_copy, _ATOM_SKIP)
+        ret.add_atom(at_copy)
+        atom_map[id(at)] = at_copy
+
+    for bond in mol.bonds:
+        bond_copy = type(bond)()
+        _copy_attrs(bond, bond_copy, _BOND_SKIP)
+        bond_copy.atom1 = atom_map[id(bond.atom1)]
+        bond_copy.atom2 = atom_map[id(bond.atom2)]
+        ret.add_bond(bond_copy)
+    return ret
 
 
 def _is_sequence(item) -> bool:

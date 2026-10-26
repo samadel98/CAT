@@ -147,7 +147,7 @@ def find_core_substructure(
     atoms and all to-be removed atoms.
 
     """
-    rdmol = to_rdmol(mol)
+    rdmol = to_rdmol(mol, properties=False)
     matches = rdmol.GetSubstructMatches(anchor_tup.mol, useChirality=True)
     remove = anchor_tup.remove
 

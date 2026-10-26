@@ -56,6 +56,7 @@ def test_validate_input() -> None:
     ref.database.read = ('core', 'ligand', 'qd')
     ref.database.write = ('core', 'ligand', 'qd')
     ref.database.thread_safe = False
+    ref.processes = 1
     if HAS_DATACAT:
         ref.database.db = Database(ref.database.dirname, **ref.database.mongodb)
     else:

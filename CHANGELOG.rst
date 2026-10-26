@@ -32,6 +32,27 @@ Unreleased
   ``scipy.special.expit(x)``) on Python 3.13.
 * Move the package metadata to ``pyproject.toml``.
 * Add reference geometries made with RDKit 2026.09 to the tests.
+* Finish importing pre-built quantum dots (``input_qd``): ligands are found by their connectivity,
+  bonds are guessed when missing, and imported quantum dots are stored in the database.
+* Add the ``--template``, ``--validate`` and ``--dry-run`` options to ``init_cat``,
+  and log a summary of the results at the end of a run.
+* Write .pdb files 4-5 times faster (``CAT.data_handling.mol_to_file.write_pdb``),
+  with output identical to PLAMS' ``writepdb``.
+* Fix ``val_nano_cat()`` raising an ``ImportError`` without its message.
+* Fix ``mol_to_file(overwrite=False)`` overwriting existing files.
+* Write molecules whose name exceeds the 255-byte filename limit under a shortened, hashed name
+  instead of skipping them.
+* Add ``optional.processes``: optimize the ligands with RDKit UFF in several processes.
+* Build quantum dots and convert molecules to RDKit faster; together with the above, a run with
+  128 ligands takes 24 s instead of 43 s with 4 processes, or 27 s with 1.
+* Fix workflows with text results (``optional.ligand.branch_distance``) never running when results
+  are read from the database, with pandas 3.
+* Fix the ``optional.ligand.branch_distance`` workflow creating a ``branch_distance`` folder in the
+  current directory instead of the ligand folder.
+* Add a weekly scheduled run of the tests, and an integration test that runs CAT end to end with
+  the Nano-CAT, Data-CAT and Auto-FOX forks (``.github/workflows/integration.yml``).
+* Publish the documentation of this fork at https://samadel98.github.io/CAT/,
+  including the new Nano-CAT ``ligand_descriptors()`` recipe and Data-CAT's file locking.
 
 
 1.1.1

@@ -181,7 +181,7 @@ def find_substructure(
         An empty list is returned if no valid functional groups are found.
 
     """
-    rdmol = molkit.to_rdmol(ligand)
+    rdmol = molkit.to_rdmol(ligand, properties=False)
 
     # Searches for functional groups (defined by functional_group_list) within the ligand
     matches: Iterator[Tuple[AnchorTup, Tuple[int, ...]]] = chain.from_iterable(
@@ -300,7 +300,7 @@ def substructure_split(
     lig.properties.charge = sum(rdkit_props(atom).get('charge', 0) for atom in lig)
 
     # Update the ligand smiles string
-    rdmol = molkit.to_rdmol(lig)
+    rdmol = molkit.to_rdmol(lig, properties=False)
     smiles = Chem.MolToSmiles(rdmol)  # NOTE: can return `None` under rare circumstances
     lig.properties.smiles = Chem.CanonSmiles(smiles)
     lig.properties.name = santize_smiles(lig.properties.smiles) + '@' + lig.properties.anchor

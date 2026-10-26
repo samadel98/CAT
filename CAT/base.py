@@ -37,7 +37,7 @@ from .logger import logger
 from .settings_dataframe import SettingsDataFrame
 
 from .data_handling.mol_import import read_mol
-from .data_handling.update_qd_df import update_qd_df
+from .data_handling.update_qd_df import init_qd_import
 from .data_handling.validate_input import validate_input
 
 from .multi_ligand import init_multi_ligand
@@ -235,7 +235,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     * Ligand COSMO-RS calculations
     * Ligand conceptual DFT calculations
 
-    .. _Nano-CAT: https://github.com/nlesc-nano/nano-CAT
+    .. _Nano-CAT: https://github.com/samadel98/nano-CAT
 
     Parameters
     ----------
@@ -283,7 +283,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     if branch_distance:
         val_nano_cat("The ligand branch-distance workflow requires the nano-CAT package")
         if Version(nanoCAT.__version__) < Version("0.7.2"):
-            raise ImportError("The `cone_angle` workflow require Nano-CAT 0.7.2")
+            raise ImportError("The `branch_distance` workflow requires Nano-CAT 0.7.2")
         init_branch_distance(ligand_df)
 
     # Perform a COSMO-RS calculation on the ligands
@@ -306,7 +306,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     if cone_angle:
         val_nano_cat("Ligand cone angle calculations require the nano-CAT package")
         if Version(nanoCAT.__version__) < Version("0.7.2"):
-            raise ImportError("The `cone_angle` workflow require Nano-CAT 0.7.2")
+            raise ImportError("The `cone_angle` workflow requires Nano-CAT 0.7.2")
         init_cone_angle(ligand_df)
 
     return ligand_df
@@ -322,7 +322,7 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
     * Peforming activation strain analyses
     * Dissociating ligands on the quantum dot surface
 
-    .. _Nano-CAT: https://github.com/nlesc-nano/nano-CAT
+    .. _Nano-CAT: https://github.com/samadel98/nano-CAT
 
     Has two accepted signatures:
         * ``ligand_df = core_df = None``: Update an existing quantum dot dataframe (**qd_df**).
@@ -353,20 +353,21 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
 
     """
     # Unpack arguments
-    bulk = ligand_df.settings.optional.qd.bulkiness
-    optimize = ligand_df.settings.optional.qd.optimize
-    forcefield = ligand_df.settings.optional.forcefield
-    dissociate = ligand_df.settings.optional.qd.dissociate
-    activation_strain = ligand_df.settings.optional.qd.activation_strain
-    construct_qd = ligand_df.settings.optional.qd.construct_qd
-    multi_ligand = ligand_df.settings.optional.qd.multi_ligand
+    settings = (ligand_df if ligand_df is not None else qd_df).settings
+    bulk = settings.optional.qd.bulkiness
+    optimize = settings.optional.qd.optimize
+    forcefield = settings.optional.forcefield
+    dissociate = settings.optional.qd.dissociate
+    activation_strain = settings.optional.qd.activation_strain
+    construct_qd = settings.optional.qd.construct_qd
+    multi_ligand = settings.optional.qd.multi_ligand
 
     # Construct the quantum dot DataFrame
     # If construct_qd is False, construct the dataframe without filling it with quantum dots
     if qd_df is None:  # Construct new quantum dots
         qd_df = init_qd_construction(ligand_df, core_df, construct_qd=construct_qd)
     elif ligand_df is core_df is None:  # Update existing quantum dots
-        update_qd_df(qd_df)
+        init_qd_import(qd_df)
     else:
         raise TypeError("Either qd_df must be 'None' or ligand_df "
                         " and core_df must both be 'None'")
@@ -374,6 +375,9 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
     # Start the ligand bulkiness workflow
     if bulk:
         val_nano_cat("Ligand bulkiness calculations require the nano-CAT package")
+        if ligand_df is None:
+            raise NotImplementedError("Ligand bulkiness calculations require the quantum dots "
+                                      "to be built from 'input_cores' and 'input_ligands'")
         init_lig_bulkiness(qd_df, ligand_df, core_df)
 
     # Skip the actual quantum dot construction
@@ -410,7 +414,7 @@ def prep_qd(ligand_df: Optional[SettingsDataFrame],
 
 
 def val_nano_cat(error_message: Optional[str] = None) -> None:
-    """Raise an an :exc:`ImportError` if the module-level constant ``NANO_CAT`` is ``False``."""
-    err = error_message if error_message is None else ''
+    """Raise an :exc:`ImportError` if Nano-CAT could not be imported (see ``NANO_CAT``)."""
+    err = '' if error_message is None else error_message
     if NANO_CAT is not None:
         raise ImportError(err) from NANO_CAT

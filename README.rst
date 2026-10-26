@@ -1,7 +1,7 @@
 .. image:: https://github.com/samadel98/CAT/actions/workflows/pythonpackage.yml/badge.svg?branch=master
    :target: https://github.com/samadel98/CAT/actions/workflows/pythonpackage.yml?query=branch%3Amaster
-.. image:: https://readthedocs.org/projects/cat/badge/?version=latest
-   :target: https://cat.readthedocs.io/en/latest/
+.. image:: https://github.com/samadel98/CAT/actions/workflows/docs.yml/badge.svg?branch=master
+   :target: https://samadel98.github.io/CAT/
 .. image:: https://zenodo.org/badge/169708827.svg
    :target: https://zenodo.org/badge/latestdoi/169708827
 .. image:: https://badge.fury.io/py/nlesc-CAT.svg
@@ -69,7 +69,7 @@ References
 * van Beek, B.; Zito, J.; Visscher, L.; Infante, I. CAT: A Compound Attachment Tool for the construction of composite chemical compounds. *J. Chem. Inf. Model.* (submitted).
 
 .. _yaml: https://yaml.org/
-.. _documentation: https://cat.readthedocs.io/en/latest/
+.. _documentation: https://samadel98.github.io/CAT/
 .. _miniconda: http://conda.pydata.org/miniconda.html
 .. _anaconda: https://www.continuum.io/downloads
 .. _installConda: https://docs.anaconda.com/anaconda/install/

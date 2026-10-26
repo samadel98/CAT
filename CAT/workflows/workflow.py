@@ -618,8 +618,8 @@ class WorkFlow(AbstractDataClass):
     def _isnull(df: pd.DataFrame, columns: list) -> pd.DataFrame:
         """A more expansive version of the :func:`pandas.isnull` function.
 
-        :class:`int` series now also return ``True`` if smaller than ``0`` and :class:`bool`
-        series are simply inverted.
+        :class:`int` series now also return ``True`` if smaller than ``0``, :class:`bool`
+        series are simply inverted and empty strings are considered null.
 
         Parameters
         ----------
@@ -639,7 +639,11 @@ class WorkFlow(AbstractDataClass):
 
         ret = pd.DataFrame(index=df.index)
         for key, series in df[columns].items():
-            func = dtype_dict.get(series.dtype, pd.isnull)
+            func = dtype_dict.get(series.dtype)
+            if func is None:
+                # pandas >= 3 stores strings in a dedicated `str` dtype rather than `object`
+                is_str = pd.api.types.is_string_dtype(series.dtype)
+                func = dtype_dict[np.dtype(object)] if is_str else pd.isnull
             ret[key] = func(series)
         return ret
 
