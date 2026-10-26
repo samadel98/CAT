@@ -61,6 +61,7 @@ from ..data_handling.mol_to_file import mol_to_file
 from ..jobs import job_geometry_opt  # noqa: F401
 from ..utils import KindEnum, AnchorTup
 from ..parallel import parallel_map, pack_atom_refs, unpack_atom_refs
+from ..frozen_settings import thaw_settings
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -158,7 +159,7 @@ def _start_ligand_jobs_plams(ligand_list: Iterable[Molecule],
             ligand.properties.is_opt = False
             continue
 
-        s = Settings(settings)
+        s = thaw_settings(settings)
         charge_func(s, int(sum(rdkit_props(at).get('charge', 0) for at in ligand)))
         ligand.job_geometry_opt(job, s, name='ligand_opt')
         ligand.round_coords()  # `.is_opt = True` is set by `ligand.job_geometry_opt()``

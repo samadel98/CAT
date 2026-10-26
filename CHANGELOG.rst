@@ -62,6 +62,9 @@ Unreleased
   now relative to the center of mass rather than the origin, which made the rotational entropy
   of molecules away from the origin too large, and linear molecules (*e.g.* the CdCl\ :sub:`2`
   of a bond dissociation energy) and single atoms no longer give a ``NaN`` entropy.
+* Fix the quantum dot optimization with AMS, and the ligand optimization with job settings of
+  its own, crashing with PLAMS 2024 and later, whose ``Settings`` constructor no longer converts
+  nested frozen settings (see the new ``CAT.frozen_settings.thaw_settings()``).
 
 
 1.1.1

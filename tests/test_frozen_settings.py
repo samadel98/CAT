@@ -2,7 +2,9 @@
 
 from assertionlib import assertion
 
-from CAT.frozen_settings import FrozenSettings
+from scm.plams import Settings
+
+from CAT.frozen_settings import FrozenSettings, thaw_settings
 
 SETTINGS = FrozenSettings({'a': True, 'b': False, 'c': [1, 2, 3, 4]})
 
@@ -30,3 +32,19 @@ def test_copy() -> None:
     settings = SETTINGS.copy()
     assertion.eq(settings, SETTINGS)
     assertion.is_not(settings, SETTINGS)
+
+
+def test_thaw_settings() -> None:
+    """Test :func:`CAT.frozen_settings.thaw_settings`."""
+    frozen = FrozenSettings({"a": {"b": {"c": 1}}, "d": [{"e": 2}, 3]})
+    ret = thaw_settings(frozen)
+    assert ret == frozen
+    assert type(ret) is Settings
+    assert type(ret.a.b) is Settings
+    assert type(ret.d[0]) is Settings
+
+    ret.a.b.f = 4
+    ret.d[0].g = 5
+    assert "f" not in frozen.a.b
+    assert "g" not in frozen.d[0]
+    assert thaw_settings(None) == Settings()
