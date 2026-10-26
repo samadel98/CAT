@@ -293,10 +293,13 @@ def restart_init(path: Union[str, 'os.PathLike[str]'],
     manager = GenJobManager(settings, path, folder, hashing)
 
     # Change the default job manager
-    with open(os.devnull, 'w') as f_, redirect_stdout(f_):
-        init()
-    if os.path.isdir(config.default_jobmanager.workdir):
-        rmtree(config.default_jobmanager.workdir)
+    if not config.init:  # Load the PLAMS defaults, unless PLAMS is already initialized
+        with open(os.devnull, 'w') as f_, redirect_stdout(f_):
+            init()
+        # Remove the working folder that `init()` just created
+        # (and only that one, as `init()` does nothing if PLAMS is already initialized)
+        if os.path.isdir(config.default_jobmanager.workdir):
+            rmtree(config.default_jobmanager.workdir)
     config.default_jobmanager = manager
     config.log.file = 3
     config.log.stdout = 0

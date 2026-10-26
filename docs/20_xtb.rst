@@ -162,6 +162,9 @@ Performance
     environment variable.
     Running several tblite calculations at the same time with too many threads in total
     makes them dramatically slower.
+    To optimize many ligands or quantum dots, run several jobs at the same time with
+    :attr:`optional.parallel_jobs`, which gives each job one thread unless ``OMP_NUM_THREADS``
+    is set.
 
 
 API

@@ -17,6 +17,7 @@ Index
 Option                                    Description
 ========================================= =========================================================================================================
 :attr:`optional.processes`                The number of processes for the RDKit UFF ligand optimization.
+:attr:`optional.parallel_jobs`            The number of quantum chemical jobs that can run at the same time.
 
 :attr:`optional.database.dirname`         The name of the directory where the database will be stored.
 :attr:`optional.database.read`            Attempt to read results from the database before starting calculations.
@@ -56,6 +57,7 @@ Default Settings
 
     optional:
         processes: 1
+        parallel_jobs: 1
 
         database:
             dirname: database
@@ -124,6 +126,44 @@ Processes
 
         optional:
             processes: null  # One process per CPU core
+
+|
+
+Parallel jobs
+-------------
+
+.. attribute:: optional.parallel_jobs
+
+    :Parameter:     * **Type** - :class:`int` or ``None``
+                    * **Default Value** - ``1``
+
+    The number of quantum chemical jobs that can run at the same time,
+    for the ligand optimization (:attr:`optional.ligand.optimize` with a job)
+    and the quantum dot optimization (:attr:`optional.qd.optimize`, except with ``use_ff``).
+    ``None`` or ``0`` allow one job per CPU core.
+
+    The jobs run as separate processes, so this pays off from two ligands or quantum dots on,
+    and each molecule is optimized exactly as with one job at a time.
+    Their names get a number (``ligand_opt_1``, ``QD_opt_part1_1``, ...) instead of
+    PLAMS' usual ``.002`` suffixes.
+
+    These jobs get one thread for OpenMP, OpenBLAS and MKL
+    (``OMP_NUM_THREADS``, ``OPENBLAS_NUM_THREADS`` and ``MKL_NUM_THREADS``),
+    unless those environment variables are already set.
+    Programs with parallelism of their own, such as AMS (``NSCM``) or MPI-parallel CP2K,
+    keep using it, so set it accordingly to avoid running more processes than there are cores.
+    :class:`~CAT.xtb.TBLiteJob` (:ref:`xTB`), whose jobs use one core each, benefits the most.
+
+    Example:
+
+    .. code:: yaml
+
+        optional:
+            parallel_jobs: 4
+
+            ligand:
+                optimize:
+                    job2: tblite
 
 |
 

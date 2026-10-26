@@ -265,3 +265,50 @@ def test_tblite_job(job_manager: JobManager) -> None:
 
     mol2.job_single_point(TBLiteJob, Settings({"input": {"foo": 1}}))
     assert np.isnan(mol2.properties.energy.E)
+
+
+@requires_tblite
+def test_parallel_jobs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that the optimized structures do not depend on ``optional.parallel_jobs``."""
+    from CAT.base import prep
+    from CAT.workflows import MOL
+
+    # The same number of threads for both runs, so that the results are identical
+    monkeypatch.setenv("OMP_NUM_THREADS", "1")
+    ret = {}
+    for n in (1, 3):
+        path = tmp_path / str(n)  # Separate job managers: no results copied between the runs
+        path.mkdir()
+        s = Settings({
+            "path": str(path),
+            "input_cores": [{str(Path("tests") / "test_files" / "core" / "CdCl.xyz"): {
+                "guess_bonds": False
+            }}],
+            "input_ligands": ["CC(=O)O", "CCC(=O)O", "CC(C)C(=O)O"],
+            "optional": {
+                "parallel_jobs": n,
+                "core": {"anchor": "Cl", "allignment": "sphere"},
+                "ligand": {"optimize": {"job2": "tblite"}, "split": True},
+                "qd": {"optimize": {"job1": "tblite", "job2": None}},
+                "database": {"read": False, "write": False},
+            },
+        })
+        ret[n] = prep(s)
+
+    (qd_df1, _, lig_df1), (qd_df3, _, lig_df3) = ret[1], ret[3]
+    assert len(lig_df1) == len(lig_df3) == 3
+    assert len(qd_df1) == len(qd_df3) == 3
+    for df1, df3 in [(lig_df1, lig_df3), (qd_df1, qd_df3)]:
+        for mol1, mol3 in zip(df1[MOL], df3[MOL]):
+            assert mol1.properties.is_opt and mol3.properties.is_opt
+            np.testing.assert_allclose(np.array(mol1), np.array(mol3), atol=1e-8)
+
+    # Simultaneous jobs get numbered names
+    for n, ref in [
+        (1, {"ligand_opt", "ligand_opt.002", "ligand_opt.003",
+             "QD_opt_part1", "QD_opt_part1.002", "QD_opt_part1.003"}),
+        (3, {"ligand_opt_1", "ligand_opt_2", "ligand_opt_3",
+             "QD_opt_part1_1", "QD_opt_part1_2", "QD_opt_part1_3"}),
+    ]:
+        names = {p.parent.name for p in (tmp_path / str(n)).glob("**/*.in")}
+        assert names == ref

@@ -19,10 +19,10 @@ from CAT.base import prep
 from CAT.utils import FormatEnum
 from CAT.workflows import MOL
 from CAT import parallel
-from CAT.parallel import get_processes, parallel_map, pack_atom_refs, unpack_atom_refs
+from CAT.parallel import get_processes, parallel_map, thread_map, pack_atom_refs, unpack_atom_refs
 from CAT.attachment.ligand_attach import _copy_mol
 from CAT.mol_utils import rdkit_props
-from CAT.data_handling.validation_schemas import processes_schema
+from CAT.data_handling.validation_schemas import processes_schema, parallel_jobs_schema
 
 PATH = Path('tests') / 'test_files'
 
@@ -36,11 +36,12 @@ def test_get_processes(value: None | int, ref: int) -> None:
     assert get_processes(processes_schema.validate(value)) == ref
 
 
+@pytest.mark.parametrize("schema", [processes_schema, parallel_jobs_schema])
 @pytest.mark.parametrize("value", [-1, True, 1.5, "4"])
-def test_processes_schema_raise(value: Any) -> None:
-    """Test that :data:`processes_schema` rejects invalid values."""
+def test_processes_schema_raise(value: Any, schema: Any) -> None:
+    """Test that :data:`processes_schema` and :data:`parallel_jobs_schema` reject invalid values."""
     with pytest.raises(SchemaError):
-        processes_schema.validate(value)
+        schema.validate(value)
 
 
 def test_parallel_map() -> None:
@@ -50,6 +51,38 @@ def test_parallel_map() -> None:
     assert parallel_map(operator.add, args, 1) == ref
     assert parallel_map(operator.add, args, 2) == ref
     assert parallel_map(operator.add, [], 2) == []
+
+
+def _get_omp_threads(i: int) -> tuple[int, str | None]:
+    return i, os.environ.get("OMP_NUM_THREADS")
+
+
+def _raise_for_odd(i: int) -> int:
+    if i % 2:
+        raise ValueError(i)
+    return i
+
+
+def test_thread_map(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test :func:`CAT.parallel.thread_map`."""
+    args = [(i, 2 * i) for i in range(10)]
+    ref = [3 * i for i in range(10)]
+    assert thread_map(operator.add, args, 1) == ref
+    assert thread_map(operator.add, args, 4) == ref
+    assert thread_map(operator.add, [], 4) == []
+
+    # The threads' child processes get a single OpenMP thread, unless set otherwise
+    monkeypatch.delenv("OMP_NUM_THREADS", raising=False)
+    assert thread_map(_get_omp_threads, [(i,) for i in range(4)], 2) == [(i, "1") for i in range(4)]
+    assert "OMP_NUM_THREADS" not in os.environ
+    assert thread_map(_get_omp_threads, [(0,)], 2) == [(0, None)]
+
+    monkeypatch.setenv("OMP_NUM_THREADS", "3")
+    assert thread_map(_get_omp_threads, [(0,), (1,)], 2) == [(0, "3"), (1, "3")]
+
+    # Exceptions are re-raised
+    with pytest.raises(ValueError, match="^1$"):
+        thread_map(_raise_for_odd, [(i,) for i in range(4)], 2)
 
 
 def test_parallel_map_broken(

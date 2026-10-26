@@ -1,4 +1,4 @@
-"""Run the CPU-bound parts of CAT's workflows in parallel processes.
+"""Run parts of CAT's workflows in parallel: in processes or, for quantum chemical jobs, threads.
 
 Index
 -----
@@ -6,6 +6,7 @@ Index
 .. autosummary::
     get_processes
     parallel_map
+    thread_map
     pack_atom_refs
     unpack_atom_refs
 
@@ -13,6 +14,7 @@ API
 ---
 .. autofunction:: get_processes
 .. autofunction:: parallel_map
+.. autofunction:: thread_map
 .. autofunction:: pack_atom_refs
 .. autofunction:: unpack_atom_refs
 
@@ -23,7 +25,7 @@ from __future__ import annotations
 import os
 import math
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
@@ -33,7 +35,7 @@ from scm.plams import Molecule, Atom
 
 from .logger import logger
 
-__all__ = ['get_processes', 'parallel_map', 'pack_atom_refs', 'unpack_atom_refs']
+__all__ = ['get_processes', 'parallel_map', 'thread_map', 'pack_atom_refs', 'unpack_atom_refs']
 
 T = TypeVar('T')
 
@@ -101,6 +103,38 @@ def parallel_map(func: Callable[..., T], args: Iterable[tuple[Any, ...]],
             "with `if __name__ == '__main__':`"
         )
         return [func(*a) for a in arg_list]
+
+
+def thread_map(func: Callable[..., T], args: Iterable[tuple[Any, ...]],
+               threads: int = 1) -> list[T]:
+    """Return ``[func(*a) for a in args]``, computed by **threads** threads.
+
+    Meant for functions that spend their time waiting for another program, such as the
+    quantum chemical jobs of PLAMS, which run as separate processes: up to **threads**
+    of them then run at the same time. These processes get one thread for OpenMP, OpenBLAS
+    and MKL each, unless the corresponding environment variables are already set.
+
+    With ``threads=1`` (or a single item) everything runs in the current thread.
+    Otherwise the first exception raised by **func** is re-raised once all calls are done.
+
+    Examples
+    --------
+    .. code:: python
+
+        >>> from CAT.parallel import thread_map
+
+        >>> thread_map(pow, [(2, 3), (3, 2)], threads=2)
+        [8, 9]
+
+    """
+    arg_list = list(args)
+    n = min(threads, len(arg_list))
+    if n <= 1:
+        return [func(*a) for a in arg_list]
+
+    with _single_threaded_children(), ThreadPoolExecutor(max_workers=n) as executor:
+        futures = [executor.submit(func, *a) for a in arg_list]
+    return [f.result() for f in futures]
 
 
 @contextmanager
