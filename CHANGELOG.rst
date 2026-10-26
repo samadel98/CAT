@@ -30,6 +30,9 @@ Unreleased
 * Fix reading the energy of CP2K 2026 frequency analyses.
 * Fix string-defined weight functions that use modules other than NumPy (*e.g.*
   ``scipy.special.expit(x)``) on Python 3.13.
+* Fix the validation of ``optional.qd.dissociate``, which rejected the documented combination of
+  ``core_atom`` and ``lig_count``: exactly one of ``core_atom`` and ``core_index`` is now required,
+  together with ``lig_count``.
 * Move the package metadata to ``pyproject.toml``.
 * Lint with ruff (including the pyupgrade, bugbear and simplify rules) instead of flake8 and
   pydocstyle.
