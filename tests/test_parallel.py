@@ -178,5 +178,6 @@ def test_processes(tmp_path: Path) -> None:
     for lig1, lig2 in zip(lig_df1[MOL], lig_df2[MOL]):
         assert lig1.properties.is_opt and lig2.properties.is_opt
         assert _state(lig1) == _state(lig2)
+        np.testing.assert_array_equal(np.array(lig2), [at.coords for at in lig2])
     for qd1, qd2 in zip(qd_df1[MOL], qd_df2[MOL]):
         np.testing.assert_array_equal(np.array(qd1), np.array(qd2))

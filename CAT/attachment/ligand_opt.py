@@ -267,7 +267,8 @@ def _apply_uff_result(
         bond.atom1, bond.atom2 = old_atoms[i], old_atoms[j]
         new_bonds.append(bond)
 
-    ligand.atoms = [old_atoms[i] for i in atoms]
+    # Reorder in place: `Molecule.as_array()` of PLAMS >= 2024 keeps the original list
+    ligand.atoms[:] = [old_atoms[i] for i in atoms]
     ligand.bonds = new_bonds
     for at, idx in zip(ligand.atoms, atom_bonds):
         at.bonds = [new_bonds[i] for i in idx]
