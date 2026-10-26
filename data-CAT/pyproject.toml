@@ -66,10 +66,10 @@ lint = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/samadel98/data-CAT"
-"Bug Tracker" = "https://github.com/samadel98/data-CAT/issues"
+Homepage = "https://github.com/samadel98/CAT/tree/master/data-CAT"
+"Bug Tracker" = "https://github.com/samadel98/CAT/issues"
 Documentation = "https://samadel98.github.io/CAT/7_database.html"
-Changelog = "https://github.com/samadel98/data-CAT/blob/master/CHANGELOG.rst"
+Changelog = "https://github.com/samadel98/CAT/blob/master/data-CAT/CHANGELOG.rst"
 
 [tool.setuptools]
 packages = ["dataCAT", "dataCAT.data"]

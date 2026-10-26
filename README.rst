@@ -42,6 +42,13 @@ Package installation
     `QMFlows fork <https://github.com/samadel98/qmflows>`_ and lifts the cap, and install CAT with uv_:
     ``uv pip install git+https://github.com/samadel98/CAT --override latest-plams-overrides.txt``
 
+- This repository also holds two packages that build on CAT, each installed on its own:
+
+  - **Nano-CAT** (`nano-CAT/ <https://github.com/samadel98/CAT/tree/master/nano-CAT>`__): the properties of ligands and quantum dots,
+    such as bond dissociation energies, COSMO-RS solvation properties and ligand bulkiness.
+  - **Data-CAT** (`data-CAT/ <https://github.com/samadel98/CAT/tree/master/data-CAT>`__): the database that stores CAT's results and,
+    optionally, exports them to MongoDB.
+
 Note that, while not strictly necessary, it is recommended to first create a conda environment:
 
 - Download and install miniconda for python3: miniconda_ (also you can install the complete anaconda_ version).

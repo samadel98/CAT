@@ -1,6 +1,6 @@
 
-.. image:: https://github.com/samadel98/data-CAT/actions/workflows/pythonpackage.yml/badge.svg?branch=master
-    :target: https://github.com/samadel98/data-CAT/actions/workflows/pythonpackage.yml?query=branch%3Amaster
+.. image:: https://github.com/samadel98/CAT/actions/workflows/data-cat.yml/badge.svg?branch=master
+    :target: https://github.com/samadel98/CAT/actions/workflows/data-cat.yml?query=branch%3Amaster
 .. image:: https://github.com/samadel98/CAT/actions/workflows/docs.yml/badge.svg?branch=master
     :target: https://samadel98.github.io/CAT/7_database.html
 .. image:: https://badge.fury.io/py/Data-CAT.svg
@@ -30,9 +30,12 @@ Data-CAT is a databasing framework for the Compound Attachment Tools package (CA
 Installation
 ============
 
-**Data-CAT** requires Python 3.10 or later and can be installed with pip:
+**Data-CAT** requires Python 3.10 or later and can be installed, together with CAT_, with pip:
 
-- **Data-CAT**: ``pip install data-CAT --upgrade``
+- **Data-CAT**: ``pip install git+https://github.com/samadel98/CAT "Data-CAT @ git+https://github.com/samadel98/CAT#subdirectory=data-CAT"``
+
+  - **Data-CAT** lives in the ``data-CAT/`` folder of the CAT_ repository.
+    ``pip install data-CAT`` installs the last release on PyPI, which predates the fixes in this repository.
 
 All dependencies, including rdkit_ and h5py_, are available on PyPI and will be installed automatically.
 Alternatively, they can be installed beforehand in a conda_ environment:

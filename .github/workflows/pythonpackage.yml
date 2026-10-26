@@ -93,6 +93,7 @@ jobs:
                 uses: codecov/codecov-action@v7
                 with:
                     files: ./coverage.xml
+                    flags: cat
                     name: codecov-umbrella
                     token: ${{ secrets.CODECOV_TOKEN }}
 

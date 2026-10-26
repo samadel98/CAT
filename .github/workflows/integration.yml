@@ -1,5 +1,5 @@
-# Install CAT together with the Nano-CAT, Data-CAT and Auto-FOX forks, run a CAT input end to end
-# and run the test suites of CAT, Nano-CAT and Data-CAT against each other
+# Install CAT, Nano-CAT (nano-CAT/) and Data-CAT (data-CAT/) together with the Auto-FOX fork,
+# run a CAT input end to end and run the test suites of CAT, Nano-CAT and Data-CAT
 
 name: Integration
 
@@ -10,7 +10,7 @@ on:
     pull_request:
     workflow_dispatch:
     schedule:
-        # Weekly, to catch breaking changes in any of the forks or their dependencies
+        # Weekly, to catch breaking changes in the Auto-FOX fork or the dependencies
         -   cron: '30 5 * * 1'
 
 permissions:
@@ -26,9 +26,7 @@ defaults:
 
 env:
     PY_COLORS: '1'
-    # Branches of the other forks; CAT itself is the checked-out commit.
-    NANOCAT_REF: master
-    DATACAT_REF: master
+    # The branch of the Auto-FOX fork
     FOX_REF: master
 
 jobs:
@@ -49,26 +47,8 @@ jobs:
                     - 27017:27017
 
         steps:
-            -   name: Check out CAT
-                uses: actions/checkout@v7
+            -   uses: actions/checkout@v7
                 with:
-                    path: CAT
-                    persist-credentials: false
-
-            -   name: Check out Nano-CAT
-                uses: actions/checkout@v7
-                with:
-                    repository: samadel98/nano-CAT
-                    ref: ${{ env.NANOCAT_REF }}
-                    path: nano-CAT
-                    persist-credentials: false
-
-            -   name: Check out Data-CAT
-                uses: actions/checkout@v7
-                with:
-                    repository: samadel98/data-CAT
-                    ref: ${{ env.DATACAT_REF }}
-                    path: data-CAT
                     persist-credentials: false
 
             -   name: Set up Python
@@ -79,7 +59,7 @@ jobs:
             -   name: Install dependencies
                 # The test suites contain reference geometries made with RDKit 2026.09
                 run: |
-                    pip install -e "./CAT[test]" -e "./nano-CAT[test]" -e "./data-CAT[test]" \
+                    pip install -e ".[test]" -e "./nano-CAT[test]" -e "./data-CAT[test]" \
                         "Auto-FOX @ git+https://github.com/samadel98/auto-FOX@${FOX_REF}" \
                         "rdkit==2026.9.*"
 
@@ -87,10 +67,9 @@ jobs:
                 run: pip list
 
             -   name: Run CAT end to end
-                run: python CAT/.github/integration/check_stack.py "${RUNNER_TEMP}/cat_run" --mongodb
+                run: python .github/integration/check_stack.py "${RUNNER_TEMP}/cat_run" --mongodb
 
             -   name: Test CAT
-                working-directory: CAT
                 run: pytest -m "not slow" --no-cov
 
             -   name: Test Nano-CAT

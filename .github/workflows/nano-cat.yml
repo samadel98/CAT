@@ -1,7 +1,6 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+# Test Nano-CAT (nano-CAT/) against the CAT of this commit
 
-name: Tests
+name: Nano-CAT
 
 on:
     push:
@@ -10,7 +9,7 @@ on:
     pull_request:
     workflow_dispatch:
     schedule:
-        # Weekly, to catch breaking releases of dependencies and changes in the other forks
+        # Weekly, to catch breaking releases of dependencies and changes in the Auto-FOX fork
         -   cron: '0 5 * * 1'
 
 permissions:
@@ -23,13 +22,12 @@ concurrency:
 defaults:
     run:
         shell: bash
+        working-directory: nano-CAT
 
 env:
     PY_COLORS: '1'
     CP2K_VERSION: '2026.2'
-    # The CAT and Auto-FOX releases on PyPI predate NumPy 2 and pandas 2 support,
-    # so test against the forks
-    CAT_URL: 'git+https://github.com/samadel98/CAT@master'
+    # The Auto-FOX release on PyPI predates NumPy 2 and pandas 2 support, so test against the fork
     FOX_URL: 'git+https://github.com/samadel98/auto-FOX@master'
 
 jobs:
@@ -91,15 +89,13 @@ jobs:
             -   name: Install dependencies
                 run: |
                     if [[ "${{ matrix.special }}" == '; latest PLAMS' ]]; then
-                        # Lift the `plams<2024` cap and use the QMFlows fork, with the overrides of CAT,
-                        # as no QMFlows release supports PLAMS >= 2024 yet; pip cannot override requirements
-                        curl -Lsf https://raw.githubusercontent.com/samadel98/CAT/master/.github/latest-plams-overrides.txt \
-                            -o "${RUNNER_TEMP}/latest-plams-overrides.txt"
+                        # Lift the `plams<2024` cap and use the QMFlows fork, as no QMFlows release
+                        # supports PLAMS >= 2024 yet; pip has no way to override requirements
                         pip install uv
-                        uv pip install --system -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" \
-                            "rdkit==2026.9.*" --override "${RUNNER_TEMP}/latest-plams-overrides.txt"
+                        uv pip install --system -e .[test] -e .. "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*" \
+                            --override ../.github/latest-plams-overrides.txt
                     else
-                        pip install -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*"
+                        pip install -e .[test] -e .. "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*"
                     fi
 
             -   name: Info Python
@@ -128,35 +124,10 @@ jobs:
             -   name: Run codecov
                 uses: codecov/codecov-action@v7
                 with:
-                    files: ./coverage.xml
+                    files: ./nano-CAT/coverage.xml
+                    flags: nano-cat
                     name: codecov-umbrella
                     token: ${{ secrets.CODECOV_TOKEN }}
-
-    Linting:
-        runs-on: ubuntu-latest
-        steps:
-            -   uses: actions/checkout@v7
-                with:
-                    persist-credentials: false
-
-            -   name: Set up Python on ubuntu-latest
-                uses: actions/setup-python@v7
-                with:
-                    python-version: '3.x'
-
-            -   name: Install linters
-                run: pip install "ruff>=0.15"
-
-            -   name: Python info
-                run: |
-                    which python
-                    python --version
-
-            -   name: Installed packages
-                run: pip list
-
-            -   name: Run ruff
-                run: ruff check --output-format=github .
 
     Type-check:
         runs-on: ubuntu-latest
@@ -170,8 +141,9 @@ jobs:
                 with:
                     python-version: '3.13'
 
+            # Non-editable CAT, so that mypy reads it as an installed (typed) package
             -   name: Install dependencies
-                run: pip install -e . "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" mypy types-PyYAML
+                run: pip install -e . .. "Auto-FOX @ ${FOX_URL}" mypy types-PyYAML
 
             -   name: Installed packages
                 run: pip list
