@@ -46,6 +46,9 @@ jobs:
                     -   os: ubuntu-latest
                         special: '; slow'
                         version: '3.13'
+                    -   os: ubuntu-latest
+                        special: '; latest PLAMS'
+                        version: '3.14'
 
         steps:
             -   uses: actions/checkout@v7
@@ -86,7 +89,18 @@ jobs:
             # The reference geometries of the tests were made with RDKit 2026.09
             # (see tests/rdkit_references.py)
             -   name: Install dependencies
-                run: pip install -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*"
+                run: |
+                    if [[ "${{ matrix.special }}" == '; latest PLAMS' ]]; then
+                        # Lift the `plams<2024` cap and use the QMFlows fork, with the overrides of CAT,
+                        # as no QMFlows release supports PLAMS >= 2024 yet; pip cannot override requirements
+                        curl -Lsf https://raw.githubusercontent.com/samadel98/CAT/master/.github/latest-plams-overrides.txt \
+                            -o "${RUNNER_TEMP}/latest-plams-overrides.txt"
+                        pip install uv
+                        uv pip install --system -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" \
+                            "rdkit==2026.9.*" --override "${RUNNER_TEMP}/latest-plams-overrides.txt"
+                    else
+                        pip install -e .[test] "nlesc-CAT @ ${CAT_URL}" "Auto-FOX @ ${FOX_URL}" "rdkit==2026.9.*"
+                    fi
 
             -   name: Info Python
                 run: |

@@ -9,7 +9,8 @@ from typing import Any
 import numpy as np
 import pytest
 import yaml
-from scm.plams import readpdb, Settings, Molecule
+from scm.plams import Settings, Molecule
+from CAT._compat import readpdb
 
 from CAT.base import prep
 from CAT.workflows import CONE_ANGLE

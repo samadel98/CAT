@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import importlib.util
 import textwrap
 from collections.abc import Generator
 from typing import Any
@@ -13,11 +14,14 @@ import numpy as np
 import pandas as pd
 from assertionlib import assertion
 from nanoutils import UniqueLoader
-from scm.plams import readpdb, Settings, Cp2kJob
+from scm.plams import Settings, Cp2kJob
 
 from CAT.base import validate_input
 from CAT.settings_dataframe import SettingsDataFrame
 from CAT.workflows import MOL
+from CAT.xtb import TBLiteJob
+from CAT.frozen_settings import thaw_settings
+from CAT._compat import readpdb
 from nanoCAT.bde import init_bde
 
 PATH = Path("tests") / "test_files"
@@ -95,12 +99,40 @@ def construct_df() -> SettingsDataFrame:
     )
     df = SettingsDataFrame(index=index, columns=columns, settings=settings)
     df[MOL] = [qd]
-    df.settings = Settings(df.settings)  # unfreeze the settings
+    df.settings = thaw_settings(df.settings)
     return df
+
+
+@pytest.fixture
+def clear_dirs() -> Generator[None, None, None]:
+    """Teardown script for deleting directies."""
+    os.mkdir(PATH / "qd")
+    yield None
+    shutil.rmtree(PATH / "database", ignore_errors=True)
+    shutil.rmtree(PATH / "ligand", ignore_errors=True)
+    shutil.rmtree(PATH / "qd", ignore_errors=True)
+
+
+def run_bde(kwargs: dict[str, Any]) -> None:
+    """Run the BDE workflow with the settings in **kwargs** and check the results."""
+    qd_df = construct_df()
+    for key, value in kwargs.items():  # Replace rather than update (*e.g.*) the job settings
+        qd_df.settings.optional.qd.dissociate[key] = value
+    init_bde(qd_df)
+
+    bde = qd_df["BDE dE", "0"].iloc[0]
+    assertion.len_eq(qd_df["BDE dE"].columns, 1)
+    assertion.assert_(np.isfinite, bde)
+
+    if kwargs.get("job2") is not None:
+        bde_gibbs = qd_df["BDE dG", "0"].iloc[0]
+        assertion.len_eq(qd_df["BDE dG"].columns, 1)
+        assertion.assert_(np.isfinite, bde_gibbs)
 
 
 @pytest.mark.skipif(shutil.which("cp2k.popt") is None, reason="requires CP2K")
 @pytest.mark.slow
+@pytest.mark.usefixtures("clear_dirs")
 class TestBDEWorkflow:
     PARAMS = {
         "core_index": {"core_index": [3]},
@@ -110,26 +142,25 @@ class TestBDEWorkflow:
         "qd_opt": {"core_index": [3], "qd_opt": True},
     }
 
-    @pytest.fixture(scope="function", autouse=True)
-    def clear_dirs(self) -> Generator[None, None, None]:
-        """Teardown script for deleting directies."""
-        os.mkdir(PATH / "qd")
-        yield None
-        shutil.rmtree(PATH / "database", ignore_errors=True)
-        shutil.rmtree(PATH / "ligand", ignore_errors=True)
-        shutil.rmtree(PATH / "qd", ignore_errors=True)
+    @pytest.mark.parametrize("kwargs", PARAMS.values(), ids=PARAMS)
+    def test_pass(self, kwargs: dict[str, Any]) -> None:
+        run_bde(kwargs)
+
+
+@pytest.mark.skipif(importlib.util.find_spec("tblite") is None, reason="requires tblite")
+@pytest.mark.usefixtures("clear_dirs")
+class TestBDEWorkflowTBLite:
+    """Run the BDE workflow with GFN2-xTB, which needs no external program."""
+
+    PARAMS = {
+        "core_index": {"core_index": [3], "job1": TBLiteJob, "s1": Settings()},
+        "freq": {
+            "core_index": [3], "job1": TBLiteJob, "s1": Settings(),
+            "job2": TBLiteJob, "s2": Settings({"input": {"solvent": "water"}}),
+        },
+        "qd_opt": {"core_index": [3], "job1": TBLiteJob, "s1": Settings(), "qd_opt": True},
+    }
 
     @pytest.mark.parametrize("kwargs", PARAMS.values(), ids=PARAMS)
     def test_pass(self, kwargs: dict[str, Any]) -> None:
-        qd_df = construct_df()
-        qd_df.settings.optional.qd.dissociate.update(kwargs)
-        init_bde(qd_df)
-
-        bde = qd_df["BDE dE", "0"].iloc[0]
-        assertion.len_eq(qd_df["BDE dE"].columns, 1)
-        assertion.assert_(np.isfinite, bde)
-
-        if "job2" in kwargs:
-            bde_gibbs = qd_df["BDE dG", "0"].iloc[0]
-            assertion.len_eq(qd_df["BDE dG"].columns, 1)
-            assertion.assert_(np.isfinite, bde_gibbs)
+        run_bde(kwargs)

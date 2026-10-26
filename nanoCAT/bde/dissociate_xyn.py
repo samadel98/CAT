@@ -44,7 +44,7 @@ from scm.plams.interfaces.molecule import rdkit as molkit
 from assertionlib.dataclass import AbstractDataClass
 
 from CAT.utils import iter_repeat
-from CAT.mol_utils import to_atnum
+from CAT.mol_utils import to_atnum, rdkit_props
 from CAT.attachment.ligand_anchoring import _smiles_to_rdmol
 from nanoutils import group_by_values
 
@@ -196,10 +196,12 @@ def _lig_mapping(mol: Molecule, idx: Iterable[int]) -> IdxMapping:
     """Map **idx** to all atoms with the same residue number."""
     idx = as_array(idx, dtype=int)  # 1-based indices
 
-    iterator = ((i, at.properties.pdb_info.get('ResidueNumber', i)) for i, at in enumerate(mol, 1))
+    iterator = (
+        (i, rdkit_props(at).pdb_info.get('ResidueNumber', i)) for i, at in enumerate(mol, 1)
+    )
     lig_mapping = group_by_values(iterator)
 
-    valid_keys = (mol[i].properties.pdb_info.get('ResidueNumber', i) for i in idx)
+    valid_keys = (rdkit_props(mol[i]).pdb_info.get('ResidueNumber', i) for i in idx)
     return {i: lig_mapping[k] for i, k in zip(idx, valid_keys)}
 
 
@@ -631,7 +633,7 @@ class MolDissociater(AbstractDataClass):
             s.core_topology = f'{core.properties.topology}_{next(iter(core_idx))}'
             try:
                 s.lig_residue = sorted({
-                    mol_new[i].properties.pdb_info.ResidueNumber for i in lig_idx
+                    rdkit_props(mol_new[i]).pdb_info.ResidueNumber for i in lig_idx
                 })
             except TypeError:
                 s.lig_residue = sorted(lig_idx)

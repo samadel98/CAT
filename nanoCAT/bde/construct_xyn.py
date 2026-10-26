@@ -27,7 +27,7 @@ from scm.plams import MoleculeError, Molecule, Atom, AMSJob, axis_rotation_matri
 
 from CAT.jobs import job_geometry_opt  # noqa: F401
 from CAT.utils import get_template
-from CAT.mol_utils import to_atnum
+from CAT.mol_utils import to_atnum, rdkit_props
 
 __all__ = ['get_xyn', 'get_perpendicular_vec']
 
@@ -108,7 +108,7 @@ def get_xyn(
     XYn, X = _construct_xyn(ion, lig_count, lig, at, idx)
 
     # Update the properties of X and XYn
-    X.properties.charge = 0 - sum([at.properties.charge for at in XYn if at.properties.charge])
+    rdkit_props(X).charge = -sum(rdkit_props(at).charge for at in XYn if rdkit_props(at).charge)
     XYn.properties.update({
         'name': mol_ref.properties.name + '_XYn',
         'path': mol_ref.properties.path,
@@ -118,8 +118,8 @@ def get_xyn(
     })
 
     X.properties.symbol = X.symbol
-    X.properties.pdb_info.ResidueName = 'COR'
-    X.properties.pdb_info.ResidueNumber = 1
+    rdkit_props(X).pdb_info.ResidueName = 'COR'
+    rdkit_props(X).pdb_info.ResidueNumber = 1
 
     # Perform a constrained UFF optimization on XYn with X frozen
     if opt:
@@ -206,8 +206,8 @@ def _construct_xyn(
 
         # Set pdb attributes
         for at in mol:
-            at.properties.pdb_info.ResidueNumber = i
-            at.properties.pdb_info.ResidueName = 'LIG'
+            rdkit_props(at).pdb_info.ResidueNumber = i
+            rdkit_props(at).pdb_info.ResidueName = 'LIG'
 
         # Combine the translated and rotated ligand with XYn
         XYn.add_molecule(mol)
@@ -250,7 +250,7 @@ def _parse_ion(ion: Molecule | str | int) -> tuple[Molecule, Atom]:
     if isinstance(ion, Molecule):
         XYn = ion.copy()
         for i, at in enumerate(XYn, 1):
-            if not at.properties.charge:
+            if not rdkit_props(at).charge:
                 continue
 
             # Found an atom with non-zero charge; return a copy
@@ -297,9 +297,9 @@ def _get_anchor(mol: Molecule) -> tuple[int, Atom]:
 def _get_ligand(mol: Molecule) -> Molecule:
     """Extract a single ligand from **mol** as a copy."""
     at_list = []
-    res = mol.atoms[-1].properties.pdb_info.ResidueNumber
+    res = rdkit_props(mol.atoms[-1]).pdb_info.ResidueNumber
     for at in reversed(mol.atoms):
-        if at.properties.pdb_info.ResidueNumber == res:
+        if rdkit_props(at).pdb_info.ResidueNumber == res:
             at_list.append(at)
         else:
             ret = Molecule()

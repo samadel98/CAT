@@ -18,6 +18,7 @@ API
 
 from scm.plams import Molecule, Atom, Bond, Settings, MoleculeError, add_Hs
 from CAT.attachment.mol_split_cm import SplitMol
+from CAT.mol_utils import rdkit_props
 
 from .ff_assignment import run_match_job
 
@@ -62,7 +63,7 @@ def run_ff_cationic(mol: Molecule, anchor: Atom, s: Settings) -> None:
     """  # noqa
     if anchor not in mol:
         raise MoleculeError("Passed 'anchor' is not part of 'mol'")
-    anchor.properties.charge = 0
+    rdkit_props(anchor).charge = 0
 
     # Find the first bond attached to the anchor atom which is not part of a ring
     for bond in anchor.bonds:
@@ -95,8 +96,8 @@ def run_ff_cationic(mol: Molecule, anchor: Atom, s: Settings) -> None:
         properties = mol[1].properties
         for at in alkyl_with_h.atoms[len(alkyl):]:
             cap_h = Atom(atnum=at.atnum, coords=at.coords, mol=alkyl, settings=properties.copy())
-            cap_h.properties.pdb_info.IsHeteroAtom = False
-            cap_h.properties.pdb_info.Name = 'Hxx'
+            rdkit_props(cap_h).pdb_info.IsHeteroAtom = False
+            rdkit_props(cap_h).pdb_info.Name = 'Hxx'
             alkyl.add_atom(cap_h)
             alkyl.add_bond(Bond(alkyl_cap, cap_h, mol=alkyl))
 

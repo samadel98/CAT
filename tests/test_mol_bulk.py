@@ -8,7 +8,8 @@ from collections.abc import Generator
 import yaml
 import pytest
 import numpy as np
-from scm.plams import readpdb, Settings
+from scm.plams import Settings
+from CAT._compat import readpdb
 from assertionlib import assertion
 
 from CAT.base import prep

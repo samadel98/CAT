@@ -19,6 +19,7 @@ API
 from itertools import chain
 
 from scm.plams import Molecule
+from CAT.mol_utils import rdkit_props
 
 __all__ = ['get_asa_fragments']
 
@@ -44,12 +45,13 @@ def get_asa_fragments(qd: Molecule) -> tuple[list[Molecule], Molecule]:
     core = Molecule()
     core.properties = mol_complete.properties.copy()
 
-    core_atoms = [at for at in mol_complete if at.properties.pdb_info.ResidueName == 'COR']
+    core_atoms = [at for at in mol_complete if rdkit_props(at).pdb_info.ResidueName == 'COR']
     for atom in core_atoms:
         mol_complete.delete_atom(atom)
         atom.mol = core
 
-    core.atoms = core_atoms
+    # Fill the existing list: `Molecule.as_array()` of PLAMS >= 2024 keeps the original list
+    core.atoms[:] = core_atoms
     mol_complete.properties.name += '_frags'
     core.properties.name += '_core'
 

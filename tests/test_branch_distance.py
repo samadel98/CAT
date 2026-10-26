@@ -6,7 +6,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from scm.plams import Molecule, Settings, from_smiles
+from scm.plams import Molecule, Settings
+from CAT._compat import from_smiles
 
 from CAT.base import prep
 from CAT.workflows import BRANCH_DISTANCE, BRANCH_SIZE

@@ -2,14 +2,14 @@
 
 from pathlib import Path
 
-from scm.plams import readpdb, Molecule
+from scm.plams import Molecule
+from CAT._compat import readpdb
 from assertionlib import assertion
 
 from nanoCAT.bde.guess_core_dist import guess_core_core_dist
 
 PATH = Path('tests') / 'test_files'
-with open(PATH / 'mol.pdb') as f:
-    MOL: Molecule = readpdb(f)
+MOL: Molecule = readpdb(PATH / 'mol.pdb')
 
 
 def test_guess_core_core_dist() -> None:
