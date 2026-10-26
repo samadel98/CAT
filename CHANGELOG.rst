@@ -63,6 +63,9 @@ Unreleased
   without any external program (``pip install "nlesc-CAT[xtb]"``). It is available wherever CAT
   accepts a job type, with the ``"tblite"`` alias, *e.g.* for the ligand and quantum dot
   optimizations.
+* Fix CAT deleting the working folder of PLAMS, with all its jobs, when PLAMS was already
+  initialized before running CAT (*e.g.* by a script calling ``plams.init()``), and printing
+  ``--- Logging error ---`` tracebacks with PLAMS 2024 and later.
 * Fix the thermochemistry of ``get_thermo()`` and ``get_entropy()``: the moments of inertia are
   now relative to the center of mass rather than the origin, which made the rotational entropy
   of molecules away from the origin too large, and linear molecules (*e.g.* the CdCl\ :sub:`2`

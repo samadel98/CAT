@@ -6,7 +6,7 @@ from pathlib import Path
 
 from unittest import mock
 
-from scm.plams import config
+from scm.plams import JobManager, config
 from scm.plams.interfaces.adfsuite.ams import AMSJob
 from scm.plams.interfaces.thirdparty.orca import ORCAJob
 from scm.plams.interfaces.thirdparty.cp2k import Cp2kJob
@@ -15,6 +15,7 @@ from scm.plams.interfaces.thirdparty.gamess import GamessJob
 from assertionlib import assertion
 
 from CAT._compat import ADFJob, readpdb
+from CAT.gen_job_manager import GenJobManager
 from CAT.utils import (
     type_to_string,
     dict_concatenate,
@@ -88,6 +89,24 @@ def test_restart_init() -> None:
 
     _hash = '0da9b13507022986d26bbc57b4c366cf1ead1fe70ff750e071e79e393b14dfb5'
     assertion.contains(manager.hashes, _hash)
+
+
+def test_restart_init_initialized(tmp_path: Path) -> None:
+    """Test that :func:`CAT.utils.restart_init` keeps the working folder of an initialized PLAMS."""
+    old_manager, old_init = config.default_jobmanager, config.init
+    try:
+        config.default_jobmanager = JobManager(config.jobmanager, str(tmp_path), "user")
+        config.init = True
+        user_dir = Path(config.default_jobmanager.workdir)
+        user_dir.mkdir(exist_ok=True)
+        (user_dir / "results.txt").write_text("results")
+
+        restart_init(tmp_path, "cat")
+        assertion.isinstance(config.default_jobmanager, GenJobManager)
+        assertion.eq(Path(config.default_jobmanager.workdir), tmp_path / "cat")
+        assertion.eq((user_dir / "results.txt").read_text(), "results")
+    finally:
+        config.default_jobmanager, config.init = old_manager, old_init
 
 
 def test_get_formula() -> None:
