@@ -11,6 +11,7 @@ from assertionlib import assertion
 
 from CAT.utils import get_formula
 from CAT.mol_utils import rdkit_props
+from CAT._compat import from_smiles
 from CAT.data_handling.mol_import import (
     read_mol_xyz, read_mol_pdb, read_mol_mol, read_mol_smiles, read_mol_plams, read_mol_rdkit,
     read_mol_folder, read_mol_txt, get_charge_dict, set_mol_prop, canonicalize_mol
@@ -127,6 +128,17 @@ def test_read_mol_txt() -> None:
 
     assertion.isinstance(mol_list[-1], Molecule)
     assertion.eq([at.symbol for at in mol_list[-1]], [at.symbol for at in REF_MOL])
+
+
+def test_canonicalize_mol() -> None:
+    """Test that :func:`canonicalize_mol` keeps :meth:`Molecule.as_array` in sync with the atoms."""
+    mol = from_smiles('OCCc1ccccc1C(=O)O')
+    symbols = [at.symbol for at in mol]
+    mol2 = canonicalize_mol(mol, inplace=False)
+    canonicalize_mol(mol)
+    for m in (mol, mol2):
+        assertion.ne([at.symbol for at in m], symbols)
+        np.testing.assert_array_equal(m.as_array(), [at.coords for at in m])
 
 
 def test_get_charge_dict() -> None:

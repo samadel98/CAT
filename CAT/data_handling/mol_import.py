@@ -326,12 +326,13 @@ def canonicalize_mol(mol: Molecule, inplace: bool = True) -> Molecule | None:
     idx_collection = Chem.CanonicalRankAtoms(rdmol)
 
     # Reverse sort Molecule.atoms by the atomic indices in idx_collection
+    # Sort in place: `Molecule.as_array()` of PLAMS >= 2024 keeps the original list
     if inplace:
-        mol.atoms = [at for _, at in sorted(zip(idx_collection, mol.atoms), reverse=True)]
+        mol.atoms[:] = [at for _, at in sorted(zip(idx_collection, mol.atoms), reverse=True)]
         return
     else:
         ret = mol.copy()
-        ret.atoms = [at for _, at in sorted(zip(idx_collection, ret.atoms), reverse=True)]
+        ret.atoms[:] = [at for _, at in sorted(zip(idx_collection, ret.atoms), reverse=True)]
         return ret
 
 
@@ -464,8 +465,8 @@ def set_qd(qd: Molecule, mol_dict: Settings) -> Molecule:
     core_idx = np.flatnonzero(~is_lig)
 
     # Reorder all atoms: core atoms first followed by ligands
-    atoms = qd.atoms
-    qd.atoms = [atoms[i] for i in core_idx] + [atoms[i] for i in lig_idx.ravel()]
+    atoms = list(qd.atoms)
+    qd.atoms[:] = [atoms[i] for i in core_idx] + [atoms[i] for i in lig_idx.ravel()]
 
     # Replace the (guessed) ligand bonds with those of the ligand
     if guess_bonds:

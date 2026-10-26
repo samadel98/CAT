@@ -46,6 +46,7 @@ def test_import_ethoxide(fmt: str, tmp_path: Path) -> None:
 
     assert len(qd) == 123 + 26 * 8
     assert Counter(at.symbol for at in qd.atoms[:123]) == {'Cd': 68, 'Se': 55}
+    np.testing.assert_array_equal(qd.as_array(), [at.coords for at in qd])
     assert sum(rdkit_props(at).charge for at in qd) == 0
     assert qd.properties.ligand_anchor == 'O3'
 
