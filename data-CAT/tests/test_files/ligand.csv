@@ -1,0 +1,7 @@
+index,,formula,hdf5 index,opt,settings
+sub index,,,,,1
+smiles,anchor,,,,
+-,-,str,-1,False,str
+C[O-],O2,C1H3O1,2,True,RDKit_2019.03.2 0
+CC[O-],O3,C2H5O1,1,True,RDKit_2019.03.2 0
+CCC[O-],O4,C3H7O1,0,True,RDKit_2019.03.2 0

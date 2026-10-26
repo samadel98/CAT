@@ -20,9 +20,6 @@ concurrency:
     cancel-in-progress: true
 
 env:
-    # The documentation includes the API of Nano-CAT and Data-CAT.
-    NANOCAT_REF: master
-    DATACAT_REF: master
     # Only pushes to (and manual runs on) master are published
     PUBLISH: ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
 
@@ -40,13 +37,10 @@ jobs:
                     python-version: '3.12'
 
             -   name: Install dependencies
-                # The PyPI releases of Nano-CAT and Data-CAT predate NumPy 2
-                # (and Nano-CAT's pulls in the conflicting `rdkit-pypi` package)
+                # The documentation includes the API of Nano-CAT (nano-CAT/) and Data-CAT (data-CAT/)
                 run: |
                     pip install -e .[docs] h5py pymongo filelock "numpy<2"
-                    pip install --no-deps \
-                        "git+https://github.com/samadel98/nano-CAT@${NANOCAT_REF}" \
-                        "git+https://github.com/samadel98/data-CAT@${DATACAT_REF}" \
+                    pip install --no-deps -e ./nano-CAT -e ./data-CAT \
                         git+https://github.com/samadel98/auto-FOX@master
 
             -   name: Installed packages

@@ -1,0 +1,13 @@
+ATOM      1 Cab  LIG A   1       3.718  -0.186   0.031  1.00  0.00           C  
+HETATM    2 Nac  LIG A   1       2.349  -0.556   0.094  1.00  0.00           N  
+ATOM      3 Cad  LIG A   1       1.312   0.393  -0.066  1.00  0.00           C  
+HETATM    4 Oae  LIG A   1       1.710   1.570  -0.265  1.00  0.00           O  
+HETATM    5 Oaf  LIG A   1       0.146  -0.070   0.012  1.00  0.00           O1-
+ATOM      6 Haj  LIG A   1       2.067  -1.517   0.257  1.00  0.00           H  
+ATOM      7 Hai  LIG A   1       3.987   0.270  -0.944  1.00  0.00           H  
+ATOM      8 Hah  LIG A   1       3.985   0.570   0.799  1.00  0.00           H  
+ATOM      9 Hag  LIG A   1       4.353  -1.078   0.185  1.00  0.00           H  
+CONECT    1    2    7    8    9
+CONECT    2    3    6
+CONECT    3    4    4    5
+END

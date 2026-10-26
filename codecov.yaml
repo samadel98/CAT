@@ -1,8 +1,32 @@
+# Codecov reads only this file: one coverage target per package
+# (CAT, Nano-CAT in nano-CAT/ and Data-CAT in data-CAT/), each uploaded with its own flag
 coverage:
     status:
         project:
-            default:
+            default: false
+            cat:
                 target: 60
+                flags:
+                    - cat
+            nano-cat:
+                target: 0
+                flags:
+                    - nano-cat
+            data-cat:
+                target: 80
+                flags:
+                    - data-cat
         patch:
             default:
                 target: 0
+
+flags:
+    cat:
+        paths:
+            - CAT/
+    nano-cat:
+        paths:
+            - nano-CAT/
+    data-cat:
+        paths:
+            - data-CAT/
