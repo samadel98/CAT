@@ -31,6 +31,8 @@ Unreleased
 * Fix string-defined weight functions that use modules other than NumPy (*e.g.*
   ``scipy.special.expit(x)``) on Python 3.13.
 * Move the package metadata to ``pyproject.toml``.
+* Lint with ruff (including the pyupgrade, bugbear and simplify rules) instead of flake8 and
+  pydocstyle.
 * Add reference geometries made with RDKit 2026.09 to the tests.
 * Finish importing pre-built quantum dots (``input_qd``): ligands are found by their connectivity,
   bonds are guessed when missing, and imported quantum dots are stored in the database.
