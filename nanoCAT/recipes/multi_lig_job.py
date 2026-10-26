@@ -16,17 +16,9 @@ import os
 from types import MappingProxyType
 from os.path import join
 from typing import (
-    Union,
-    MutableMapping,
-    Mapping,
-    Optional,
-    Any,
-    List,
-    Dict,
-    Tuple,
-    Iterable,
-    FrozenSet
+    Any
 )
+from collections.abc import MutableMapping, Mapping, Iterable
 
 import pandas as pd
 
@@ -46,7 +38,7 @@ from FOX.io.read_psf import overlay_rtf_file
 
 __all__ = ['multi_ligand_job']
 
-PathType = Union[str, os.PathLike]
+PathType = str | os.PathLike
 
 SET_CONFIG_STDOUT = SetAttr(config.log, 'stdout', 0)
 
@@ -66,10 +58,10 @@ UNIT_MAP: Mapping[str, str] = MappingProxyType({
 
 
 def multi_ligand_job(mol: Molecule,
-                     psf: Union[PathType, PSFContainer],
+                     psf: PathType | PSFContainer,
                      settings: MutableMapping,
-                     path: Optional[PathType] = None,
-                     folder: Optional[PathType] = None,
+                     path: PathType | None = None,
+                     folder: PathType | None = None,
                      **kwargs: Any) -> CP2KMM_Result:
     r"""Estimate forcefield parameters using MATCH and then run a MM calculation with CP2K.
 
@@ -258,7 +250,7 @@ def _fill_uff(psf: PSFContainer, lj: pd.DataFrame) -> None:
 
 
 def _run_match(mol_list: Iterable[Molecule],
-               forcefield: str = 'top_all36_cgenff_new') -> Tuple[List[str], PRMContainer]:
+               forcefield: str = 'top_all36_cgenff_new') -> tuple[list[str], PRMContainer]:
     """Run a :class:`MatchJob`, using **forcefield**, on all molecules in **mol_list**."""
     s = Settings()
     s.input.forcefield = forcefield
@@ -286,7 +278,7 @@ def _concatenate_prm(file_list: Iterable[PathType]) -> PRMContainer:
     ret = next(iterator)
 
     for prm in iterator:
-        items = ((k.lower(), getattr(prm, k.lower())) for k in prm.HEADERS[:-2])
+        items = ((k.lower(), getattr(prm, k.lower())) for k in prm._HEADERS[:-2])
         for k, v in items:
             df = getattr(ret, k)
             if v is None:
@@ -296,7 +288,7 @@ def _concatenate_prm(file_list: Iterable[PathType]) -> PRMContainer:
             else:
                 setattr(ret, k, pd.concat([df, v]))
 
-    items = ((k.lower(), getattr(ret, k.lower())) for k in ret.HEADERS[:-2])
+    items = ((k.lower(), getattr(ret, k.lower())) for k in ret._HEADERS[:-2])
     for k, df in items:
         if df is None:
             continue
@@ -305,10 +297,10 @@ def _concatenate_prm(file_list: Iterable[PathType]) -> PRMContainer:
     return ret
 
 
-def _lig_from_psf(mol: Molecule, psf: PSFContainer) -> Dict[FrozenSet[int], Molecule]:
+def _lig_from_psf(mol: Molecule, psf: PSFContainer) -> dict[frozenset[int], Molecule]:
     residue_set = set(psf.segment_name[psf.residue_name == 'LIG'])
 
-    ret: Dict[FrozenSet[int], Molecule] = {}
+    ret: dict[frozenset[int], Molecule] = {}
     for res in residue_set:
         _key = psf.residue_id[psf.segment_name == res]
         key = frozenset(_key)
