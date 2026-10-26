@@ -1,0 +1,7 @@
+index,,,,hdf5 index,ligand count,opt,settings,settings
+sub index,,,,,,,1,2
+core,core anchor,ligand smiles,ligand anchor,,,,,
+-,-,-,-,-1,-1,False,str,str
+Cd68Cl26Se55,124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149,CCC[O-],O4,0,-1,True,type 0,type 0
+Cd68Cl26Se55,124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149,CC[O-],O3,1,-1,True,type 0,type 0
+Cd68Cl26Se55,124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149,C[O-],O2,2,-1,True,type 0,type 0

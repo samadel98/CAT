@@ -1,0 +1,115 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Data-CAT"
+dynamic = ["version", "readme"]
+description = "A databasing framework for the Compound Attachment Tools package (CAT)."
+license = "LGPL-3.0-or-later"
+license-files = ["LICENSE.md", "NOTICE"]
+authors = [
+    { name = "B. F. van Beek", email = "b.f.van.beek@vu.nl" },
+]
+keywords = [
+    "database",
+    "science",
+    "chemistry",
+    "python-3",
+    "python-3-10",
+    "python-3-11",
+    "python-3-12",
+    "python-3-13",
+    "python-3-14",
+    "automation",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "h5py>=3.6.0",
+    "filelock>=3.12.0",
+    "numpy>=1.21.2",
+    "pandas>=1.4.0",
+    "pymongo>=4.0",
+    "rdkit>=2022.9.1",
+    "Nano-Utils>=2.3.1",
+    "AssertionLib>=2.3.2",
+    "plams>=1.5.1",
+    "nlesc-CAT>=0.10.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "build",
+]
+lint = [
+    "ruff>=0.15",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/samadel98/data-CAT"
+"Bug Tracker" = "https://github.com/samadel98/data-CAT/issues"
+Documentation = "https://samadel98.github.io/CAT/7_database.html"
+Changelog = "https://github.com/samadel98/data-CAT/blob/master/CHANGELOG.rst"
+
+[tool.setuptools]
+packages = ["dataCAT", "dataCAT.data"]
+zip-safe = false
+
+[tool.setuptools.package-data]
+dataCAT = ["py.typed", "*.pyi", "data/*.pdb"]
+
+[tool.setuptools.dynamic]
+version = { attr = "dataCAT.__version__.__version__" }
+readme = { file = ["README.rst"], content-type = "text/x-rst" }
+
+[tool.pytest.ini_options]
+testpaths = ["dataCAT", "tests"]
+addopts = "--tb=short --doctest-glob='*.py' --doctest-glob='*.rst' --cov=dataCAT --cov-report xml --cov-report term --cov-report html --doctest-modules"
+markers = ["slow: A marker for slow tests."]
+
+[tool.coverage.run]
+branch = true
+source = ["dataCAT"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# pycodestyle, Pyflakes, pydocstyle, pyupgrade, flake8-bugbear, flake8-comprehensions
+# and flake8-simplify
+select = ["E", "F", "W", "D", "UP", "B", "C4", "SIM"]
+ignore = [
+    "D401",  # First line of a docstring in imperative mood
+    "B905",  # `zip()` without `strict=`
+    "SIM118",  # `key in dict.keys()`; `PDBContainer.keys()` is a classmethod
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"conftest.py" = ["D"]
+"tools/*" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+ignore-decorators = ["typing.overload"]

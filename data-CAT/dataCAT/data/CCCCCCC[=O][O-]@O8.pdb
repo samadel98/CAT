@@ -1,0 +1,30 @@
+ATOM      1 Cab  LIG A   1       4.994  -0.534  -0.049  1.00  0.00           C  
+ATOM      2 Cac  LIG A   1       6.321   0.230   0.021  1.00  0.00           C  
+ATOM      3 Cad  LIG A   1       3.801   0.425   0.039  1.00  0.00           C  
+ATOM      4 Cae  LIG A   1       7.514  -0.729  -0.066  1.00  0.00           C  
+ATOM      5 Caf  LIG A   1       2.472  -0.341  -0.031  1.00  0.00           C  
+ATOM      6 Cag  LIG A   1       8.837   0.028   0.003  1.00  0.00           C  
+ATOM      7 Cah  LIG A   1       1.271   0.558   0.051  1.00  0.00           C  
+HETATM    8 Oai  LIG A   1       0.000   0.000   0.000  1.00  0.00           O1-
+HETATM    9 Oaj  LIG A   1       1.392   1.808   0.165  1.00  0.00           O  
+ATOM     10 Haw  LIG A   1       9.680  -0.691  -0.063  1.00  0.00           H  
+ATOM     11 Hav  LIG A   1       8.915   0.746  -0.842  1.00  0.00           H  
+ATOM     12 Hau  LIG A   1       8.915   0.581   0.963  1.00  0.00           H  
+ATOM     13 Hat  LIG A   1       2.421  -0.905  -0.987  1.00  0.00           H  
+ATOM     14 Has  LIG A   1       2.421  -1.069   0.807  1.00  0.00           H  
+ATOM     15 Har  LIG A   1       7.472  -1.293  -1.024  1.00  0.00           H  
+ATOM     16 Haq  LIG A   1       7.472  -1.457   0.773  1.00  0.00           H  
+ATOM     17 Hap  LIG A   1       3.851   1.151  -0.803  1.00  0.00           H  
+ATOM     18 Hao  LIG A   1       3.851   0.987   0.998  1.00  0.00           H  
+ATOM     19 Han  LIG A   1       6.372   0.794   0.979  1.00  0.00           H  
+ATOM     20 Ham  LIG A   1       6.372   0.958  -0.820  1.00  0.00           H  
+ATOM     21 Hal  LIG A   1       4.944  -1.097  -1.007  1.00  0.00           H  
+ATOM     22 Hak  LIG A   1       4.944  -1.261   0.792  1.00  0.00           H  
+CONECT    1    2    3   21   22
+CONECT    2    4   19   20
+CONECT    3    5   17   18
+CONECT    4    6   15   16
+CONECT    5    7   13   14
+CONECT    6   10   11   12
+CONECT    7    8    9    9
+END
