@@ -32,7 +32,6 @@ import pandas as pd
 from packaging.version import Version
 
 import rdkit
-import qmflows
 from rdkit.Chem.AllChem import UFFGetMoleculeForceField as UFF  # noqa: N814
 from scm.plams import finish, Settings, Molecule
 from scm.plams.core.basejob import Job
@@ -42,6 +41,7 @@ from .key_map import MOL, OPT
 from .workflow_dicts import WORKFLOW_TEMPLATE, _TemplateMapping
 from ..utils import restart_init, parallel_init, JOB_MAP
 from ..logger import logger
+from ..jobs import get_job_template
 from ..settings_dataframe import SettingsDataFrame
 
 _PANDAS_3 = Version(pd.__version__) >= Version("3.0.0")
@@ -614,8 +614,7 @@ class WorkFlow(AbstractDataClass):
 
             settings = Settings(settings)
             if self.read_template:  # Update the settings using a QMFlows template
-                template = qmflows.geometry['specific'][self.type_to_string(job)].copy()
-                settings.soft_update(template)
+                settings.soft_update(get_job_template(job, 'geometry'))
             ret[name]['key'] = job
             ret[name]['value'] = settings
         return ret
@@ -665,6 +664,7 @@ class WorkFlow(AbstractDataClass):
             * ``GamessJob``
             * ``ORCAJob``
             * ``CRSJob``
+            * ``TBLiteJob``
 
         Parameters
         ----------

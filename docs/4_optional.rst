@@ -674,6 +674,15 @@ Ligand
                         optimize:
                             job2: ADFJob
 
+        GFN2-xTB requires no external program (see :ref:`xTB`):
+
+        .. code:: yaml
+
+            optional:
+                ligand:
+                    optimize:
+                        job2: tblite
+
 
     .. attribute:: optional.ligand.anchor
 
@@ -1051,6 +1060,18 @@ QD
         By default the calculation is performed with ADF UFF [3_, 11_].
         The geometry of the core and ligand atoms directly attached to the core
         are frozen during this optimization.
+
+        The ``job1``/``s1`` and ``job2``/``s2`` keys specify the job types and settings of
+        the two consecutive optimizations, the second one being skipped if ``job2`` is ``null``.
+        For example, a single GFN2-xTB optimization (see :ref:`xTB`):
+
+        .. code:: yaml
+
+            optional:
+                qd:
+                    optimize:
+                        job1: tblite
+                        job2: null
 
 
     .. attribute:: optional.qd.multi_ligand

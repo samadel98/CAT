@@ -45,6 +45,8 @@ Aliases
 
 -   |CRSJob| = ``"crs"`` = ``"cosmo-rs"`` = ``"crsjob"``
 
+-   |TBLiteJob| = ``"tblite"`` = ``"tblitejob"`` = ``"xtb"`` (see :ref:`xTB`)
+
 
 .. |ADFJob| replace:: :class:`ADFJob<scm.plams.interfaces.adfsuite.adf.ADFJob>`
 .. |AMSJob| replace:: :class:`AMSJob<scm.plams.interfaces.adfsuite.ams.AMSJob>`
@@ -59,3 +61,4 @@ Aliases
 .. |GamessJob| replace:: :class:`GamessJob<scm.plams.interfaces.thirdparty.gamess.GamessJob>`
 .. |DFTBPlusJob| replace:: :class:`DFTBPlusJob<scm.plams.interfaces.thirdparty.dftbplus.DFTBPlusJob>`
 .. |CRSJob| replace:: :class:`CRSJob<scm.plams.interfaces.adfsuite.crs.CRSJob>`
+.. |TBLiteJob| replace:: :class:`TBLiteJob<CAT.xtb.TBLiteJob>`
