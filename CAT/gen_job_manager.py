@@ -18,7 +18,7 @@ API
 import os
 import errno
 import inspect
-from typing import (Optional, Callable)
+from collections.abc import Callable
 from os.path import (join, isfile, abspath, isdir, exists, normpath)
 
 import dill as pickle
@@ -74,8 +74,8 @@ class GenJobManager(JobManager):
     """
 
     def __init__(self, settings: Settings,
-                 path: Optional[str] = None,
-                 folder: Optional[str] = None,
+                 path: str | None = None,
+                 folder: str | None = None,
                  hashing: str = 'input') -> None:
         """Initialize the :class:`GenJobManager` instance."""
         if _USE_EXISTING_FOLDER:
@@ -86,8 +86,8 @@ class GenJobManager(JobManager):
         self.input = join(self.workdir, hashing)
 
     def _init_legacy(self, settings: Settings,
-                     path: Optional[str] = None,
-                     folder: Optional[str] = None) -> None:
+                     path: str | None = None,
+                     folder: str | None = None) -> None:
         """Initialize for PLAMS < 2024, whose :class:`JobManager` cannot reuse a folder."""
         self.settings = settings
         self.jobs = []
@@ -161,7 +161,7 @@ class GenJobManager(JobManager):
             raise FileError(f'File {filename} not present')
 
         # Read the has from filename
-        with open(filename, 'r') as f:
+        with open(filename) as f:
             h = f.read().rstrip('\n')
         self.hashes[h] = self._get_job(filename)
 
@@ -171,7 +171,7 @@ class GenJobManager(JobManager):
         # The base class only forgets the hash if it maps to **job** itself rather than a callable
         self.hashes.pop(job.hash(), None)
 
-    def _check_hash(self, job: Job) -> Optional[Job]:
+    def _check_hash(self, job: Job) -> Job | None:
         """Calculate and check the hash of **job**.
 
         If the hash is not ``None``, previous jobs are searched for the same hash.
@@ -190,7 +190,7 @@ class GenJobManager(JobManager):
 
         """
         h = job.hash()
-        setattr(job, '_hash', h)
+        job._hash = h
         if h is None:  # No hash available for **job**, move along
             return None
 

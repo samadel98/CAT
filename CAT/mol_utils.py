@@ -30,7 +30,7 @@ API
 
 """
 
-from typing import Optional, Iterable, Union, Tuple, List
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -47,7 +47,7 @@ from ._mol_str_parser import FormatEnum
 __all__ = ['adf_connectivity', 'fix_h', 'fix_carboxyl', 'rdkit_props']
 
 
-def rdkit_props(obj: Union[Atom, Bond]) -> Settings:
+def rdkit_props(obj: Atom | Bond) -> Settings:
     """Return the properties where PLAMS keeps the RDKit charge, PDB info and stereo of **obj**.
 
     These are ``obj.properties`` in PLAMS < 2024 and ``obj.properties.rdkit`` in later versions.
@@ -70,7 +70,7 @@ def rdkit_props(obj: Union[Atom, Bond]) -> Settings:
 
 @add_to_class(Molecule)
 def from_mol_other(self, mol: Molecule,
-                   atom_subset: Optional[Iterable[Atom]] = None) -> None:
+                   atom_subset: Iterable[Atom] | None = None) -> None:
     """Update the Cartesian coordinates of this instance with those from another PLAMS molecule.
 
     Alternatively, update only a subset of atoms.
@@ -91,7 +91,7 @@ def from_mol_other(self, mol: Molecule,
 
 @add_to_class(Molecule)
 def from_rdmol(self, rdmol: Chem.Mol,
-               atom_subset: Optional[Iterable[Atom]] = None) -> None:
+               atom_subset: Iterable[Atom] | None = None) -> None:
     """Update the atomic coordinates of this instance with coordinates from an RDKit molecule.
 
     Alternatively, update only a subset of atoms.
@@ -113,7 +113,7 @@ def from_rdmol(self, rdmol: Chem.Mol,
 
 
 @add_to_class(Molecule)
-def get_index(self, value: Union[Atom, Bond]) -> Union[int, Tuple[int, int]]:
+def get_index(self, value: Atom | Bond) -> int | tuple[int, int]:
     """Return the first index of **value** within this instance.
 
     **value** expects an instance of either :class:`Atom` or :class:`Bond`.
@@ -158,7 +158,7 @@ def get_index(self, value: Union[Atom, Bond]) -> Union[int, Tuple[int, int]]:
 
 
 @add_to_class(Molecule)
-def separate_mod(self) -> Tuple[Molecule]:
+def separate_mod(self) -> tuple[Molecule]:
     """Modified PLAMS function: creates new molecules out of this instance rather than a copy of this instance. Atoms, bonds and properties are *not* copied.
 
     Separate the molecule into connected components.
@@ -204,7 +204,7 @@ def separate_mod(self) -> Tuple[Molecule]:
 
 
 @add_to_class(Molecule)
-def round_coords(self, decimals: int = 3, inplace: bool = True) -> Optional[Molecule]:
+def round_coords(self, decimals: int = 3, inplace: bool = True) -> Molecule | None:
     """Round the Cartesian coordinates of this instance to a given precision in decimal digits.
 
     Performs an inplace update of all atoms in this instance,
@@ -227,7 +227,7 @@ def round_coords(self, decimals: int = 3, inplace: bool = True) -> Optional[Mole
     return None if inplace else mol
 
 
-def to_atnum(value: Union[str, int, Atom]) -> int:
+def to_atnum(value: str | int | Atom) -> int:
     """Turn an atomic symbol into an atomic number.
 
     Parameters
@@ -264,7 +264,7 @@ def to_atnum(value: Union[str, int, Atom]) -> int:
                         f"observed type: '{value.__class__.__name__}'") from ex
 
 
-def to_symbol(value: Union[str, int, Atom]) -> str:
+def to_symbol(value: str | int | Atom) -> str:
     """Turn an atomic number into an atomic symbol.
 
     Parameters
@@ -290,7 +290,7 @@ def to_symbol(value: Union[str, int, Atom]) -> str:
             ex.args = (ex.args[0] + f': {repr(value)}',)
             raise ex
     elif isinstance(value, str):
-        if value not in PeriodicTable.symtonum.keys():
+        if value not in PeriodicTable.symtonum:
             raise PTError(f'trying to convert incorrect atomic symbol: {repr(value)}')
         return value
 
@@ -301,7 +301,7 @@ def to_symbol(value: Union[str, int, Atom]) -> str:
                         f"observed type: '{value.__class__.__name__}'") from ex
 
 
-def adf_connectivity(mol: Molecule) -> List[str]:
+def adf_connectivity(mol: Molecule) -> list[str]:
     """Create an AMS-compatible connectivity list.
 
     Parameters

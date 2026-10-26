@@ -12,7 +12,8 @@ API
 
 """
 
-from typing import Any, Union, Optional, Tuple, Iterable
+from typing import Any
+from collections.abc import Iterable
 from collections import abc
 
 import numpy as np
@@ -23,9 +24,9 @@ from scm.plams import Molecule, Atom, rotation_matrix
 from .distribution import distribute_idx
 
 
-def test_distribute(mol: Union[Molecule, str], symbol: str,
-                    f_range: Union[float, Iterable[float]],
-                    rotate: Optional[Tuple[float, float, float]] = (0.1, -0.1, 0.9),
+def test_distribute(mol: Molecule | str, symbol: str,
+                    f_range: float | Iterable[float],
+                    rotate: tuple[float, float, float] | None = (0.1, -0.1, 0.9),
                     **kwargs: Any) -> Molecule:
     r"""Test function for :func:`CAT.attachment.distribution.distribute_idx`.
 

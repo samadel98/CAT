@@ -14,7 +14,8 @@ API
 
 """
 
-from typing import Tuple, Any, Mapping, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Mapping
 
 import numpy as np
 from scm.plams import Molecule, MoleculeError, to_rdmol
@@ -35,7 +36,7 @@ def set_core_anchors(
     anchor_tup: AnchorTup,
     allignment_tup: AllignmentTup,
     subset_kwargs: "None | Mapping[str, Any]" = None,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Identify and parse the core anchors within the passed molecule.
 
     Returns two strings: The (parsed) molecular formula and the anchor indices.
@@ -140,7 +141,7 @@ def _get_core_vectors(
 def find_core_substructure(
     mol: Molecule,
     anchor_tup: AnchorTup,
-) -> Tuple["NDArray[i8]", "None | NDArray[i8]"]:
+) -> tuple["NDArray[i8]", "None | NDArray[i8]"]:
     """Identify substructures within the passed core based on **anchor_tup**.
 
     Returns two indice-arrays, respectivelly containing the indices of the anchor

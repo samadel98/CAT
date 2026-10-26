@@ -36,7 +36,7 @@ DB_PATH = PATH / 'database'
 @delete_finally(LIG_PATH, QD_PATH, DB_PATH)
 def test_validate_input() -> None:
     """Test :func:`CAT.data_handling.validate_input.validate_input`."""
-    with open(join(PATH, 'input1.yaml'), 'r') as f:
+    with open(join(PATH, 'input1.yaml')) as f:
         s = Settings(yaml.load(f, Loader=yaml.FullLoader))
     s.path = PATH
     validate_input(s, validate_only=False)
@@ -116,7 +116,7 @@ def test_validate_input() -> None:
 
 def test_validate_input2() -> None:
     """Test :func:`CAT.data_handling.validate_input.validate_input`."""
-    with open(join(PATH, 'input1.yaml'), 'r') as f:
+    with open(join(PATH, 'input1.yaml')) as f:
         s = Settings(yaml.load(f, Loader=yaml.FullLoader))
     validate_input(s, validate_only=True)
 

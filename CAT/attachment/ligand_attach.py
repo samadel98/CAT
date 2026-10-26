@@ -35,7 +35,7 @@ API
 """
 
 import copy
-from typing import List, Any, Optional, NoReturn, Union
+from typing import Any, NoReturn
 from collections import abc
 
 import numpy as np
@@ -140,7 +140,7 @@ def _get_df(core_index: pd.MultiIndex,
 
     """
     # Create the index
-    idx_tups = [(i, j, k, l) for i, j in core_index for k, l in ligand_index]
+    idx_tups = [(i, j, k, m) for i, j in core_index for k, m in ligand_index]
     index = pd.MultiIndex.from_tuples(
         idx_tups, names=['core', 'core anchor', 'ligand smiles', 'ligand anchor']
     )
@@ -346,9 +346,9 @@ def rot_mol(xyz_array: np.ndarray,
             vec1: np.ndarray,
             vec2: np.ndarray,
             idx: int = 0,
-            atoms_other: Optional[np.ndarray] = None,
-            core: Optional[np.ndarray] = None,
-            bond_length: Optional[int] = None,
+            atoms_other: np.ndarray | None = None,
+            core: np.ndarray | None = None,
+            bond_length: int | None = None,
             step: float = 1/16,
             dist_to_self: bool = True,
             ret_min_dist: bool = False,
@@ -502,7 +502,7 @@ def rotation_check_kdtree(
 
 def _evaluate_distance(mol: np.ndarray, name: str,
                        threshold: float = 1.0,
-                       action: str = 'warn') -> Union[None, NoReturn]:
+                       action: str = 'warn') -> None | NoReturn:
     """Eavluate all the distance matrix of **xyz3D** and perform **action** when distances are below **threshold**."""  # noqa
     try:
         action_func = WARN_MAP[action]
@@ -564,8 +564,8 @@ def rot_mol_angle(xyz_array: np.ndarray,
                   vec1: np.ndarray,
                   vec2: np.ndarray,
                   idx: int = 0,
-                  atoms_other: Optional[np.ndarray] = None,
-                  bond_length: Optional[float] = None) -> np.ndarray:
+                  atoms_other: np.ndarray | None = None,
+                  bond_length: float | None = None) -> np.ndarray:
     """Rotate one or more molecules (**xyz_array**) from **vec1** to **vec2**.
 
     Paramaters
@@ -625,7 +625,7 @@ def rot_mol_angle(xyz_array: np.ndarray,
 
 
 def array_to_qd(mol: Molecule, xyz_array: np.ndarray,
-                mol_out: Optional[Molecule] = None) -> Optional[List[Molecule]]:
+                mol_out: Molecule | None = None) -> list[Molecule] | None:
     """Create :math:`n` copies of **mol** and update their Cartesian coordinates with **xyz_array**.
 
     Parameters

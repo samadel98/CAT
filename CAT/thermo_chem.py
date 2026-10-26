@@ -14,7 +14,7 @@ API
 
 """
 
-from typing import (Sequence, Union, Dict)
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -22,8 +22,6 @@ from scm.plams import Molecule
 from scm.plams.tools.units import Units
 
 __all__ = ['get_thermo', 'get_entropy']
-
-# flake8: noqa: N806,N803
 
 
 def get_entropy(mol: Molecule,
@@ -93,7 +91,7 @@ def get_thermo(mol: Molecule,
                E: float = 0.0,
                T: float = 298.15,
                export: Sequence[str] = ('E', 'U', 'H', 'S', 'G'),
-               unit: str = 'kcal/mol') -> Union[float, Dict[str, float]]:
+               unit: str = 'kcal/mol') -> float | dict[str, float]:
     """Extract and return Gibbs free energies, entropies and/or enthalpies from an AMS KF file.
 
     All vibrational frequencies smaller than 100 cm**-1 are set to 100 cm**-1.

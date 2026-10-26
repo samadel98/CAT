@@ -12,15 +12,11 @@ API
 
 """
 
-import sys
 from os import mkdir
 from os.path import (join, isdir)
-from typing import Dict, Any
+from typing import Any
 
-if sys.version_info >= (3, 7):
-    from contextlib import nullcontext
-else:
-    from contextlib2 import nullcontext
+from contextlib import nullcontext
 
 import qmflows
 from scm.plams import Settings, Cp2kJob
@@ -83,7 +79,7 @@ def _validate_multi_lig(s: Settings) -> None:
         assert len(f) == len(s.optional.qd.multi_ligand.ligands) - 1
 
 
-def parse_qmflows_keywords(bde_dict: Dict[str, Any]) -> Dict[str, Any]:
+def parse_qmflows_keywords(bde_dict: dict[str, Any]) -> dict[str, Any]:
     """Parse qmflows generic keywords for the BDE workflow."""
     # TODO: Support QM packages other than qmflows
     if bde_dict["job1"] is Cp2kJob:

@@ -17,7 +17,7 @@ API
 """
 
 import reprlib
-from typing import Optional, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -35,7 +35,7 @@ try:
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
-    PLT: Optional[ImportError] = None
+    PLT: ImportError | None = None
     Figure = plt.Figure
 except ImportError as ex:
     PLT = ex

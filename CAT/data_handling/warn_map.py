@@ -2,7 +2,8 @@
 
 import warnings
 from types import MappingProxyType
-from typing import Mapping, Callable, NoReturn, Union, Type
+from typing import NoReturn
+from collections.abc import Mapping, Callable
 
 from scm.plams import MoleculeError
 
@@ -17,7 +18,7 @@ class ValueWarning(Warning, ValueError):
 
 
 #: Map an :exc:`Exception` type to a :exc:`Warning` type.
-CATEGORY_MAP: Mapping[Type[Exception], Type[Warning]] = MappingProxyType({
+CATEGORY_MAP: Mapping[type[Exception], type[Warning]] = MappingProxyType({
     MoleculeError: MoleculeWarning,
     ValueError: ValueWarning
 })
@@ -47,7 +48,7 @@ def _ignore(exc: Exception) -> None:
 
 #: Map a string to callable for either raising an :exc:`Exception`,
 #: displaying a :exc:`Warning` or doing nothing.
-WARN_MAP: Mapping[str, Callable[[Exception], Union[NoReturn, None]]] = MappingProxyType({
+WARN_MAP: Mapping[str, Callable[[Exception], NoReturn | None]] = MappingProxyType({
     'raise': _raise,
     'warn': _warn,
     'ignore': _ignore

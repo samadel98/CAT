@@ -10,7 +10,8 @@ and its NOTICE reads: "This product includes Nano-Utils, software developed by B
 from math import comb
 from itertools import combinations
 from collections import abc
-from typing import Any, Iterable, Union
+from typing import Any
+from collections.abc import Iterable
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
@@ -21,7 +22,7 @@ __all__ = ["as_nd_array", "array_combinations"]
 
 
 def as_nd_array(
-    array: Union[Iterable[Any], ArrayLike],
+    array: Iterable[Any] | ArrayLike,
     dtype: DTypeLike,
     ndmin: int = 1,
     copy: bool = False,

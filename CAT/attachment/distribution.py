@@ -14,7 +14,6 @@ API
 
 """
 
-import sys
 import reprlib
 import functools
 from types import MappingProxyType
@@ -22,16 +21,10 @@ from itertools import islice, takewhile
 from collections import abc
 from typing import (
     cast,
-    Generator,
-    Optional,
-    Iterable,
-    FrozenSet,
     Any,
-    Union,
-    Callable,
-    Mapping,
     TYPE_CHECKING,
 )
+from collections.abc import Generator, Iterable, Callable, Mapping
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -46,10 +39,7 @@ __all__ = ['distribute_idx', 'uniform_idx']
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
-    if sys.version_info >= (3, 8):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
+    from typing import Literal
 
     _OpKind = Literal['min', 'max']
     _ModeKind = Literal['uniform', 'random', 'cluster']
@@ -59,12 +49,12 @@ else:
     _ModeKind = "Literal['uniform', 'random', 'cluster']"
 
 #: A set of allowed values for the **mode** parameter in :func:`get_distribution`.
-MODE_SET: FrozenSet[str] = frozenset({'uniform', 'random', 'cluster'})
+MODE_SET: frozenset[str] = frozenset({'uniform', 'random', 'cluster'})
 
 #: Map the **operation** parameter in :func:`uniform_idx` to either
 #: :func:`numpy.nanargmin` or :func:`numpy.nanargmax`.
 _ArgFunc = Callable[[np.ndarray], np.intp]
-OPERATION_MAPPING: Mapping[Union[str, Callable], _ArgFunc] = MappingProxyType({
+OPERATION_MAPPING: Mapping[str | Callable, _ArgFunc] = MappingProxyType({
     'min': np.nanargmin,
     min: np.nanargmin,
     np.min: np.nanargmin,
@@ -76,7 +66,7 @@ OPERATION_MAPPING: Mapping[Union[str, Callable], _ArgFunc] = MappingProxyType({
 
 def distribute_idx(
     core: ArrayLike,
-    idx: Union[int, Iterable[int]],
+    idx: int | Iterable[int],
     f: float,
     mode: _ModeKind = 'uniform',
     **kwargs: Any,
@@ -145,9 +135,9 @@ def distribute_idx(
         generator1 = uniform_idx(
             dist,
             operation=operation,
-            start=kwargs.get('start', None),
+            start=kwargs.get('start'),
             cluster_size=kwargs.get('cluster_size', 1),
-            randomness=kwargs.get('randomness', None),
+            randomness=kwargs.get('randomness'),
             weight=kwargs.get('weight', lambda x: np.exp(-x))
         )
         generator2 = islice(generator1, stop)
@@ -161,9 +151,9 @@ def distribute_idx(
 def uniform_idx(
     dist: np.ndarray,
     operation: _OpKind = 'min',
-    cluster_size: Union[int, Iterable[int]] = 1,
-    start: Optional[int] = None,
-    randomness: Optional[float] = None,
+    cluster_size: int | Iterable[int] = 1,
+    start: int | None = None,
+    randomness: float | None = None,
     weight: Callable[[np.ndarray], np.ndarray] = lambda x: np.exp(-x)
 ) -> Generator[int, None, None]:
     r"""Yield the column-indices of **dist** which yield a uniform or clustered distribution.
@@ -322,8 +312,7 @@ def uniform_idx(
     else:
         generator = _min_and_max(dist_w, dist_w_1d, arg_func, cluster_size)
 
-    for i in generator:
-        yield i
+    yield from generator
 
 
 def _min_or_max(dist_sqr: np.ndarray, dist_1d_sqr: np.ndarray,
@@ -338,7 +327,7 @@ def _min_or_max(dist_sqr: np.ndarray, dist_1d_sqr: np.ndarray,
 
 def _min_and_max(dist_sqr: np.ndarray, dist_1d_sqr: np.ndarray,
                  arg_func: Callable[[np.ndarray], int],
-                 cluster_size: Union[int, Iterable[int]] = 1) -> Generator[int, None, None]:
+                 cluster_size: int | Iterable[int] = 1) -> Generator[int, None, None]:
     """Helper function for :func:`uniform_idx` if :code:`cluster_size != 1`."""
     # Construct a boolean array denoting the start of new clusters
     bool_ar = np.zeros(len(dist_1d_sqr), dtype=bool)

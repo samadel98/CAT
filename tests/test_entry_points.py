@@ -5,7 +5,7 @@ import sys
 import shutil
 import warnings
 from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
 import rdkit
 import pytest
@@ -17,10 +17,6 @@ from CAT.test_utils import assert_mol_allclose
 
 from rdkit_references import RDKIT_REF_PATH
 
-if sys.version_info >= (3, 7):
-    from builtins import dict as OrderedDict
-else:
-    from collections import OrderedDict
 
 PATH = Path('tests') / 'test_files'
 
@@ -79,9 +75,9 @@ class TestMain:
             if os.path.isdir(f):
                 shutil.rmtree(f)
 
-    PATH_DICT = OrderedDict({
+    PATH_DICT = {
         os.path.splitext(f)[0]: f for f in os.listdir(PATH_REF) if f.endswith('xyz')
-    })
+    }
 
     def test_raise(self) -> None:
         filename = str(PATH / 'input2.yaml')

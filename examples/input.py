@@ -10,7 +10,7 @@ from CAT.logger import logger
 
 
 yaml_path = join(dirname(__file__), 'input_settings.yaml')
-with open(yaml_path, 'r') as f:
+with open(yaml_path) as f:
     arg = Settings(yaml.load(f, Loader=yaml.FullLoader))
 
 try:
@@ -19,7 +19,4 @@ except Exception as ex:
     logger.critical(f'{ex.__class__.__name__}: {ex}', exc_info=True)
     raise
 
-if len(ligand_df):
-    mol = ligand_df.iloc[0, 0]
-else:
-    mol = None
+mol = ligand_df.iloc[0, 0] if len(ligand_df) else None

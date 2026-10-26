@@ -14,12 +14,13 @@ API
 
 """
 
-# flake8: noqa: E501
+# ruff: noqa: E501
 
 import sys
 import enum
 import textwrap
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from nanoutils import PartialPrepend
 from packaging.version import Version

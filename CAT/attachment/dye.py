@@ -13,8 +13,6 @@ from ..logger import logger
 
 __all__ = ['label_lig', 'label_core', 'substitution', 'multi_substitution']
 
-# flake8: noqa: N806
-
 
 def ff_constrained_opt(mol, constrain=()):
     """Performs a constrained FF optimization on a PLAMS molecule.

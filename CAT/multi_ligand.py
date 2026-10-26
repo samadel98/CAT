@@ -1,7 +1,8 @@
 """A module for attaching multiple non-unique ligands to a single quantum dot."""
 
 import os
-from typing import Iterable, Any, overload, Sequence, MutableSequence, List, Union
+from typing import Any, overload
+from collections.abc import Iterable, Sequence, MutableSequence
 
 import numpy as np
 import pandas as pd
@@ -50,7 +51,7 @@ def init_multi_ligand(qd_df):
 
 @overload
 def multi_lig(qd_series: pd.Series, ligands: Iterable[str],
-              anchor: Sequence[Union[str, int]], f: None,
+              anchor: Sequence[str | int], f: None,
               **kwargs: Any) -> pd.DataFrame:
     ...
 @overload  # noqa: E302
@@ -114,7 +115,7 @@ def _multi_lig_f(qd_series, ligands, path, f, **kwargs):
 
 def smiles_to_lig(smiles: MutableSequence[str],
                   functional_groups: Iterable[AnchorTup],
-                  opt: bool = True, split: bool = True) -> List[Molecule]:
+                  opt: bool = True, split: bool = True) -> list[Molecule]:
     """Parse and convert all **smiles** strings into Molecules."""
     # Convert the SMILES strings into ligands
     validate_mol(smiles, 'input_ligands')

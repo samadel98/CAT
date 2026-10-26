@@ -14,10 +14,10 @@ API
 """
 
 from types import MappingProxyType
-from typing import Mapping, Tuple
+from collections.abc import Mapping
 
 #: A :class:`Mapping<collections.abc.Mapping>` containing all column keys used throughout CAT.
-KEY_MAP: Mapping[str, Tuple[str, str]] = MappingProxyType({
+KEY_MAP: Mapping[str, tuple[str, str]] = MappingProxyType({
     'OPT': ('opt', ''),
     'MOL': ('mol', ''),
     'FORMULA': ('formula', ''),

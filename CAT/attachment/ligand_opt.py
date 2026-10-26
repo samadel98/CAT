@@ -31,11 +31,12 @@ API
 """
 
 import itertools
+import contextlib
 from types import MappingProxyType
 from typing import (
-    List, Dict, Any, Iterable, Union, Set, Optional, Type, Tuple,
-    Mapping, Callable, Sequence, TYPE_CHECKING,
+    Any, TYPE_CHECKING,
 )
+from collections.abc import Iterable, Mapping, Callable, Sequence
 from collections import ChainMap
 
 import numpy as np
@@ -111,7 +112,7 @@ def _set_charge_cp2kjob(s: Settings, charge: int) -> None:
 
 
 ChargeFunc = Callable[[Settings, int], None]
-CHARGE_FUNC_MAPPING: Mapping[Type[Job], ChargeFunc] = MappingProxyType({
+CHARGE_FUNC_MAPPING: Mapping[type[Job], ChargeFunc] = MappingProxyType({
     k: v for k, v in [
         (ADFJob, _set_charge_adfjob),
         (AMSJob, _set_charge_amsjob),
@@ -121,8 +122,8 @@ CHARGE_FUNC_MAPPING: Mapping[Type[Job], ChargeFunc] = MappingProxyType({
 
 
 def start_ligand_jobs(ligand_list: Iterable[Molecule],
-                      jobs: Iterable[Optional[Type[Job]]],
-                      settings: Iterable[Optional[Settings]],
+                      jobs: Iterable[type[Job] | None],
+                      settings: Iterable[Settings | None],
                       use_ff: bool = False, processes: int = 1, **kwargs) -> None:
     """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations.
 
@@ -146,7 +147,7 @@ def start_ligand_jobs(ligand_list: Iterable[Molecule],
 
 
 def _start_ligand_jobs_plams(ligand_list: Iterable[Molecule],
-                             job: Type[Job], settings: Settings,
+                             job: type[Job], settings: Settings,
                              charge_func: ChargeFunc) -> None:
     """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations."""
     for ligand in ligand_list:
@@ -192,13 +193,13 @@ def _start_ligand_jobs_uff(ligand_list: Iterable[Molecule], processes: int = 1) 
 
 #: The result of :func:`_optimize_ligand_uff`: the new coordinates, the new order of the atoms
 #: and bonds, and the indices of the bonds of each atom
-_UFFResult = Tuple["NDArray[np.float64]", List[int], List[Tuple[int, int]], List[List[int]]]
+_UFFResult = tuple["NDArray[np.float64]", list[int], list[tuple[int, int]], list[list[int]]]
 
 
 def _optimize_ligand_uff(
     ligand: Molecule,
-    atom_refs: Dict[str, Any],
-) -> "Tuple[None | _UFFResult, None | str]":
+    atom_refs: dict[str, Any],
+) -> "tuple[None | _UFFResult, None | str]":
     """Optimize **ligand** in a worker process; return the result or the error.
 
     :func:`optimize_ligand` also reorders the atoms and bonds of the ligand,
@@ -222,9 +223,9 @@ def _optimize_ligand_uff(
 def _apply_uff_result(
     ligand: Molecule,
     xyz: "NDArray[np.float64]",
-    atoms: List[int],
-    bonds: List[Tuple[int, int]],
-    atom_bonds: List[List[int]],
+    atoms: list[int],
+    bonds: list[tuple[int, int]],
+    atom_bonds: list[list[int]],
 ) -> None:
     """Update **ligand** with the result of :func:`_optimize_ligand_uff`."""
     old_atoms = ligand.atoms
@@ -308,7 +309,7 @@ def optimize_ligand(ligand: Molecule) -> None:
 def _get_allign_args(
     mol: "Molecule | Mol",
     anchor_tup: AnchorTup,
-) -> Tuple[np.ndarray, int, int, Tuple[int, int, int], "None | float"]:
+) -> tuple[np.ndarray, int, int, tuple[int, int, int], "None | float"]:
     if anchor_tup.kind == KindEnum.FIRST:
         idx_rot = idx_trans = anchor_tup.anchor_idx[0]
         xyz = mol.as_array() if isinstance(mol, Molecule) else rdmol_as_array(mol)
@@ -350,7 +351,7 @@ def allign_axis(mol: Molecule) -> None:
     mol.from_array(xyz.round(decimals=3))
 
 
-def split_mol(plams_mol: Molecule, anchor: Atom) -> List[Bond]:
+def split_mol(plams_mol: Molecule, anchor: Atom) -> list[Bond]:
     """Split a molecule into multiple smaller fragments; returning the bonds that have to be broken.
 
     One fragment is created for every branch within **plams_mol**.
@@ -419,7 +420,7 @@ def split_mol(plams_mol: Molecule, anchor: Atom) -> List[Bond]:
 
     # Fragment the molecule such that the anchor on the largest fragment
     ret = []
-    for at, bond_list in atom_dict.items():
+    for _at, bond_list in atom_dict.items():
         # Can't directly iterate over bond_list as its size is modified
         iterator = range(len(bond_list[2:]))
         for _ in iterator:
@@ -461,7 +462,7 @@ def get_frag_size(self, bond: Bond, anchor: Atom) -> int:
     frag1 = set()
     frag2 = set()
 
-    def dfs(at1: Atom, atom_set: Set[Atom]):
+    def dfs(at1: Atom, atom_set: set[Atom]):
         at1._visited = True
         atom_set.add(at1)
         for at2 in at1.neighbors():
@@ -518,7 +519,7 @@ def get_dihed(atoms: Iterable[Atom], unit: str = 'degree') -> float:
 
 
 @add_to_class(Molecule)
-def neighbors_mod(self, atom: Atom, exclude: Union[int, str] = 1) -> List[Atom]:
+def neighbors_mod(self, atom: Atom, exclude: int | str = 1) -> list[Atom]:
     """A modified PLAMS function: Allows the exlucison of specific elements from the return list.
 
     Return a list of neighbors of **atom** within the molecule.
@@ -622,7 +623,7 @@ def set_dihed(self, angle: float, anchor: Atom, cap: Sequence[Atom],
 
 def rdmol_as_array(rdmol: rdkit.Chem.Mol) -> np.ndarray:
     """Convert an rdkit molecule into an array of Cartesian coordinates."""
-    def get_xyz(atom: rdkit.Chem.Atom) -> Tuple[float, float, float]:
+    def get_xyz(atom: rdkit.Chem.Atom) -> tuple[float, float, float]:
         pos = conf.GetAtomPosition(atom.GetIdx())
         return (pos.x, pos.y, pos.z)
 
@@ -638,7 +639,7 @@ def rdmol_as_array(rdmol: rdkit.Chem.Mol) -> np.ndarray:
     return ret.reshape(shape)
 
 
-def _find_idx(mol: Molecule, bond: Bond, atom: Atom) -> List[int]:
+def _find_idx(mol: Molecule, bond: Bond, atom: Atom) -> list[int]:
     """Return the atomic indices of all atoms on the side of **bond.atom2**."""
     ret = []
     mol.set_atoms_id(start=0)
@@ -661,7 +662,7 @@ def _find_idx(mol: Molecule, bond: Bond, atom: Atom) -> List[int]:
     return ret
 
 
-def modified_minimum_scan_rdkit(ligand: Molecule, bond_tuple: Tuple[int, int]) -> None:
+def modified_minimum_scan_rdkit(ligand: Molecule, bond_tuple: tuple[int, int]) -> None:
     """A modified version of the :func:`.global_minimum_scan_rdkit` function.
 
     * Uses the ligand vector as criteria rather than the energy.
@@ -691,12 +692,10 @@ def modified_minimum_scan_rdkit(ligand: Molecule, bond_tuple: Tuple[int, int]) -
         if len(bond2_list):
             bond2 = bond2_list[0]
             atom2 = bond2.atom1 if bond1.atom1 is not atom1 else bond1.atom2
-            try:
+            # A `MoleculeError` is raised if the beta-bond is in a ring,
+            # and can thus not be freely rotated
+            with contextlib.suppress(MoleculeError):
                 mol.rotate_bond(bond2, atom2, a2, unit='degree')
-            except MoleculeError:
-                # This can happen if the beta-bond is in a ring,
-                # and can thus not be freely rotated
-                pass
     rdmol_list = [molkit.to_rdmol(mol, properties=False) for mol in mol_list]
 
     # Optimize the (constrained) geometry for all dihedral angles in angle_list

@@ -13,7 +13,7 @@ API
 """
 
 import reprlib
-from typing import Union, Callable
+from collections.abc import Callable
 
 import numpy as np
 
@@ -26,8 +26,8 @@ from .distribution import OPERATION_MAPPING
 __all__ = ['brute_uniform_idx']
 
 
-def brute_uniform_idx(mol: Union[Molecule, np.ndarray],
-                      idx: Union[int, np.ndarray], n: int = 2,
+def brute_uniform_idx(mol: Molecule | np.ndarray,
+                      idx: int | np.ndarray, n: int = 2,
                       operation: str = 'min',
                       weight: Callable[[np.ndarray], np.ndarray] = lambda x: np.exp(-x)
                       ) -> np.ndarray:

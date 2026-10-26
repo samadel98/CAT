@@ -83,7 +83,7 @@ def test_distribute_idx() -> None:
 def test_cat() -> None:
     """Tests for the CAT package."""
     yaml_path = PATH / 'CAT_subset.yaml'
-    with open(yaml_path, 'r') as f:
+    with open(yaml_path) as f:
         arg = Settings(yaml.load(f, Loader=yaml.FullLoader))
 
     arg.path = PATH

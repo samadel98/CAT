@@ -56,11 +56,11 @@ CORE_ANCHORS = {
     }),
 }
 ANCHOR_OPTIONS = {
-    "remove": dict(group="OC(=O)C", group_idx=1, remove=[0, 2, 3]),
-    "kind_first": dict(group="OC(=O)C", group_idx=0, kind="FIRST"),
-    "kind_mean": dict(group="OC(=O)C", group_idx=[0, 2], kind="MEAN"),
-    "kind_mean_translate": dict(group="OC(=O)C", group_idx=[0, 2], kind="MEAN_TRANSLATE"),
-    "angle": dict(group="OC(=O)C", group_idx=[0, 1, 2], angle_offset=45),
+    "remove": {"group": "OC(=O)C", "group_idx": 1, "remove": [0, 2, 3]},
+    "kind_first": {"group": "OC(=O)C", "group_idx": 0, "kind": "FIRST"},
+    "kind_mean": {"group": "OC(=O)C", "group_idx": [0, 2], "kind": "MEAN"},
+    "kind_mean_translate": {"group": "OC(=O)C", "group_idx": [0, 2], "kind": "MEAN_TRANSLATE"},
+    "angle": {"group": "OC(=O)C", "group_idx": [0, 1, 2], "angle_offset": 45},
 }
 
 
@@ -73,7 +73,7 @@ def _run_cat(yaml_name: str, **kwargs: object) -> Molecule:
     from CAT.base import prep
     from CAT.workflows import MOL
 
-    with open(PATH / yaml_name, "r") as f:
+    with open(PATH / yaml_name) as f:
         arg = Settings(yaml.load(f, Loader=yaml.FullLoader))
     arg.path = PATH
     for key, value in kwargs.items():

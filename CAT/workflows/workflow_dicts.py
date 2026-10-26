@@ -2,7 +2,8 @@
 
 import os
 from types import MappingProxyType
-from typing import Mapping, MutableMapping, Tuple, Dict, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Mapping, MutableMapping
 
 import yaml
 import numpy as np
@@ -54,9 +55,9 @@ if TYPE_CHECKING:
     class _TemplateMapping(TypedDict):
         description: str
         mol_type: str
-        template: Mapping[str, Tuple[str, ...]]
-        import_columns: Mapping[Tuple[str, str], Any]
-        export_columns: Tuple[Tuple[str, str], ...]
+        template: Mapping[str, tuple[str, ...]]
+        import_columns: Mapping[tuple[str, str], Any]
+        export_columns: tuple[tuple[str, str], ...]
 
 else:
     _TemplateMapping = 'CAT.workflows.workflow_dicts._TemplateMapping'
@@ -64,10 +65,10 @@ else:
 __all__ = ['WORKFLOW_TEMPLATE']
 
 
-def _load_templates() -> Dict[str, Any]:
+def _load_templates() -> dict[str, Any]:
     """Load the templates from ``CAT/data/workflow_dicts/workflow_yaml.yaml``."""
     path = os.path.join(os.path.dirname(__file__), 'workflow_yaml.yaml')
-    with open(path, 'r') as f:
+    with open(path) as f:
         return yaml.load(f, Loader=yaml.FullLoader)
 
 

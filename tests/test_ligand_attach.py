@@ -2,7 +2,8 @@
 
 import shutil
 from pathlib import Path
-from typing import Generator, NamedTuple, TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
+from collections.abc import Generator
 
 import rdkit
 import yaml
@@ -104,7 +105,7 @@ class TestDihedral:
         # Setup
         name, dihed = request.param  # type: str, str | float
         yaml_path = PATH / 'CAT_dihedral.yaml'
-        with open(yaml_path, 'r') as f:
+        with open(yaml_path) as f:
             arg = Settings(yaml.load(f, Loader=yaml.FullLoader))
 
         arg.path = PATH
@@ -146,7 +147,7 @@ class TestAllignment:
         # Setup
         allignment: str = request.param
         yaml_path = PATH / 'CAT_allignment.yaml'
-        with open(yaml_path, 'r') as f1:
+        with open(yaml_path) as f1:
             arg = Settings(yaml.load(f1, Loader=yaml.FullLoader))
 
         arg.path = PATH
@@ -217,7 +218,7 @@ class TestCoreAnchor:
         # Setup
         name, (core, kwargs) = request.param
         yaml_path = PATH / 'CAT_allignment.yaml'
-        with open(yaml_path, 'r') as f1:
+        with open(yaml_path) as f1:
             arg = Settings(yaml.load(f1, Loader=yaml.FullLoader))
 
         arg.path = PATH

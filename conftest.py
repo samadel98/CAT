@@ -23,7 +23,7 @@ def rdkit_version() -> None:
     if version < Version("2021.03.4"):
         warnings.warn(
             "The CAT test suite requires RDKit >= 2021.03.4 to properly run; "
-            f"observed version: {rdkit.__version__}"
+            f"observed version: {rdkit.__version__}", stacklevel=2
         )
     elif version >= Version("2024.03") and (
         rdkit.__version__.split(".")[:2] != RDKIT_REF_VERSION.split(".")
@@ -31,15 +31,16 @@ def rdkit_version() -> None:
         warnings.warn(
             "The reference geometries of the CAT test suite were made with RDKit 2021.03 - "
             f"2023.09 and {RDKIT_REF_VERSION}, so some tests can fail with other versions; "
-            f"observed version: {rdkit.__version__}"
+            f"observed version: {rdkit.__version__}", stacklevel=2
         )
 
 
 class TestFilter(logging.Filter):
+    """Filter out the warnings about missing optional packages."""
+
     def filter(self, record: logging.LogRecord) -> bool:
-        if re.fullmatch(r"The optional [\-a-zA-Z]+ package was not found", record.msg):
-            return False
-        return True
+        """Return whether **record** should be logged."""
+        return not re.fullmatch(r"The optional [\-a-zA-Z]+ package was not found", record.msg)
 
 
 @pytest.fixture(scope="session", autouse=True)

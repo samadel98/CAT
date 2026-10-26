@@ -45,8 +45,9 @@ import itertools
 from types import MappingProxyType
 from string import ascii_letters
 from typing import (
-    Dict, Iterable, List, Sequence, Optional, Mapping, Callable, Tuple, overload
+    overload
 )
+from collections.abc import Iterable, Sequence, Mapping, Callable
 
 import numpy as np
 from scipy.spatial import cKDTree
@@ -70,7 +71,7 @@ _logger.setLevel(RDLogger.CRITICAL)
 
 
 @overload
-def read_mol(input_mol: Iterable[Settings]) -> List[Molecule]:
+def read_mol(input_mol: Iterable[Settings]) -> list[Molecule]:
     ...
 @overload  # noqa: E302
 def read_mol(input_mol: None) -> None:
@@ -126,7 +127,7 @@ def read_mol(input_mol):  # noqa: E302
     return mol_list
 
 
-def read_mol_xyz(mol_dict: Settings) -> Optional[Molecule]:
+def read_mol_xyz(mol_dict: Settings) -> Molecule | None:
     """Read an .xyz file."""
     try:
         mol = Molecule(mol_dict.mol, inputformat='xyz')
@@ -139,7 +140,7 @@ def read_mol_xyz(mol_dict: Settings) -> Optional[Molecule]:
         print_exception('read_mol_xyz', mol_dict.name, ex)
 
 
-def read_mol_pdb(mol_dict: Settings) -> Optional[Molecule]:
+def read_mol_pdb(mol_dict: Settings) -> Molecule | None:
     """Read a .pdb file."""
     try:
         mol = readpdb(mol_dict.mol)
@@ -152,7 +153,7 @@ def read_mol_pdb(mol_dict: Settings) -> Optional[Molecule]:
         print_exception('read_mol_pdb', mol_dict.name, ex)
 
 
-def read_mol_mol(mol_dict: Settings) -> Optional[Molecule]:
+def read_mol_mol(mol_dict: Settings) -> Molecule | None:
     """Read a .mol file."""
     try:
         mol = molkit.from_rdmol(Chem.MolFromMolFile(mol_dict.mol, removeHs=False))
@@ -165,7 +166,7 @@ def read_mol_mol(mol_dict: Settings) -> Optional[Molecule]:
         print_exception('read_mol_mol', mol_dict.name, ex)
 
 
-def read_mol_smiles(mol_dict: Settings) -> Optional[Molecule]:
+def read_mol_smiles(mol_dict: Settings) -> Molecule | None:
     """Read a SMILES string."""
     try:
         mol = _from_smiles(mol_dict.mol)
@@ -198,7 +199,7 @@ def _from_smiles(smiles: str) -> Molecule:
     return get_conformation(rdmol)
 
 
-def read_mol_plams(mol_dict: Settings) -> Optional[Molecule]:
+def read_mol_plams(mol_dict: Settings) -> Molecule | None:
     """Read a PLAMS molecule."""
     try:
         mol = mol_dict.mol
@@ -211,7 +212,7 @@ def read_mol_plams(mol_dict: Settings) -> Optional[Molecule]:
         print_exception('read_mol_plams', mol_dict.name, ex)
 
 
-def read_mol_rdkit(mol_dict: Settings) -> Optional[Molecule]:
+def read_mol_rdkit(mol_dict: Settings) -> Molecule | None:
     """Read a RDKit molecule."""
     try:
         mol = molkit.from_rdmol(mol_dict.mol)
@@ -224,7 +225,7 @@ def read_mol_rdkit(mol_dict: Settings) -> Optional[Molecule]:
         print_exception('read_mol_rdkit', mol_dict.name, ex)
 
 
-def read_mol_folder(mol_dict: Settings) -> Optional[List[Molecule]]:
+def read_mol_folder(mol_dict: Settings) -> list[Molecule] | None:
     """Read all files (.xyz, .pdb, .mol, .txt or further subfolders) within a folder."""
     try:
         mol_type = 'input_cores' if mol_dict.is_core else 'input_ligands'
@@ -239,14 +240,14 @@ def read_mol_folder(mol_dict: Settings) -> Optional[List[Molecule]]:
         print_exception('read_mol_folder', mol_dict.name, ex)
 
 
-def read_mol_txt(mol_dict: Settings) -> Optional[List[Molecule]]:
+def read_mol_txt(mol_dict: Settings) -> list[Molecule] | None:
     """Read a plain text file containing one or more SMILES strings."""
     try:
         row = 0 if 'row' not in mol_dict else mol_dict.row
         column = 0 if 'column' not in mol_dict else mol_dict.column
         mol_type = 'input_cores' if mol_dict.is_core else 'input_ligands'
 
-        with open(mol_dict.mol, 'r') as f:
+        with open(mol_dict.mol) as f:
             iterator = itertools.islice(f, row, None)
             _file_list = [i.rstrip('\n').split()[column] for i in iterator if i]
         optional_dict = Settings({k: v for k, v in mol_dict.items() if k not in ('mol', 'path')})
@@ -258,7 +259,7 @@ def read_mol_txt(mol_dict: Settings) -> Optional[List[Molecule]]:
         print_exception('read_mol_txt', mol_dict.name, ex)
 
 
-EXTENSION_MAPPING: Mapping[str, Callable[[Settings], Optional[Molecule]]] = MappingProxyType({
+EXTENSION_MAPPING: Mapping[str, Callable[[Settings], Molecule | None]] = MappingProxyType({
     'xyz': read_mol_xyz,
     'pdb': read_mol_pdb,
     'mol': read_mol_mol,
@@ -270,7 +271,7 @@ EXTENSION_MAPPING: Mapping[str, Callable[[Settings], Optional[Molecule]]] = Mapp
 })
 
 
-def canonicalize_mol(mol: Molecule, inplace: bool = True) -> Optional[Molecule]:
+def canonicalize_mol(mol: Molecule, inplace: bool = True) -> Molecule | None:
     """Take a PLAMS molecule and sort its atoms based on their canonical rank.
 
     .. _rdkit.Chem.CanonicalRankAtoms: https://www.rdkit.org/docs/source/rdkit.Chem.rdmolfiles.html#rdkit.Chem.rdmolfiles.CanonicalRankAtoms
@@ -334,7 +335,7 @@ def canonicalize_mol(mol: Molecule, inplace: bool = True) -> Optional[Molecule]:
         return ret
 
 
-def get_charge_dict() -> Dict[str, int]:
+def get_charge_dict() -> dict[str, int]:
     """Create a dictionary of elements and their formal atomic charge."""
     elements = [
         (1, ['Li', 'Na', 'K', 'Rb', 'Cs']),         # Group 1: Alkali metals
@@ -548,7 +549,7 @@ def find_ligands(qd: Molecule, ligand: Chem.Mol, anchor: int = 0) -> np.ndarray:
     n = ligand.GetNumAtoms()
     atom_idx = {id(at): i for i, at in enumerate(qd.atoms)}
     bonds = [(atom_idx[id(b.atom1)], atom_idx[id(b.atom2)]) for b in qd.bonds]
-    neighbors: List[List[int]] = [[] for _ in range(len(qd))]
+    neighbors: list[list[int]] = [[] for _ in range(len(qd))]
     for i, j in bonds:
         neighbors[i].append(j)
         neighbors[j].append(i)
@@ -572,7 +573,7 @@ def find_ligands(qd: Molecule, ligand: Chem.Mol, anchor: int = 0) -> np.ndarray:
 
     # Find all non-overlapping ligands
     max_matches = len(mapper.perms) * max(1, len(heavy_qd) // len(mapper.heavy))
-    matches: List[List[int]] = []
+    matches: list[list[int]] = []
     used: set = set()
     for heavy_match in target.GetSubstructMatches(
         mapper.heavy_query, uniquify=True, maxMatches=max_matches
@@ -598,7 +599,7 @@ class _LigandMapper:
     """Pick the geometrically most sensible atom mapping of a ligand (see :func:`find_ligands`)."""
 
     def __init__(self, ligand: Chem.Mol, anchor: int, xyz: np.ndarray,
-                 core_tree: "None | cKDTree", neighbors: List[List[int]]) -> None:
+                 core_tree: "None | cKDTree", neighbors: list[list[int]]) -> None:
         heavy = [at.GetIdx() for at in ligand.GetAtoms() if at.GetAtomicNum() != 1]
         heavy_pos = {i: k for k, i in enumerate(heavy)}
         heavy_bonds = [b for b in ligand.GetBonds()
@@ -633,13 +634,13 @@ class _LigandMapper:
         self.core_tree = core_tree
         self.neighbors = neighbors
 
-    def __call__(self, match: Sequence[int]) -> List[int]:
+    def __call__(self, match: Sequence[int]) -> list[int]:
         """Return the best mapping of the ligand atoms onto the quantum dot atoms in **match**."""
         if len(self.perms) <= 1:
             return list(match)
 
         h_atoms = {match[i] for i in self.h_idx}
-        best: "None | Tuple[float, float]" = None
+        best: None | tuple[float, float] = None
         ret = list(match)
         for perm in self.perms:
             # Map ligand atom ``heavy[k]`` onto the quantum dot atom of ligand atom ``perm[k]``
@@ -666,7 +667,7 @@ class _LigandMapper:
 
 
 def _skeleton(atnums: Iterable[int], bonds: Iterable[Sequence[int]],
-              isotopes: Optional[Iterable[int]] = None) -> Chem.Mol:
+              isotopes: Iterable[int] | None = None) -> Chem.Mol:
     """Construct an uncharged molecule with only single bonds from atomic numbers and bonds.
 
     Non-zero **isotopes** have to be equal for two atoms to match in a substructure search.

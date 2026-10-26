@@ -19,11 +19,11 @@ import threading
 from shutil import rmtree
 from pathlib import Path
 from collections import abc
-from contextlib import nullcontext
+from contextlib import nullcontext, AbstractContextManager
 from typing import (
-    Optional, Union, Dict, Hashable, MutableMapping, TypeVar, Iterable, Container, Tuple, Callable,
-    Any, List, Type, Mapping, TYPE_CHECKING, cast, ClassVar, ContextManager
+    Union, TypeVar, Any, TYPE_CHECKING, cast, ClassVar
 )
+from collections.abc import Hashable, MutableMapping, Iterable, Container, Callable, Mapping
 
 import numpy as np
 import pandas as pd
@@ -70,7 +70,7 @@ def _lt_0(value) -> bool:
 
 
 def pop_and_concatenate(mapping: MutableMapping[str, T], base_key: object,
-                        filter_func: Callable[[Any], bool] = _return_true) -> Tuple[T, ...]:
+                        filter_func: Callable[[Any], bool] = _return_true) -> tuple[T, ...]:
     """Take a key and :meth:`pop<dict.pop>` all values from **mapping**.
 
     The popping will continue as long as :code:`base_key + str(i)` is available in the mapping,
@@ -117,7 +117,7 @@ def pop_and_concatenate(mapping: MutableMapping[str, T], base_key: object,
 
     """
     i = 1
-    ret: List[T] = []
+    ret: list[T] = []
     while True:
         key = f'{base_key}{i}'
         try:
@@ -130,8 +130,8 @@ def pop_and_concatenate(mapping: MutableMapping[str, T], base_key: object,
             i += 1
 
 
-OptionalJobType = Union[None, Type[Job], Iterable[Optional[Type[Job]]]]
-OptionalSettings = Union[None, Settings, Iterable[Optional[Settings]]]
+OptionalJobType = None | type[Job] | Iterable[type[Job] | None]
+OptionalSettings = None | Settings | Iterable[Settings | None]
 
 
 class WorkFlow(AbstractDataClass):
@@ -181,7 +181,7 @@ class WorkFlow(AbstractDataClass):
     _WORKFLOW_TEMPLATES: ClassVar[Mapping[str, _TemplateMapping]] = WORKFLOW_TEMPLATE
 
     @staticmethod
-    def _supress_settingwithcopywarning() -> ContextManager[None]:
+    def _supress_settingwithcopywarning() -> AbstractContextManager[None]:
         """Return a context manager for supressing Pandas :exc:`SettingwithCopyWarning`.
 
         Pandas 3.0 removed the warning (and deprecated the option that controlled it).
@@ -194,7 +194,7 @@ class WorkFlow(AbstractDataClass):
     # Get-only properties
 
     @property
-    def template(self) -> Mapping[str, Tuple[str, ...]]:
+    def template(self) -> Mapping[str, tuple[str, ...]]:
         """Get :attr:`WorkFlow._WORKFLOW_TEMPLATES` [:attr:`WorkFlow.name`] [``"template"``]."""
         return self._WORKFLOW_TEMPLATES[self.name]['template']
 
@@ -209,12 +209,12 @@ class WorkFlow(AbstractDataClass):
         return self._WORKFLOW_TEMPLATES[self.name]['description']
 
     @property
-    def import_columns(self) -> Mapping[Tuple[str, str], Any]:
+    def import_columns(self) -> Mapping[tuple[str, str], Any]:
         """Get :attr:`WorkFlow._WORKFLOW_TEMPLATES` [:attr:`WorkFlow.name`] [``"import_columns"``]."""  # noqa: E501
         return self._WORKFLOW_TEMPLATES[self.name]['import_columns']
 
     @property
-    def export_columns(self) -> Tuple[Tuple[str, str], ...]:
+    def export_columns(self) -> tuple[tuple[str, str], ...]:
         """Get :attr:`WorkFlow._WORKFLOW_TEMPLATES` [:attr:`WorkFlow.name`] [``"export_columns"``]."""  # noqa: E501
         return self._WORKFLOW_TEMPLATES[self.name]['export_columns']
 
@@ -236,7 +236,7 @@ class WorkFlow(AbstractDataClass):
         return self._read
 
     @read.setter
-    def read(self, value: Union[bool, Container[str]]) -> None:
+    def read(self, value: bool | Container[str]) -> None:
         try:
             self._read: bool = bool(self.db) and self.mol_type in value  # type: ignore
         except TypeError:  # value is not a container
@@ -253,7 +253,7 @@ class WorkFlow(AbstractDataClass):
         return self._write
 
     @write.setter
-    def write(self, value: Union[bool, Container[str]]) -> None:
+    def write(self, value: bool | Container[str]) -> None:
         try:
             self._write: bool = bool(self.db) and self.mol_type in value
         except TypeError:  # value is not a container
@@ -270,14 +270,14 @@ class WorkFlow(AbstractDataClass):
         return self._overwrite
 
     @overwrite.setter
-    def overwrite(self, value: Union[bool, Container[str]]) -> None:
+    def overwrite(self, value: bool | Container[str]) -> None:
         try:
             self._overwrite: bool = bool(self.db) and self.mol_type in value
         except TypeError:  # value is not a container
             self._overwrite = bool(value)
 
     @property
-    def jobs(self) -> Tuple[Optional[Type[Job]], ...]:
+    def jobs(self) -> tuple[type[Job] | None, ...]:
         """Get or set :attr:`WorkFlow.jobs`.
 
         Setting accepts either a |plams.Job| type, ``None`` or
@@ -287,14 +287,14 @@ class WorkFlow(AbstractDataClass):
         return self._jobs
 
     @jobs.setter
-    def jobs(self, value: Union[None, Type[Job], Iterable[Optional[Type[Job]]]]) -> None:
+    def jobs(self, value: None | type[Job] | Iterable[type[Job] | None]) -> None:
         if isinstance(value, type):
-            self._jobs: Tuple[Optional[Type[Job]], ...] = (value,)
+            self._jobs: tuple[type[Job] | None, ...] = (value,)
         else:
             self._jobs = (None,) if value is None else tuple(value)
 
     @property
-    def settings(self) -> Tuple[Optional[Settings], ...]:
+    def settings(self) -> tuple[Settings | None, ...]:
         """Get or set :attr:`WorkFlow.settings`.
 
         Setting accepts either a |plams.Settings| instance, ``None`` or
@@ -304,19 +304,19 @@ class WorkFlow(AbstractDataClass):
         return self._settings
 
     @settings.setter
-    def settings(self, value: Union[None, Settings, Iterable[Optional[Settings]]]) -> None:
+    def settings(self, value: None | Settings | Iterable[Settings | None]) -> None:
         if isinstance(value, Settings):
-            self._settings: Tuple[Optional[Settings], ...] = (value,)
+            self._settings: tuple[Settings | None, ...] = (value,)
         else:
             self._settings = (None,) if value is None else tuple(value)
 
     # Methods and magic methods
 
     def __init__(self, name: str,
-                 db: Optional[Database] = None,
-                 read: Union[bool, Container[str]] = False,
-                 write: Union[bool, Container[str]] = False,
-                 overwrite: Union[bool, Container[str]] = False,
+                 db: 'Database | None' = None,
+                 read: bool | Container[str] = False,
+                 write: bool | Container[str] = False,
+                 overwrite: bool | Container[str] = False,
                  path: Union[None, str, 'os.PathLike[str]'] = None,
                  keep_files: bool = True,
                  read_template: bool = True,
@@ -338,12 +338,12 @@ class WorkFlow(AbstractDataClass):
         self.write = cast(bool, write)
         self.overwrite = cast(bool, overwrite)
 
-        self.path: Union[str, 'os.PathLike[str]'] = path if path is not None else os.getcwd()
+        self.path: str | os.PathLike[str] = path if path is not None else os.getcwd()
         self.keep_files = keep_files
         self.thread_safe = thread_safe
         self.read_template = read_template
-        self.jobs = cast(Tuple[Optional[Type[Job]], ...], jobs)
-        self.settings = cast(Tuple[Optional[Settings], ...], settings)
+        self.jobs = cast(tuple[type[Job] | None, ...], jobs)
+        self.settings = cast(tuple[Settings | None, ...], settings)
 
         for k, v in kwargs.items():
             if hasattr(self, k):
@@ -357,8 +357,8 @@ class WorkFlow(AbstractDataClass):
 
     # TODO: Ensure that func allways returns an array-like object (no iterators)
     def __call__(self, func: Callable, df: pd.DataFrame,
-                 index: Union[slice, pd.Series] = slice(None),
-                 columns: Optional[List[Hashable]] = None,
+                 index: slice | pd.Series = slice(None),
+                 columns: list[Hashable] | None = None,
                  no_loc: bool = False, **kwargs) -> None:
         r"""Initialize the workflow.
 
@@ -432,7 +432,7 @@ class WorkFlow(AbstractDataClass):
         logger.info(f"Finishing {self.description}\n")
 
     def from_db(self, df: pd.DataFrame, inplace: bool = True, get_mol: bool = False,
-                columns: Optional[Mapping] = None) -> Union[slice, pd.Series]:
+                columns: Mapping | None = None) -> slice | pd.Series:
         """Ensure that all required keys are present in **df** and import from the database.
 
         Returns a :class:`pandas.index` with all to-be updated rows, as based on how many
@@ -490,10 +490,10 @@ class WorkFlow(AbstractDataClass):
             keys = list(import_columns.keys())
             return self._isnull(df, keys).any(axis=1)
 
-    def to_db(self, df: pd.DataFrame, status: Optional[str] = None,
-              job_recipe: Optional[dict] = None,
-              index: Union[slice, pd.Series] = slice(None),
-              columns: Optional[Dict[Hashable, Any]] = None) -> None:
+    def to_db(self, df: pd.DataFrame, status: str | None = None,
+              job_recipe: dict | None = None,
+              index: slice | pd.Series = slice(None),
+              columns: dict[Hashable, Any] | None = None) -> None:
         """Export results to the database.
 
         Parameters
@@ -549,7 +549,7 @@ class WorkFlow(AbstractDataClass):
             rmtree(Path(self.path) / name)
 
     @classmethod
-    def from_template(cls, settings: Union[Settings, SettingsDataFrame], name: str) -> 'WorkFlow':
+    def from_template(cls, settings: Settings | SettingsDataFrame, name: str) -> 'WorkFlow':
         """Construct a :class:`WorkFlow` instance from a |plams.Settings| object.
 
         Parameters
@@ -572,7 +572,7 @@ class WorkFlow(AbstractDataClass):
         if isinstance(settings, SettingsDataFrame):
             settings = settings.settings
 
-        kwargs: Dict[str, Any] = {'name': name}
+        kwargs: dict[str, Any] = {'name': name}
 
         # Raise a KeyError if a key cannot be found
         with Settings.suppress_missing():
@@ -592,14 +592,14 @@ class WorkFlow(AbstractDataClass):
         kwargs['settings'] = pop_and_concatenate(kwargs, 's')
         return cls.from_dict(kwargs)
 
-    def get_recipe(self) -> Dict[Tuple[str], JobRecipe]:
+    def get_recipe(self) -> dict[tuple[str], JobRecipe]:
         """Create a recipe for :meth:`WorkFlow.to_db`."""
         settings_names = [i[1:] for i in self.export_columns if i[0] == 'settings']
         uff_fallback = {
             'key': f'RDKit_{rdkit.__version__}', 'value': f'{UFF.__module__}.{UFF.__name__}'
         }
 
-        ret: Dict[Tuple[str], JobRecipe] = Settings()
+        ret: dict[tuple[str], JobRecipe] = Settings()
         for name, job, settings in zip(settings_names, self.jobs, self.settings):
             # job is None, *i.e.* it's an RDKit UFF optimziation
             if job is None:
@@ -630,7 +630,7 @@ class WorkFlow(AbstractDataClass):
             A list of column keys from **df**.
 
         """
-        dtype_dict: Dict[np.dtype, Callable] = {
+        dtype_dict: dict[np.dtype, Callable] = {
             np.dtype(bool): operator.invert,
             np.dtype(int): _lt_0,
             np.dtype(float): pd.isnull,
@@ -648,7 +648,7 @@ class WorkFlow(AbstractDataClass):
         return ret
 
     @staticmethod
-    def type_to_string(job: Union[Job, Type[Job]]) -> Optional[str]:
+    def type_to_string(job: Job | type[Job]) -> str | None:
         """Turn a :class:`type` instance into a :class:`str`.
 
         Accepts one of the following |plams.Job| subclasses:
@@ -682,7 +682,7 @@ class WorkFlow(AbstractDataClass):
             return None
 
     @staticmethod
-    def pop_job_settings(mol_list: Iterable[Molecule], key: str = 'job_path') -> List[List[str]]:
+    def pop_job_settings(mol_list: Iterable[Molecule], key: str = 'job_path') -> list[list[str]]:
         """Take a list of molecules and pop and return all references to **key**.
 
         Parameters
@@ -711,7 +711,7 @@ class WorkFlow(AbstractDataClass):
         return ret
 
 
-class PlamsInit(ContextManager[None]):
+class PlamsInit(AbstractContextManager[None]):
     """A context manager for calling :func:`.restart_init` and |plams.finish|."""
 
     def __init__(self, path: Union[str, 'os.PathLike[str]'],

@@ -21,7 +21,7 @@ API
 
 """
 
-from typing import Optional, Callable
+from collections.abc import Callable
 
 import pandas as pd
 
@@ -49,7 +49,7 @@ class SettingsSeries(pd.Series):
     _metadata = ['settings']
 
     def __init__(self, data=None, index=None, dtype=None, name=None, copy=None, fastpath=False,
-                 settings: Optional[dict] = None) -> None:
+                 settings: dict | None = None) -> None:
         """Initialize the :class:`.SettingsSeries` construction."""
         self.settings = self._sanitize_settings(settings)
         # pandas >= 3.0 removed `fastpath`; only pandas < 2.0 passes it internally
@@ -71,7 +71,7 @@ class SettingsSeries(pd.Series):
         return _df
 
     @staticmethod
-    def _sanitize_settings(settings: Optional[dict]) -> FrozenSettings:
+    def _sanitize_settings(settings: dict | None) -> FrozenSettings:
         """Sanitize the **settings** parameter for :attr:`SettingsSeries.settings`."""
         if settings is None:
             return FrozenSettings()
@@ -101,7 +101,7 @@ class SettingsDataFrame(pd.DataFrame):
     _metadata = ['settings']
 
     def __init__(self, data=None, index=None, columns=None, dtype=None, copy=None,
-                 settings: Optional[dict] = None) -> None:
+                 settings: dict | None = None) -> None:
         """Initialize the :class:`.SettingsDataFrame` construction."""
         self.settings = self._sanitize_settings(settings)
         super().__init__(data, index=index, columns=columns, dtype=dtype, copy=copy)
@@ -121,7 +121,7 @@ class SettingsDataFrame(pd.DataFrame):
         return _series
 
     @staticmethod
-    def _sanitize_settings(settings: Optional[dict]) -> FrozenSettings:
+    def _sanitize_settings(settings: dict | None) -> FrozenSettings:
         """Sanitize the **settings** parameter for :attr:`SettingsDataFrame.settings`."""
         if settings is None:
             return FrozenSettings()

@@ -14,7 +14,7 @@ API
 
 """
 
-from typing import Union, Optional, Any
+from typing import Any
 
 import numpy as np
 from scipy.spatial import ConvexHull, cKDTree
@@ -27,7 +27,7 @@ try:
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
-    PLT: Optional[ImportError] = None
+    PLT: ImportError | None = None
     Figure = plt.Figure
 except ImportError as ex:
     PLT = ex
@@ -36,8 +36,8 @@ except ImportError as ex:
 __all__ = ['get_surface_vec', 'plot_vectors']
 
 
-def get_surface_vec(mol: Union[Molecule, np.ndarray],
-                    anchor: Union[None, Molecule, np.ndarray] = None) -> np.ndarray:
+def get_surface_vec(mol: Molecule | np.ndarray,
+                    anchor: None | Molecule | np.ndarray = None) -> np.ndarray:
     """Construct a set of vectors perpendicular to the surface of **mol** and assign one to each atom in **anchor**.
 
     Utilizes a convex hull algorithm for identifying and partitioning the surface.
@@ -64,10 +64,7 @@ def get_surface_vec(mol: Union[Molecule, np.ndarray],
 
     """  # noqa
     xyz = np.array(mol, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
-    if anchor is None:
-        anchor = xyz
-    else:
-        anchor = np.array(anchor, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
+    anchor = xyz if anchor is None else np.array(anchor, dtype=float, ndmin=2, copy=COPY_IF_NEEDED)
 
     # Construct the convex hull and extract the vertices
     hull = ConvexHull(xyz)
@@ -81,7 +78,7 @@ def get_surface_vec(mol: Union[Molecule, np.ndarray],
 
 
 def plot_vectors(vec: np.ndarray,
-                 xyz: Optional[np.ndarray] = None,
+                 xyz: np.ndarray | None = None,
                  show: bool = True, **kwargs: Any) -> Figure:
     r"""Create a 3D plot of all (3D) vectors in **vec**.
 

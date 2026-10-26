@@ -6,7 +6,7 @@ from .attachment.distribution import (
     uniform_idx as uniform_idx,
 )
 
-# flake8: noqa: E402
+# ruff: noqa: E402
 
 __all__ = distribution.__all__
 __doc__ = distribution.__doc__

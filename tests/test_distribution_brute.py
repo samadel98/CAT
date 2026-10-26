@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from itertools import cycle
-from typing import Iterable, Generator
+from collections.abc import Iterable, Generator
 
 import numpy as np
 
