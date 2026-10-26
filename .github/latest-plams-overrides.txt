@@ -1,0 +1,5 @@
+# uv overrides for installing CAT with PLAMS >= 2024 (`uv pip install ... --override <this file>`).
+# No QMFlows release supports PLAMS >= 2024 yet, so these lift the `plams<2024` cap of
+# pyproject.toml and install the QMFlows fork, which does (it has no version tags, hence the URL).
+plams>=2024
+qmflows @ git+https://github.com/samadel98/qmflows@master

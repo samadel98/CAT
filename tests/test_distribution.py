@@ -5,10 +5,11 @@ from pathlib import Path
 import yaml
 import pytest
 import numpy as np
-from scm.plams import Molecule, Settings, readpdb
+from scm.plams import Molecule, Settings
 from assertionlib import assertion
 from nanoutils import delete_finally
 
+from CAT._compat import readpdb
 from CAT.test_utils import assert_mol_allclose
 from CAT.base import prep
 from CAT.workflows import MOL as MOL_KEY

@@ -46,8 +46,8 @@ from scipy.spatial.distance import cdist
 from scm.plams import Molecule, Atom, Settings, MoleculeError
 from assertionlib.ndrepr import aNDRepr
 
-from .._compat import COPY_IF_NEEDED
-from ..mol_utils import get_index, round_coords  # noqa: F401
+from .._compat import COPY_IF_NEEDED, atoms_as_array
+from ..mol_utils import get_index, round_coords, rdkit_props  # noqa: F401
 from ..utils import AnchorTup, KindEnum
 from ..workflows import WorkFlow, HDF5_INDEX, MOL, OPT
 from ..settings_dataframe import SettingsDataFrame
@@ -175,7 +175,7 @@ def ligand_to_qd(core: Molecule, ligand: Molecule, path: str) -> Molecule:
     """
     def get_name() -> str:
         core_name = core.properties.name
-        anchor = str(qd[-1].properties.pdb_info.ResidueNumber - 1)
+        anchor = str(rdkit_props(qd[-1]).pdb_info.ResidueNumber - 1)
         lig_name = ligand.properties.name
         return f'{core_name}__{anchor}_{lig_name}'
 
@@ -218,7 +218,7 @@ def ligand_to_qd(core: Molecule, ligand: Molecule, path: str) -> Molecule:
     # Set properties
     qd.properties = Settings({
         'indices': [i for i, at in enumerate(qd, 1) if
-                    at.properties.pdb_info.ResidueName == 'COR' or at.properties.anchor],
+                    rdkit_props(at).pdb_info.ResidueName == 'COR' or at.properties.anchor],
         'path': path,
         'name': get_name(),
         'job_path': [],
@@ -652,13 +652,13 @@ def array_to_qd(mol: Molecule, xyz_array: np.ndarray,
     if mol_out is None:
         start = 2
     else:
-        start = 1 + mol_out[-1].properties.get('pdb_info', {}).get('ResidueNumber', 1)
+        start = 1 + rdkit_props(mol_out[-1]).get('pdb_info', {}).get('ResidueNumber', 1)
 
     for i, xyz in enumerate(xyz_array, start=start):
         mol_cp = _copy_mol(mol)
         mol_cp.from_array(xyz)
         for at in mol_cp:
-            at.properties.pdb_info.ResidueNumber = i
+            rdkit_props(at).pdb_info.ResidueNumber = i
         mol_list.append(mol_cp)
 
     # return a list of molecules or merge the list with an existing molecule
@@ -778,7 +778,7 @@ def sanitize_dim_2(value: Any) -> np.ndarray:
     try:
         ret = np.array(value, dtype=float, copy=COPY_IF_NEEDED)
     except TypeError:
-        ret = Molecule.as_array(None, atom_subset=value)
+        ret = atoms_as_array(value)
 
     if ret.ndim < 2:
         ret = ret.reshape((2 - ret.ndim) * (1,) + ret.shape)
@@ -824,14 +824,14 @@ def sanitize_dim_3(value: Any, padding: float = np.nan) -> np.ndarray:
         return np.array(value.coords)[None, None, :]
 
     elif _is_atom_sequence(value):
-        return Molecule.as_array(None, atom_subset=value)[None, :]
+        return atoms_as_array(value)[None, :]
 
     elif _is_mol_sequence(value):
         max_at = max(len(mol) for mol in value)
         ret = np.full((len(value), max_at, 3), padding, order='F')
         for i, mol in enumerate(value):
             j = len(mol)
-            ret[i, :j] = Molecule.as_array(None, atom_subset=mol)
+            ret[i, :j] = atoms_as_array(mol)
         return ret
 
     else:

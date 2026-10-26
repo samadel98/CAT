@@ -12,6 +12,17 @@ Unreleased
 * Raise the minimum versions of NumPy (1.21.2), SciPy (1.7.2), pandas (1.4.0), PyYAML (6.0),
   QMFlows (0.13.0), RDKit (2022.03.3), Nano-Utils (2.3.2) and packaging (17.1).
 * Cap PLAMS below 2024, as no QMFlows release supports the newer PLAMS versions.
+* Add support for PLAMS 2024 and later (tested up to 2026.104), when used with a QMFlows version
+  that supports them (*e.g.* the `samadel98/qmflows <https://github.com/samadel98/qmflows>`_ fork).
+  The ``ADFJob``, ``UFFJob``, ``BANDJob``, ``DFTBJob``, ``MOPACJob`` and ``ReaxFFJob`` job types,
+  which PLAMS 2024 removed, are only available with older PLAMS versions.
+* Embed ligands built from SMILES strings the same way for all PLAMS versions,
+  as PLAMS 2024 changed its conformer generation.
+* Add ``CAT.mol_utils.rdkit_props()``, which returns the atomic properties that hold
+  the formal charge and PDB info (``Atom.properties.rdkit`` since PLAMS 2024).
+* Fix reading .pdb files whose bonds RDKit cannot guess (*e.g.* the ``Cd68Se55_HCl.pdb`` core)
+  with PLAMS 2024 and later.
+* Fix ``round(mol)`` for PLAMS molecules once CAT is imported.
 * Fix ``import CAT`` raising an ``AttributeError`` on Python 3.13.
 * Fix ``import CAT`` failing when a broken Nano-CAT or Data-CAT version is installed.
 * Fix the input validation with schema >= 0.7.6.

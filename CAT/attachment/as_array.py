@@ -23,6 +23,8 @@ import numpy as np
 
 from scm.plams import Atom, Molecule
 
+from .._compat import atoms_as_array
+
 __all__ = ['AsArray']
 
 
@@ -91,7 +93,7 @@ class AsArray(AbstractContextManager):
 
     def __enter__(self) -> np.ndarray:
         """Enter the context manager; return an array of Cartesian coordinates."""
-        self._xyz = Molecule.as_array(None, atom_subset=self.mol)
+        self._xyz = atoms_as_array(self.mol)
         return self._xyz
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:

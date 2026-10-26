@@ -67,13 +67,7 @@ from schema import Optional as Optional_
 from scm.plams import CRSJob, Settings
 from scm.plams.core.basejob import Job
 
-from scm.plams.interfaces.adfsuite.adf import ADFJob
 from scm.plams.interfaces.adfsuite.ams import AMSJob
-from scm.plams.interfaces.adfsuite.uff import UFFJob
-from scm.plams.interfaces.adfsuite.band import BANDJob
-from scm.plams.interfaces.adfsuite.dftb import DFTBJob
-from scm.plams.interfaces.adfsuite.mopac import MOPACJob
-from scm.plams.interfaces.adfsuite.reaxff import ReaxFFJob
 
 from scm.plams.interfaces.thirdparty.cp2k import Cp2kJob
 from scm.plams.interfaces.thirdparty.orca import ORCAJob
@@ -87,6 +81,7 @@ except Exception:  # A broken Data-CAT install should not break `import CAT`
     Database = None
 
 from .str_to_func import str_to_func
+from .._compat import ADFJob, UFFJob, BANDJob, DFTBJob, MOPACJob, ReaxFFJob
 from ..utils import get_template, validate_path, validate_core_atom, check_sys_var
 from ..mol_utils import to_atnum
 from ..utils import AllignmentEnum, AllignmentTup
@@ -142,16 +137,19 @@ JOB_MAP: Mapping[str, Type[Job]] = MappingProxyType({
 })
 
 
-#: A dictionary for translating strings into :class:`plams.Job` types for ADF
+#: A dictionary for translating strings into :class:`plams.Job` types for ADF.
+#: Only the job types available in the installed PLAMS version are included.
 JOB_MAP_SCM: Mapping[str, Type[Job]] = MappingProxyType({
-    'adf': ADFJob, 'adfjob': ADFJob,
-    'ams': AMSJob, 'amsjob': AMSJob,
-    'uff': UFFJob, 'uffjob': UFFJob,
-    'band': BANDJob, 'bandjob': BANDJob,
-    'dftb': DFTBJob, 'dftbjob': DFTBJob,
-    'mopac': MOPACJob, 'mopacjob': MOPACJob,
-    'reaxff': ReaxFFJob, 'reaxffjob': ReaxFFJob,
-    'crs': CRSJob, 'cosmo-rs': CRSJob, 'crsjob': CRSJob
+    k: v for k, v in {
+        'adf': ADFJob, 'adfjob': ADFJob,
+        'ams': AMSJob, 'amsjob': AMSJob,
+        'uff': UFFJob, 'uffjob': UFFJob,
+        'band': BANDJob, 'bandjob': BANDJob,
+        'dftb': DFTBJob, 'dftbjob': DFTBJob,
+        'mopac': MOPACJob, 'mopacjob': MOPACJob,
+        'reaxff': ReaxFFJob, 'reaxffjob': ReaxFFJob,
+        'crs': CRSJob, 'cosmo-rs': CRSJob, 'crsjob': CRSJob
+    }.items() if v is not None
 })
 
 

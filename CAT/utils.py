@@ -51,17 +51,17 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 from ._nanoutils import as_nd_array
-from ._compat import COPY_IF_NEEDED
+from ._compat import COPY_IF_NEEDED, ADFJob
 from rdkit.Chem import Mol
 from scm.plams.core.basejob import Job
 from scm.plams.interfaces.thirdparty.orca import ORCAJob
 from scm.plams import (
     config, Settings, Molecule, MoleculeError, PeriodicTable, init,
-    from_smiles, AMSJob, ADFJob, Cp2kJob, DiracJob, GamessJob, CRSJob
+    from_smiles, AMSJob, Cp2kJob, DiracJob, GamessJob, CRSJob
 )
 
 from .logger import logger
-from .mol_utils import to_atnum
+from .mol_utils import to_atnum, rdkit_props
 from .gen_job_manager import GenJobManager
 from ._mol_str_parser import FormatEnum
 
@@ -78,13 +78,15 @@ __all__ = [
 ]
 
 JOB_MAP: Mapping[Type[Job], str] = MappingProxyType({
-    ADFJob: 'adf',
-    AMSJob: 'ams',
-    DiracJob: 'dirac',
-    Cp2kJob: 'cp2k',
-    GamessJob: 'gamess',
-    ORCAJob: 'orca',
-    CRSJob: 'cosmo-rs'
+    k: v for k, v in [
+        (ADFJob, 'adf'),
+        (AMSJob, 'ams'),
+        (DiracJob, 'dirac'),
+        (Cp2kJob, 'cp2k'),
+        (GamessJob, 'gamess'),
+        (ORCAJob, 'orca'),
+        (CRSJob, 'cosmo-rs'),
+    ] if k is not None
 })
 
 T1 = TypeVar('T1')
@@ -209,7 +211,7 @@ def validate_core_atom(atom):  # noqa: E302
     # Double check the SMILES string:
     charge_dict = {}
     for at in mol:
-        charge = at.properties.charge
+        charge = rdkit_props(at).charge
         try:
             charge_dict[charge] += 1
         except KeyError:

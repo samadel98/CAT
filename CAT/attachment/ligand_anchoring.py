@@ -35,7 +35,7 @@ from rdkit import Chem
 
 from ..logger import logger
 from ..utils import get_template, AnchorTup, KindEnum, get_formula, FormatEnum, MultiAnchorEnum
-from ..mol_utils import separate_mod   # noqa: F401
+from ..mol_utils import separate_mod, rdkit_props  # noqa: F401
 from ..workflows import MOL, FORMULA, HDF5_INDEX, OPT
 from ..settings_dataframe import SettingsDataFrame
 from ..data_handling.validate_mol import santize_smiles
@@ -282,8 +282,8 @@ def substructure_split(
             raise MoleculeError("Failed to identify an anchor-containing fragment")
 
         # Check if the ligand heteroatom has a charge assigned, assigns a charge if not
-        if not anchor.properties.charge:
-            anchor.properties.charge = -1
+        if not rdkit_props(anchor).charge:
+            rdkit_props(anchor).charge = -1
 
     anchor_tup = anchor_tup._replace(anchor_idx=tuple(lig.atoms.index(at) for at in anchors))
 
@@ -297,7 +297,7 @@ def substructure_split(
             f"{lig[1 + i].symbol}{1 + i}" for i in anchor_tup.anchor_idx
         )
     lig.properties.anchor_tup = anchor_tup
-    lig.properties.charge = sum(atom.properties.get('charge', 0) for atom in lig)
+    lig.properties.charge = sum(rdkit_props(atom).get('charge', 0) for atom in lig)
 
     # Update the ligand smiles string
     rdmol = molkit.to_rdmol(lig, properties=False)

@@ -37,11 +37,13 @@ import numpy as np
 
 from scm.plams.core.basejob import Job
 from scm.plams import (Molecule, Settings, Results, config, add_to_class, ResultsError,
-                       ADFJob, AMSJob, Units, Cp2kResults, Cp2kJob)
+                       AMSJob, Units, Cp2kResults, Cp2kJob)
 
 import qmflows
 
+from ._compat import ADFJob
 from .logger import (logger, log_start, log_succes, log_fail, log_copy)
+from .mol_utils import rdkit_props
 from .thermo_chem import get_thermo
 from .utils import type_to_string
 
@@ -126,13 +128,13 @@ def pre_process_settings(mol: Molecule, s: Settings,
         # ret.input.ams.system.BondOrders._1 = adf_connectivity(mol)
         if 'uff' not in s.input:
             ret.input.ams.system.charge = int(sum(
-                at.properties.get('charge', 0) for at in mol
+                rdkit_props(at).get('charge', 0) for at in mol
             ))
 
-    elif job_type is ADFJob:
+    elif ADFJob is not None and job_type is ADFJob:
         mol.properties.pop('charge', None)
         if not ret.input.charge:
-            ret.input.charge = int(sum(at.properties.get('charge', 0) for at in mol))
+            ret.input.charge = int(sum(rdkit_props(at).get('charge', 0) for at in mol))
     return ret
 
 
@@ -257,7 +259,7 @@ def _finalize(self):
     if config.preview is False:
         self.results.collect()
         self.results.finished.set()
-        if self.status != 'crashed':
+        if self.status not in ('crashed', 'failed'):  # PLAMS >= 2024 can fail jobs earlier
             self.status = 'finished'
             self._log_status(3)
             if self.check():
