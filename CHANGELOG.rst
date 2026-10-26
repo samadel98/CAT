@@ -63,6 +63,9 @@ Unreleased
   without any external program (``pip install "nlesc-CAT[xtb]"``). It is available wherever CAT
   accepts a job type, with the ``"tblite"`` alias, *e.g.* for the ligand and quantum dot
   optimizations.
+* Add ``optional.parallel_jobs``: the number of quantum chemical jobs of the ligand and quantum
+  dot optimizations that run at the same time (*e.g.* with ``TBLiteJob``), with one OpenMP
+  thread each unless ``OMP_NUM_THREADS`` is set (``CAT.parallel.thread_map()``).
 * Fix CAT deleting the working folder of PLAMS, with all its jobs, when PLAMS was already
   initialized before running CAT (*e.g.* by a script calling ``plams.init()``), and printing
   ``--- Logging error ---`` tracebacks with PLAMS 2024 and later.

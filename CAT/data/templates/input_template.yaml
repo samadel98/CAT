@@ -19,6 +19,7 @@ input_ligands:
 
 optional:
     processes: 1  # Processes for the ligand optimization; null: one per CPU core
+    parallel_jobs: 1  # Quantum chemical jobs that run at the same time; null: one per CPU core
 
     database:
         read: True  # Reuse results of previous runs

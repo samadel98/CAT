@@ -31,6 +31,8 @@ from ..workflows import WorkFlow, MOL, JOB_SETTINGS_QD_OPT
 from ..mol_utils import fix_carboxyl, fix_h
 from ..settings_dataframe import SettingsDataFrame
 from ..data_handling.mol_to_file import mol_to_file
+from ..logger import logger
+from ..parallel import thread_map
 
 try:
     from nanoCAT.qd_opt_ff import qd_opt_ff
@@ -46,7 +48,8 @@ def init_qd_opt(qd_df: SettingsDataFrame) -> None:
 
     # Pull from the database; push unoptimized structures
     idx = workflow.from_db(qd_df)
-    workflow(start_qd_opt, qd_df, columns=[], index=idx)
+    parallel_jobs = qd_df.settings.optional.get('parallel_jobs', 1)
+    workflow(start_qd_opt, qd_df, columns=[], index=idx, parallel_jobs=parallel_jobs)
 
     # Sets a nested list
     # This cannot be done with loc is it will try to expand the list into a 2D array
@@ -65,15 +68,33 @@ def init_qd_opt(qd_df: SettingsDataFrame) -> None:
 
 def start_qd_opt(mol_list: Iterable[Molecule],
                  jobs: tuple[type[Job] | None, ...], settings: tuple[Settings | None, ...],
-                 use_ff: bool = False, **kwargs) -> None:
-    """Loop over all molecules in **mol_list** and perform geometry optimizations."""
-    for mol in mol_list:
+                 use_ff: bool = False, parallel_jobs: int = 1, **kwargs) -> None:
+    """Loop over all molecules in **mol_list** and perform geometry optimizations.
+
+    Up to **parallel_jobs** quantum dots are optimized at the same time,
+    except with the forcefield (**use_ff**).
+
+    """
+    mols = list(mol_list)
+    for mol in mols:
         mol.properties.job_path = []
-        qd_opt(mol, jobs, settings, use_ff=use_ff)
+
+    if use_ff or parallel_jobs <= 1 or len(mols) <= 1:
+        for mol in mols:
+            qd_opt(mol, jobs, settings, use_ff=use_ff)
+        return None
+
+    logger.info(f'Optimizing {len(mols)} quantum dots with up to '
+                f'{min(parallel_jobs, len(mols))} at the same time')
+    # Unique job names, as PLAMS < 2024 does not rename simultaneously registered jobs safely
+    args = [(mol, jobs, settings, False, f'_{i}') for i, mol in enumerate(mols, 1)]
+    thread_map(qd_opt, args, parallel_jobs)
+    return None
 
 
 def qd_opt(mol: Molecule, jobs: tuple[type[Job] | None, ...],
-           settings: tuple[Settings | None, ...], use_ff: bool = False) -> None:
+           settings: tuple[Settings | None, ...], use_ff: bool = False,
+           name_suffix: str = '') -> None:
     """Perform an optimization of the quantum dot.
 
     Performs an inplace update of **mol**.
@@ -90,6 +111,9 @@ def qd_opt(mol: Molecule, jobs: tuple[type[Job] | None, ...],
     forcefield : bool
         If ``True``, perform the job with CP2K with a user-specified forcefield.
 
+    name_suffix : str
+        A suffix for the names of the jobs.
+
     """
     # Prepare the job settings
     if use_ff:
@@ -105,13 +129,13 @@ def qd_opt(mol: Molecule, jobs: tuple[type[Job] | None, ...],
     s2 = freeze_atoms(job2, s2, mol.properties.indices)
 
     # Run the first job and fix broken angles
-    mol.job_geometry_opt(job1, s1, name='QD_opt_part1')
+    mol.job_geometry_opt(job1, s1, name=f'QD_opt_part1{name_suffix}')
     fix_carboxyl(mol)
     fix_h(mol)
     mol.round_coords()
 
     # Run the second job
     if job2 is not None:
-        mol.job_geometry_opt(job2, s2, name='QD_opt_part2')
+        mol.job_geometry_opt(job2, s2, name=f'QD_opt_part2{name_suffix}')
         mol.round_coords()
     return None

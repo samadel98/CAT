@@ -91,7 +91,7 @@ from ..utils import AllignmentEnum, AllignmentTup
 __all__ = ['mol_schema', 'core_schema', 'ligand_schema', 'qd_schema', 'database_schema',
            'mongodb_schema', 'bde_schema', 'ligand_opt_schema', 'qd_opt_schema', 'crs_schema',
            'asa_schema', 'subset_schema', 'bulkiness_schema', 'cone_angle_schema',
-           'processes_schema']
+           'processes_schema', 'parallel_jobs_schema']
 
 #: Schema for validating ``optional.processes``: the number of processes,
 #: with ``None`` or ``0`` meaning one per CPU core
@@ -99,6 +99,14 @@ processes_schema: Schema = Schema(Or(
     None,
     And(int, lambda n: not isinstance(n, bool) and n >= 0),
     error="optional.processes expects None or a non-negative integer",
+))
+
+#: Schema for validating ``optional.parallel_jobs``: the number of jobs that can run
+#: at the same time, with ``None`` or ``0`` meaning one per CPU core
+parallel_jobs_schema: Schema = Schema(Or(
+    None,
+    And(int, lambda n: not isinstance(n, bool) and n >= 0),
+    error="optional.parallel_jobs expects None or a non-negative integer",
 ))
 
 

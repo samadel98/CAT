@@ -60,7 +60,7 @@ from ..settings_dataframe import SettingsDataFrame
 from ..data_handling.mol_to_file import mol_to_file
 from ..jobs import job_geometry_opt  # noqa: F401
 from ..utils import KindEnum, AnchorTup
-from ..parallel import parallel_map, pack_atom_refs, unpack_atom_refs
+from ..parallel import parallel_map, thread_map, pack_atom_refs, unpack_atom_refs
 from ..xtb import TBLiteJob
 from ..frozen_settings import thaw_settings
 
@@ -83,8 +83,11 @@ def init_ligand_opt(ligand_df: SettingsDataFrame) -> None:
         return None
 
     # Start the ligand optimization
-    processes = ligand_df.settings.optional.get('processes', 1)
-    workflow(start_ligand_jobs, ligand_df, columns=[], index=idx, processes=processes)
+    optional = ligand_df.settings.optional
+    workflow(
+        start_ligand_jobs, ligand_df, columns=[], index=idx,
+        processes=optional.get('processes', 1), parallel_jobs=optional.get('parallel_jobs', 1),
+    )
 
     # Push the optimized structures to the database
     job_recipe = workflow.get_recipe()
@@ -131,10 +134,12 @@ CHARGE_FUNC_MAPPING: Mapping[type[Job], ChargeFunc] = MappingProxyType({
 def start_ligand_jobs(ligand_list: Iterable[Molecule],
                       jobs: Iterable[type[Job] | None],
                       settings: Iterable[Settings | None],
-                      use_ff: bool = False, processes: int = 1, **kwargs) -> None:
+                      use_ff: bool = False, processes: int = 1, parallel_jobs: int = 1,
+                      **kwargs) -> None:
     """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations.
 
-    RDKit UFF optimizations are spread over **processes** worker processes.
+    RDKit UFF optimizations are spread over **processes** worker processes,
+    and up to **parallel_jobs** PLAMS jobs run at the same time.
 
     """
     _j1, job = jobs
@@ -149,27 +154,46 @@ def start_ligand_jobs(ligand_list: Iterable[Molecule],
         _start_ligand_jobs_uff(ligand_list, processes=processes)
     else:
         charge_func = CHARGE_FUNC_MAPPING[job]
-        _start_ligand_jobs_plams(ligand_list, job, s, charge_func)
+        _start_ligand_jobs_plams(ligand_list, job, s, charge_func, parallel_jobs=parallel_jobs)
     return None
 
 
 def _start_ligand_jobs_plams(ligand_list: Iterable[Molecule],
                              job: type[Job], settings: Settings,
-                             charge_func: ChargeFunc) -> None:
-    """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations."""
-    for ligand in ligand_list:
-        try:
-            optimize_ligand(ligand)
-        except Exception as ex:
-            logger.debug(f'{ex.__class__.__name__}: {ex}', exc_info=True)
-            ligand.properties.is_opt = False
-            continue
+                             charge_func: ChargeFunc, parallel_jobs: int = 1) -> None:
+    """Loop over all molecules in ``ligand_df.loc[idx]`` and perform geometry optimizations.
 
-        s = thaw_settings(settings)
-        charge_func(s, int(sum(rdkit_props(at).get('charge', 0) for at in ligand)))
-        ligand.job_geometry_opt(job, s, name='ligand_opt')
-        ligand.round_coords()  # `.is_opt = True` is set by `ligand.job_geometry_opt()``
-        allign_axis(ligand)
+    Up to **parallel_jobs** jobs run at the same time.
+
+    """
+    ligands = list(ligand_list)
+    if parallel_jobs > 1 and len(ligands) > 1:
+        logger.info(f'Optimizing {len(ligands)} ligands with up to '
+                    f'{min(parallel_jobs, len(ligands))} jobs at the same time')
+        # Unique job names, as PLAMS < 2024 does not rename simultaneously registered jobs safely
+        args = [(lig, job, settings, charge_func, f'ligand_opt_{i}')
+                for i, lig in enumerate(ligands, 1)]
+    else:
+        args = [(lig, job, settings, charge_func, 'ligand_opt') for lig in ligands]
+    thread_map(_optimize_ligand_plams, args, parallel_jobs)
+    return None
+
+
+def _optimize_ligand_plams(ligand: Molecule, job: type[Job], settings: Settings,
+                           charge_func: ChargeFunc, name: str) -> None:
+    """Optimize **ligand** with RDKit UFF and then with a PLAMS job."""
+    try:
+        optimize_ligand(ligand)
+    except Exception as ex:
+        logger.debug(f'{ex.__class__.__name__}: {ex}', exc_info=True)
+        ligand.properties.is_opt = False
+        return None
+
+    s = thaw_settings(settings)
+    charge_func(s, int(sum(rdkit_props(at).get('charge', 0) for at in ligand)))
+    ligand.job_geometry_opt(job, s, name=name)
+    ligand.round_coords()  # `.is_opt = True` is set by `ligand.job_geometry_opt()``
+    allign_axis(ligand)
     return None
 
 
