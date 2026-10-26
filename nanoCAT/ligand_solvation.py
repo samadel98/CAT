@@ -64,6 +64,7 @@ from CAT.utils import get_template
 from CAT.logger import logger
 from CAT.workflows import WorkFlow, MOL, JOB_SETTINGS_CRS
 from CAT.settings_dataframe import SettingsDataFrame
+from CAT.frozen_settings import thaw_settings
 
 __all__ = ['init_solv']
 
@@ -204,7 +205,7 @@ def get_surface_charge(mol: Molecule, job: type[Job], s: Settings) -> str | None
         Optional: The path+filename of a file containing COSMO surface charges.
 
     """
-    s = Settings(s)
+    s = thaw_settings(s)
     # Special procedure for ADF jobs
     # Use the gas-phase electronic structure as a fragment for the COSMO single point
     if job is ADFJob:
@@ -241,7 +242,7 @@ def get_pka(mol: Molecule, coskf_mol: str | None, coskf_mol_conj: str | None,
     if coskf_mol is None or coskf_mol_conj is None:
         return 5 * [np.nan]
 
-    s = Settings(s)
+    s = thaw_settings(s)
     s.input.compound[1]._h = water
     s.ignore_molecule = True
 
@@ -340,7 +341,7 @@ def get_solv(mol: Molecule, solvent_list: Sequence[str],
         return i * [np.nan]
 
     # Prepare a list of job settings
-    s = Settings(s)
+    s = thaw_settings(s)
     s.input.compound[0]._h = coskf
     s.ignore_molecule = True
     s_list = []

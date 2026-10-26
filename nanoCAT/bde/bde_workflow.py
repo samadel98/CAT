@@ -40,7 +40,8 @@ import qmflows
 from scm.plams import AMSJob, Molecule, Settings, Cp2kJob
 from scm.plams.core.basejob import Job
 
-from CAT.jobs import job_single_point, job_geometry_opt, job_freq  # noqa: F401
+from CAT.jobs import job_single_point, job_geometry_opt, job_freq, freeze_atoms  # noqa: F401
+from CAT.frozen_settings import thaw_settings
 from CAT.logger import logger
 from CAT.settings_dataframe import SettingsDataFrame
 from CAT.workflows import WorkFlow, MOL, JOB_SETTINGS_BDE
@@ -185,7 +186,7 @@ def get_bde_dE(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
     # Optimize XYn
     len_core = len(core)
     if job is AMSJob:
-        s_cp = Settings(s)
+        s_cp = thaw_settings(s)
         s_cp.input.ams.GeometryOptimization.coordinatetype = 'Cartesian'
         lig.job_geometry_opt(job, s_cp, name='E_XYn_opt')
     elif forcefield:
@@ -193,8 +194,8 @@ def get_bde_dE(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
     else:
         # TODO Generalize this to more QM packages
         if job is Cp2kJob:
-            s_geom = s.copy()
-            s.input.soft_update(qmflows.geometry.cp2k)
+            s_geom = thaw_settings(s)
+            s_geom.input.soft_update(qmflows.geometry.cp2k)
         else:
             s_geom = s
         lig.job_geometry_opt(job, s_geom, name='E_XYn_opt')
@@ -210,7 +211,7 @@ def get_bde_dE(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
     else:
         # TODO Generalize this to more QM packages
         if job is Cp2kJob:
-            s_sp = s.copy()
+            s_sp = thaw_settings(s)
             s_sp.input.soft_update(
                 qmflows.singlepoint.cp2k if not qd_opt else qmflows.geometry.cp2k
             )
@@ -272,9 +273,7 @@ def get_bde_ddG(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
     assert s is not None
 
     # Optimize XYn
-    if job is AMSJob:
-        s.input.ams.Constraints.Atom = lig.properties.indices
-    lig.job_freq(job, s, name='G_XYn_freq')
+    lig.job_freq(job, freeze_atoms(job, s, lig.properties.indices), name='G_XYn_freq')
 
     # Extract energies
     G_lig = lig.properties.energy.G
@@ -285,9 +284,7 @@ def get_bde_ddG(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
         return np.full(len_core, np.nan)
 
     # Optimize the full quantum dot
-    if job is AMSJob:
-        s.input.ams.Constraints.Atom = tot.properties.indices
-    tot.job_freq(job, s, name='G_QD_freq')
+    tot.job_freq(job, freeze_atoms(job, s, tot.properties.indices), name='G_QD_freq')
 
     # Extract energies
     G_tot = tot.properties.energy.G
@@ -299,9 +296,7 @@ def get_bde_ddG(tot: Molecule, lig: Molecule, core: Sequence[Molecule],
 
     # Optimize the quantum dot(s) - XYn
     for mol in core:
-        if job is AMSJob:
-            s.input.ams.Constraints.Atom = mol.properties.indices
-        mol.job_freq(job, s, name='G_QD-XYn_freq')
+        mol.job_freq(job, freeze_atoms(job, s, mol.properties.indices), name='G_QD-XYn_freq')
 
     # Extract energies
     G_core = np.fromiter([mol.properties.energy.G for mol in core], count=len_core, dtype=float)

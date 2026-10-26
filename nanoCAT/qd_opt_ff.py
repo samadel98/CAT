@@ -37,6 +37,7 @@ from scm.plams import Molecule, Settings
 from scm.plams.core.basejob import Job
 from scm.plams.core.results import Results
 
+from CAT.frozen_settings import thaw_settings
 from FOX import PSFContainer
 from FOX.ff.lj_uff import combine_sigma, combine_epsilon
 
@@ -76,7 +77,7 @@ def qd_opt_ff(mol: Molecule, jobs: type[Job] | Sequence[type[Job] | None],
 
     # Prepare the job settings
     job = jobs[0] if isinstance(jobs, abc.Sequence) else jobs
-    s = Settings(settings[0]) if isinstance(settings, abc.Sequence) else Settings(settings)
+    s = thaw_settings(settings[0] if isinstance(settings, abc.Sequence) else settings)
 
     s.runscript.pre = (f'ln "{psf_name}" ./"{name}.psf"\n'
                        f'ln "{mol.properties.prm}" ./"{name}.prm"')

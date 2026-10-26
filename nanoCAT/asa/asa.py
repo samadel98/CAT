@@ -32,6 +32,7 @@ from rdkit.Chem import rdForceFieldHelpers
 from CAT.jobs import job_single_point, job_geometry_opt  # noqa: F401
 from CAT.workflows import WorkFlow, MOL, JOB_SETTINGS_ASA
 from CAT.settings_dataframe import SettingsDataFrame
+from CAT.frozen_settings import thaw_settings
 
 from .md_asa import get_asa_md
 from .asa_frag import get_asa_fragments
@@ -300,7 +301,7 @@ def _asa_plams_ff(mol_complete: Molecule, ligands: Iterable[Molecule], core: Mol
         the total number of fragments within **ligands**.
 
     """
-    s = Settings(settings)
+    s = thaw_settings(settings)
 
     # Calculate the (summed) energy of each individual ligand fragment in the total system
     E_ligands = 0.0

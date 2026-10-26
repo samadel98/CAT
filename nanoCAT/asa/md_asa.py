@@ -33,6 +33,7 @@ from FOX import MultiMolecule, PSFContainer, PRMContainer, get_intra_non_bonded,
 
 from CAT.jobs import job_md  # noqa: F401
 from CAT.logger import logger
+from CAT.frozen_settings import thaw_settings
 
 from .asa_frag import get_asa_fragments
 from .energy_gatherer import EnergyGatherer
@@ -318,7 +319,7 @@ def _get_neutral_psf(psf: PSFContainer, frag_neutral: Molecule, frag_count: int)
 
 def _md2opt(s: Settings) -> Settings:
     """Convert CP2K MD settings to CP2K geometry optimization settings."""
-    s2 = Settings(s)
+    s2 = thaw_settings(s)
     del s2.input.motion.md
     s2.input['global'].run_type = 'geometry_optimization'
 
