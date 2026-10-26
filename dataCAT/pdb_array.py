@@ -138,7 +138,7 @@ _ResInfo = Tuple[
     str,  # AltLoc
     str,  # ResidueName
     int,  # ResidueNumber
-    int,  # ChainId
+    str,  # ChainId
     str,  # InsertionCode
     float,  # Occupancy
     float,  # TempFactor
@@ -198,7 +198,7 @@ def _get_bond_info(mol: Molecule) -> List[_BondTuple]:
 
 
 def _iter_rec_plams(
-    atom_array: np.recarray,
+    atom_array: np.ndarray,
 ) -> Generator[Tuple[_Properties, _Coords, str], None, None]:
     """Helper function for :func:`_rec_to_mol`: create an iterator yielding atom properties and attributes."""  # noqa: E501
     for ar in atom_array:
@@ -252,7 +252,7 @@ def _rec_to_plams(
 
 
 def _iter_rec_rdkit(
-    atom_array: np.recarray,
+    atom_array: np.ndarray,
 ) -> Generator[Tuple[str, int, _ResInfo], None, None]:
     """Helper function for :func:`_rec_to_mol`: create an iterator yielding atom properties and attributes."""  # noqa: E501
     for ar in atom_array:
@@ -843,7 +843,7 @@ class PDBContainer:
             if k == 'scale':
                 dtype = ar_self.dtype
                 ar_list = [ar.astype(dtype, copy=False) for ar in ar_list]
-                ar_new = np.concatenate((ar_self, *ar_list)).view(np.recarray)
+                ar_new: np.ndarray = np.concatenate((ar_self, *ar_list)).view(np.recarray)
 
             # 'atom_count' and 'bond_count': two normal 1d arrays
             elif ar_self.ndim == 1:
@@ -1068,7 +1068,7 @@ class PDBContainer:
         return [_rec_to_plams(*args) for args in iterator]
 
     @overload
-    def to_rdkit(
+    def to_rdkit(  # type: ignore[overload-overlap]
         self,
         index: None | Sequence[int] | slice | np.ndarray = ...,
         sanitize: bool = ...,

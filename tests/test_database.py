@@ -9,7 +9,6 @@ from types import MappingProxyType
 from os.path import join, abspath
 from pathlib import Path
 
-import h5py
 import numpy as np
 import pandas as pd
 import pytest
@@ -22,6 +21,9 @@ from CAT.utils import get_formula
 from CAT.workflows import MOL, HDF5_INDEX, OPT, V_BULK, JOB_SETTINGS_CDFT
 
 from dataCAT import Database, OpenLig, OpenQD
+from dataCAT.locking import open_hdf5
+from dataCAT.create_database import MONGO_COLLECTIONS
+from dataCAT.functions import df_to_mongo_dict, mongo_dict_to_df
 from dataCAT.testing_utils import _readpdb as readpdb
 
 PATH = Path('tests') / 'test_files'
@@ -42,7 +44,7 @@ def test_init() -> None:
     assertion.is_(DB.csv_qd.func, OpenQD)
 
     assertion.eq(DB.hdf5.args[0], abspath(join(DB_PATH, 'structures.hdf5')))
-    assertion.is_(DB.hdf5.func, h5py.File)
+    assertion.is_(DB.hdf5.func, open_hdf5)
 
     assertion.isinstance(DB.mongodb, (type(None), MappingProxyType))
 
@@ -412,3 +414,115 @@ def test_update_mongodb_raise(mongo_db: Database) -> None:
     db = Database(DB_PATH_UPDATE)
     db._mongodb = None
     assertion.assert_(db.update_mongodb, 'ligand', exception=ValueError)
+
+
+@pytest.mark.parametrize('name', ['ligand', 'qd'])
+def test_query_mongodb_roundtrip(mongo_db: Database, name: str) -> None:
+    """Test that :meth:`~dataCAT.Database.query_mongodb` returns what was exported."""
+    mongo_db.update_mongodb(name)
+    collection_name, idx_keys = MONGO_COLLECTIONS[name]
+    query = {MONGO_KEYS[collection_name]: {'$regex': f'^{MONGO_PREFIX}'}}
+    out = mongo_db.query_mongodb(name, query)
+
+    manager = mongo_db.csv_lig if name == 'ligand' else mongo_db.csv_qd
+    with manager(write=False) as df:
+        ref = df.ndframe.sort_index(axis=1)
+    assertion.eq(out.index.names, list(idx_keys))
+    assertion.eq(out.columns.names, ref.columns.names)
+    pd.testing.assert_frame_equal(out.sort_index(), ref.sort_index())
+
+
+@pytest.fixture
+def mongo_df(mongo_db: Database) -> Database:
+    """Export ligands with NaN and missing properties to MongoDB."""
+    idx = pd.MultiIndex.from_tuples(
+        [(f'{MONGO_PREFIX}{i}', 'O2') for i in ('a', 'b', 'c')], names=['smiles', 'anchor']
+    )
+    columns = pd.MultiIndex.from_tuples([('cone_angle', 'dist=0.0'), ('V_bulk', '')])
+    df = pd.DataFrame([[50.0, 1.0], [150.0, np.nan], [np.nan, 3.0]], index=idx, columns=columns)
+    mongo_db.update_mongodb({'ligand': df})
+
+    # A ligand without any cone angle
+    idx2 = pd.MultiIndex.from_tuples([(f'{MONGO_PREFIX}d', 'O2')], names=['smiles', 'anchor'])
+    df2 = pd.DataFrame([[2.0]], index=idx2, columns=pd.MultiIndex.from_tuples([('V_bulk', '')]))
+    mongo_db.update_mongodb({'ligand': df2})
+    return mongo_db
+
+
+QUERY_PARAM = {
+    'lt': ({('cone_angle', 'dist=0.0'): {'$lt': 100}}, ['a']),
+    'gt': ({('cone_angle', 'dist=0.0'): {'$gt': 100}}, ['b']),
+    'empty_sub_index': ({('V_bulk', ''): {'$gte': 2}}, ['c', 'd']),
+    'exists': ({('cone_angle', 'dist=0.0'): {'$exists': False}}, ['d']),
+    'or': ({'$or': [{('V_bulk', ''): 1.0}, {('cone_angle', 'dist=0.0'): 150.0}]}, ['a', 'b']),
+    'index': ({'smiles': f'{MONGO_PREFIX}c'}, ['c']),
+}
+
+
+@pytest.mark.parametrize('query,ref', QUERY_PARAM.values(), ids=QUERY_PARAM.keys())
+def test_query_mongodb_filter(mongo_df: Database, query: dict, ref: list) -> None:
+    """Test :meth:`~dataCAT.Database.query_mongodb` with property filters."""
+    query = {'$and': [{'smiles': {'$regex': f'^{MONGO_PREFIX}'}}, query]}
+    out = mongo_df.query_mongodb('ligand', query)
+    smiles = [i[len(MONGO_PREFIX):] for i in out.index.get_level_values('smiles')]
+    assertion.eq(sorted(smiles), ref)
+    assertion.not_(any(i.startswith('_query') for i, _ in out.columns))
+
+
+def test_query_mongodb_columns(mongo_df: Database) -> None:
+    """Test :meth:`~dataCAT.Database.query_mongodb` with **columns** and **limit**."""
+    query = {'smiles': {'$regex': f'^{MONGO_PREFIX}'}}
+    out = mongo_df.query_mongodb('ligand', query, columns=['cone_angle'])
+    assertion.eq(out.columns.tolist(), [('cone_angle', 'dist=0.0')])
+    assertion.len_eq(out, 4)
+
+    out2 = mongo_df.query_mongodb('ligand', query, columns=[('V_bulk', ''), ('bob', '')])
+    assertion.eq(out2.columns.tolist(), [('V_bulk', ''), ('bob', '')])
+    np.testing.assert_array_equal(out2['V_bulk', ''].sort_values(), [1.0, 2.0, 3.0, np.nan])
+    assertion.is_(out2['bob', ''].isnull().all(), np.True_)
+
+    out3 = mongo_df.query_mongodb('ligand', query, limit=2)
+    assertion.len_eq(out3, 2)
+
+    out4 = mongo_df.query_mongodb('ligand', {'smiles': f'{MONGO_PREFIX}bob'})
+    assertion.len_eq(out4, 0)
+    assertion.eq(out4.index.names, ['smiles', 'anchor'])
+
+
+def test_query_mongodb_placeholder(mongo_db: Database) -> None:
+    """Test that :meth:`~dataCAT.Database.query_mongodb` skips the placeholder row."""
+    idx = pd.MultiIndex.from_tuples([('-', '-')], names=['smiles', 'anchor'])
+    df = pd.DataFrame([[1.0]], index=idx, columns=pd.MultiIndex.from_tuples([('V_bulk', '')]))
+    with MongoClient(**mongo_db.mongodb) as client:
+        collection = client.cat_database.ligand_database
+        existed = collection.count_documents({'smiles': '-', 'anchor': '-'}) > 0
+    try:
+        mongo_db.update_mongodb({'ligand': df})
+        assertion.len_eq(mongo_db.query_mongodb('ligand', {'smiles': '-'}), 0)
+    finally:
+        if not existed:
+            with MongoClient(**mongo_db.mongodb) as client:
+                client.cat_database.ligand_database.delete_one({'smiles': '-', 'anchor': '-'})
+
+
+def test_query_mongodb_raise(mongo_db: Database) -> None:
+    """Test :meth:`~dataCAT.Database.query_mongodb` with invalid input."""
+    assertion.assert_(mongo_db.query_mongodb, 'bob', exception=ValueError)
+
+    db = Database(DB_PATH_UPDATE)
+    db._mongodb = None
+    assertion.assert_(db.query_mongodb, 'ligand', exception=ValueError)
+
+
+def test_mongo_dict_to_df() -> None:
+    """Test :func:`dataCAT.functions.mongo_dict_to_df`."""
+    with DB.csv_lig(write=False) as df:
+        ref = df.ndframe
+    docs = df_to_mongo_dict(ref)
+    out = mongo_dict_to_df(docs, ref.index.names)
+    pd.testing.assert_frame_equal(out, ref)
+
+    out2 = mongo_dict_to_df([], ['smiles', 'anchor'])
+    assertion.len_eq(out2, 0)
+    assertion.eq(out2.index.names, ['smiles', 'anchor'])
+    assertion.eq(out2.columns.names, ['index', 'sub index'])

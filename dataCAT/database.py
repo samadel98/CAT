@@ -16,13 +16,14 @@ API
 import reprlib
 import textwrap
 import warnings
+import functools
 from os import getcwd, PathLike
 from os.path import abspath
 from types import MappingProxyType
 from functools import partial
 from typing import (
     Optional, Sequence, List, Union, Any, Dict, TypeVar, Mapping,
-    overload, Tuple, Type, Iterable, TypedDict, TYPE_CHECKING
+    overload, Tuple, Type, Iterable, TypedDict, ContextManager, Callable, cast, TYPE_CHECKING
 )
 
 import h5py
@@ -39,7 +40,8 @@ from .create_database import (
     create_csv, create_hdf5, create_mongodb, QD, Ligand, IDX_DTYPE, MONGO_COLLECTIONS
 )
 from .context_managers import OpenLig, OpenQD
-from .functions import df_to_mongo_dict, even_index, hdf5_availability
+from .locking import get_lock, open_hdf5
+from .functions import df_to_mongo_dict, mongo_dict_to_df, even_index, hdf5_availability
 from .pdb_array import PDBContainer
 from .hdf5_log import update_hdf5_log
 from .property_dset import create_prop_dset, update_prop_dset
@@ -68,6 +70,43 @@ class JobRecipe(TypedDict):
 
 #: The MongoDB error code of a duplicate key error.
 _DUPLICATE_KEY_CODE = 11000
+
+FT = TypeVar('FT', bound=Callable[..., Any])
+
+
+def _locked(func: FT) -> FT:
+    """Decorate a :class:`Database` method, so that it holds the lock of the database throughout."""
+    @functools.wraps(func)
+    def wrapper(self: 'Database', *args: Any, **kwargs: Any) -> Any:
+        with get_lock(self.dirname):
+            return func(self, *args, **kwargs)
+    return wrapper  # type: ignore[return-value]
+
+
+def _parse_mongo_query(query: Mapping[Any, Any], add_fields: Dict[str, Any]) -> Dict[str, Any]:
+    """Translate the ``(index, sub index)`` keys of **query** into MongoDB fields.
+
+    Plain sub indices become dotted paths (``"index.sub"``). As dots cannot be escaped,
+    sub indices that are empty or contain a dot are copied to temporary fields, which are
+    added to **add_fields**; querying these keeps the usual MongoDB semantics for
+    missing values and NaN (unlike comparisons within ``"$expr"``).
+
+    """
+    ret = {}
+    for key, value in query.items():
+        if key in ('$and', '$or', '$nor'):
+            ret[key] = [_parse_mongo_query(i, add_fields) for i in value]
+        elif not isinstance(key, tuple):
+            ret[key] = value
+        elif key[1] and '.' not in key[1] and not key[1].startswith('$'):
+            ret[f'{key[0]}.{key[1]}'] = value
+        else:
+            name = f'_query{len(add_fields)}'
+            add_fields[name] = {
+                '$getField': {'field': {'$literal': key[1]}, 'input': f'${key[0]}'}
+            }
+            ret[name] = value
+    return ret
 
 
 def _to_int64_array(ar: np.ndarray) -> np.ndarray:
@@ -102,8 +141,8 @@ class Database:
         return self._csv_qd
 
     @property
-    def hdf5(self) -> 'partial[h5py.File]':
-        """:data:`Callable[..., h5py.File]<typing.Callable>`: Get a function for constructing a :class:`h5py.File` context manager."""  # noqa: E501
+    def hdf5(self) -> 'partial[ContextManager[h5py.File]]':
+        """:data:`Callable[..., ContextManager[h5py.File]]<typing.Callable>`: Get a function for opening the .hdf5 file as :class:`h5py.File`, while holding the lock of the database (see :mod:`dataCAT.locking`)."""  # noqa: E501
         return self._hdf5
 
     @property
@@ -140,14 +179,17 @@ class Database:
         self._dirname: str = abspath(path) if path is not None else getcwd()
 
         # Create the database components and return the filename
-        lig_path = create_csv(self.dirname, database='ligand')
-        qd_path = create_csv(self.dirname, database='qd')
-        hdf5_path = create_hdf5(self.dirname)
+        with get_lock(self.dirname):
+            lig_path = create_csv(self.dirname, database='ligand')
+            qd_path = create_csv(self.dirname, database='qd')
+            hdf5_path = create_hdf5(self.dirname)
 
         # Populate attributes with MetaManager instances
         self._csv_lig = partial(OpenLig, filename=lig_path)
         self._csv_qd = partial(OpenQD, filename=qd_path)
-        self._hdf5 = partial(h5py.File, hdf5_path, libver='latest')
+        self._hdf5 = cast(
+            'partial[ContextManager[h5py.File]]', partial(open_hdf5, hdf5_path, libver='latest')
+        )
 
         # Try to create or access the mongodb database
         try:
@@ -235,6 +277,7 @@ class Database:
             return self.csv_qd
         raise ValueError(f"database={database!r}; accepted values for are 'ligand' and 'qd'")
 
+    @_locked
     def update_mongodb(self, database: Union[str, Mapping[str, pd.DataFrame]] = 'ligand',
                        overwrite: bool = False) -> None:
         """Export ligand or qd results to the MongoDB database.
@@ -318,6 +361,102 @@ class Database:
                 if other_error or ex.details.get('writeConcernErrors'):
                     raise
 
+    def query_mongodb(
+        self,
+        database: Union[Ligand, QD] = 'ligand',
+        query: Optional[Mapping[Union[str, Tuple[str, str]], Any]] = None,
+        columns: Optional[Sequence[Union[str, Tuple[str, str]]]] = None,
+        limit: int = 0,
+    ) -> pd.DataFrame:
+        """Read ligand or qd results from the MongoDB database into a DataFrame.
+
+        The inverse of :meth:`Database.update_mongodb`: the returned DataFrame has the
+        same layout as the DataFrames of :attr:`Database.csv_lig` and :attr:`Database.csv_qd`.
+
+        Examples
+        --------
+        .. code:: python
+
+            >>> from dataCAT import Database
+
+            >>> db = Database(...)  # doctest: +SKIP
+
+            # All ligands with a given SMILES string
+            >>> db.query_mongodb('ligand', {'smiles': 'CC(=O)[O-]'})  # doctest: +SKIP
+
+            # The bulkiness of all quantum dots with a given core
+            >>> query = {'core': 'Cd68Cl26Se55'}
+            >>> db.query_mongodb('qd', query, columns=['V_bulk'])  # doctest: +SKIP
+
+            # Ligands with a cone angle below 120 degrees; columns are given as
+            # (index, sub index) tuples and the values are MongoDB query operators
+            >>> query = {('cone_angle', 'dist=0.0'): {'$lt': 120}}
+            >>> db.query_mongodb('ligand', query)  # doctest: +SKIP
+
+        Parameters
+        ----------
+        database : :class:`str`
+            The type of database; accepted values are ``"ligand"`` and ``"qd"``.
+        query : :class:`Mapping<typing.Mapping>`, optional
+            A MongoDB query filter (see :meth:`pymongo.collection.Collection.find`).
+            Its keys can be index names (*e.g.* ``"smiles"`` or ``"core"``) or
+            ``(index, sub index)`` tuples of columns, also within ``"$and"``,
+            ``"$or"`` and ``"$nor"``.
+            Column tuples whose sub index is empty or contains a ``"."`` need MongoDB >= 5.0.
+        columns : :class:`Sequence<typing.Sequence>`, optional
+            The columns to return, as ``index`` strings (all columns with that name) or
+            ``(index, sub index)`` tuples; :data:`None` returns all columns.
+        limit : :class:`int`
+            The maximum number of documents to return; ``0`` means no limit.
+
+        Returns
+        -------
+        :class:`pandas.DataFrame`
+            A DataFrame with the matching documents, in the order of the collection.
+            Values absent from a document are set to ``NaN``.
+
+        """
+        if self.mongodb is None:
+            raise ValueError('Database.Mongodb is None')
+        try:
+            collection_name, idx_keys = MONGO_COLLECTIONS[database]
+        except (KeyError, TypeError):
+            raise ValueError(
+                f"database={database!r}; accepted values for are 'ligand' and 'qd'"
+            ) from None
+
+        # Skip the placeholder row that `Database.update_mongodb` exports from the .csv file
+        placeholder = {'$nor': [{k: '-' for k in idx_keys}]}
+        add_fields: Dict[str, Any] = {}
+        match = _parse_mongo_query(query or {}, add_fields)
+
+        pipeline: List[Dict[str, Any]] = []
+        if add_fields:
+            pipeline.append({'$addFields': add_fields})
+        pipeline.append({'$match': {'$and': [placeholder, match]} if match else placeholder})
+        if columns is None:
+            pipeline.append({'$project': {'_id': 0, **{k: 0 for k in add_fields}}})
+        else:
+            keep = {i if isinstance(i, str) else i[0] for i in columns}
+            pipeline.append({'$project': {'_id': 0, **{k: 1 for k in [*idx_keys, *keep]}}})
+        if limit:
+            pipeline.append({'$limit': limit})
+
+        with MongoClient(**self.mongodb) as client:
+            docs = list(client.cat_database[collection_name].aggregate(pipeline))
+        df = mongo_dict_to_df(docs, idx_keys)
+        if columns is None:
+            return df.sort_index(axis=1)
+
+        selection: List[Tuple[str, str]] = []
+        for i in columns:
+            if isinstance(i, str):
+                selection += sorted(j for j in df.columns if j[0] == i)
+            else:
+                selection.append(tuple(i))  # type: ignore[arg-type]
+        return df.reindex(columns=pd.MultiIndex.from_tuples(selection, names=df.columns.names))
+
+    @_locked
     def update_csv(self, df: pd.DataFrame,
                    index: Union[None, slice, pd.Series] = None,
                    database: Union[Ligand, QD] = 'ligand',
@@ -461,6 +600,7 @@ class Database:
                 db[i] = -1
         return columns.drop(drop_idx)  # type: ignore
 
+    @_locked
     def update_hdf5(self, df: pd.DataFrame,
                     index: Union[slice, pd.Series],
                     database: Union[Ligand, QD] = 'ligand',
@@ -567,6 +707,7 @@ class Database:
 
     """ ########################  Pulling results from the database ########################### """
 
+    @_locked
     def from_csv(self, df: pd.DataFrame, database: Union[Ligand, QD] = 'ligand',
                  get_mol: bool = True, inplace: bool = True) -> Optional[pd.Series]:
         """Pull results from :attr:`Database.csv_lig` or :attr:`Database.csv_qd`.
@@ -655,6 +796,7 @@ class Database:
             mol_list = self.from_hdf5(idx, database=database, rdmol=False)
             return pd.Series(mol_list, index=df_sorted[df_slice].index, name=MOL)
 
+    @_locked
     def from_hdf5(self, index: Union[slice, Sequence[int]],
                   database: Union[Ligand, QD] = 'ligand', rdmol: bool = True,
                   mol_list: Optional[Iterable[Molecule]] = None) -> List[Union[Molecule, Mol]]:
@@ -699,6 +841,9 @@ class Database:
         The purpose of this method is ensure that a .hdf5 file is actually closed,
         thus allowing the :meth:`Database.from_hdf5` method to safely access **filename** without
         the risk of raising an :exc:`OSError`.
+        It first waits for the lock of the database (see :mod:`dataCAT.locking`), which is held by
+        all other processes that use this version of Data-CAT or newer,
+        and then checks whether a process without the lock has the file open.
 
         Parameters
         ----------
@@ -721,4 +866,5 @@ class Database:
 
         """
         filename = self.hdf5.args[0]
-        hdf5_availability(filename, timeout, max_attempts, libver='latest')
+        with get_lock(self.dirname):
+            hdf5_availability(filename, timeout, max_attempts, libver='latest')

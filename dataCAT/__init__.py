@@ -48,6 +48,7 @@ from . import (
     testing_utils,
     dtype,
     create_database,
+    locking,
 )
 
 __author__ = 'B. F. van Beek'
@@ -56,7 +57,7 @@ __email__ = 'b.f.van.beek@vu.nl'
 __all__ = [
     'CAT_VERSION', 'NANOCAT_VERSION', 'DATACAT_VERSION',
 
-    'functions', 'testing_utils', 'dtype', 'create_database',
+    'functions', 'testing_utils', 'dtype', 'create_database', 'locking',
 
     'create_hdf5_log', 'update_hdf5_log', 'reset_hdf5_log',
 
