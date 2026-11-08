@@ -38,7 +38,7 @@ import scm.plams.interfaces.molecule.rdkit as molkit
 from rdkit import Chem
 from rdkit.Chem import Mol
 
-from nanoutils import PathType
+from CAT._nanoutils import PathType
 
 if TYPE_CHECKING:
     from .pdb_array import PDBContainer, IndexLike

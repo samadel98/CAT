@@ -24,7 +24,7 @@ import numpy as np
 
 from scm.plams import Molecule
 
-from nanoutils import group_by_values
+from CAT._nanoutils import group_by_values
 from nanoCAT.bde.guess_core_dist import guess_core_core_dist
 
 __all__ = ['get_coordination_number', 'coordination_outer']

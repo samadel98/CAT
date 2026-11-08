@@ -6,7 +6,7 @@ from .__version__ import __version__ as __version__
 __author__ = "Bas van Beek"
 __email__ = 'b.f.van.beek@vu.nl'
 
-from nanoutils import VersionInfo
+from ._nanoutils import VersionInfo
 version_info = VersionInfo.from_str(__version__)
 del VersionInfo
 

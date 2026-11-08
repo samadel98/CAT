@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from scm.plams import Settings
-from assertionlib.dataclass import AbstractDataClass
+from CAT._dataclass import AbstractDataClass
 from FOX import (MultiMolecule, PSFContainer, PRMContainer,
                  get_non_bonded, get_intra_non_bonded, get_bonded)
 

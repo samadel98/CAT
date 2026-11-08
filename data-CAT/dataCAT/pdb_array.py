@@ -84,7 +84,6 @@ import h5py
 import numpy as np
 from scm.plams import Molecule, Atom, Bond
 from rdkit import Chem, Geometry
-from assertionlib import assertion
 
 from .dtype import ATOMS_DTYPE, BONDS_DTYPE, ATOM_COUNT_DTYPE, BOND_COUNT_DTYPE, BACKUP_IDX_DTYPE
 from .functions import int_to_slice, if_exception
@@ -1266,9 +1265,14 @@ class PDBContainer:
             dset = group[key] if key != 'scale' else group[cls.SCALE_NAME]
 
             len_dict[key] = len(dset)
-            assertion.eq(dset.ndim, cls.NDIM[key], message=f"{key!r} ndim mismatch")
-            if key != 'scale':
-                assertion.eq(dset.dtype, cls.DTYPE[key], message=f"{key!r} dtype mismatch")
+            if dset.ndim != cls.NDIM[key]:
+                raise AssertionError(
+                    f"{key!r} ndim mismatch: {dset.ndim} != {cls.NDIM[key]}"
+                )
+            if key != 'scale' and dset.dtype != cls.DTYPE[key]:
+                raise AssertionError(
+                    f"{key!r} dtype mismatch: {dset.dtype} != {cls.DTYPE[key]}"
+                )
 
         # Check that all datasets are of the same length
         if len(set(len_dict.values())) != 1:

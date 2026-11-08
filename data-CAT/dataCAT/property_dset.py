@@ -31,7 +31,6 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from assertionlib import assertion
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -294,16 +293,20 @@ def validate_prop_group(group: h5py.Group) -> None:
         Raised if the validation process fails.
 
     """  # noqa: E501
-    assertion.isinstance(group, h5py.Group)
+    if not isinstance(group, h5py.Group):
+        raise AssertionError(f"Expected an h5py.Group; observed type: {type(group).__name__!r}")
 
     idx_ref = group.attrs['index']
     idx = group.file[idx_ref]
 
     iterator = ((k, v) for k, v in group.items() if not k.endswith('_names'))
     for name, dset in iterator:
-        assertion.le(len(dset), len(idx), message=f'{name!r} invalid dataset length')
-        assertion.contains(dset.dims[0].keys(), 'index', message=f'{name!r} missing dataset scale')
-        assertion.eq(dset.dims[0]['index'], idx, message=f'{name!r} invalid dataset scale')
+        if not len(dset) <= len(idx):
+            raise AssertionError(f'{name!r} invalid dataset length: {len(dset)} > {len(idx)}')
+        if 'index' not in dset.dims[0].keys():
+            raise AssertionError(f'{name!r} missing dataset scale')
+        if dset.dims[0]['index'] != idx:
+            raise AssertionError(f'{name!r} invalid dataset scale')
 
 
 def prop_to_dataframe(dset: h5py.Dataset, dtype: DTypeLike | None = None) -> pd.DataFrame:

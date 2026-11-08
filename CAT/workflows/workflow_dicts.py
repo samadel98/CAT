@@ -50,7 +50,7 @@ from .key_map import (
 )
 
 if TYPE_CHECKING:
-    from nanoutils import TypedDict
+    from typing import TypedDict
 
     class _TemplateMapping(TypedDict):
         description: str

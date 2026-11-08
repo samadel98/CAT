@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 from pymongo import MongoClient, ASCENDING
 
-from nanoutils import PathType
+from CAT._nanoutils import PathType
 from CAT.logger import logger
 
 from .dtype import BACKUP_IDX_DTYPE, LIG_IDX_DTYPE, QD_IDX_DTYPE, FORMULA_DTYPE, LIG_COUNT_DTYPE

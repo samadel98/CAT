@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from nanoutils import PathType
+from CAT._nanoutils import PathType
 from CAT.workflows import HDF5_INDEX
 
 __all__: list[str] = []

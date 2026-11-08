@@ -88,6 +88,9 @@ Unreleased
   8 times faster than the tblite wheels on PyPI; CI checks it weekly.
 * Replace the PyPI publishing workflow by a ``Build`` workflow that builds and checks the
   distributions of the three packages; nothing is published.
+* Drop the runtime dependencies on Nano-Utils and AssertionLib, which are no longer maintained:
+  the few utilities CAT, Nano-CAT and Data-CAT used are copied into ``CAT._nanoutils`` and
+  ``CAT._dataclass``. Both remain test dependencies.
 
 
 1.1.1

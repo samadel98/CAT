@@ -50,6 +50,8 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Fix ``fast_bulk_workflow()`` keeping the capping atom (*e.g.* the proton of a carboxylic acid)
   that it removes from the ligands; the anchor atom now carries the negative charge instead.
   The geometries are otherwise unchanged.
+* Drop the runtime dependencies on Nano-Utils and AssertionLib (now only needed for the tests);
+  Nano-CAT uses the copies of their utilities in CAT instead.
 
 
 0.7.2

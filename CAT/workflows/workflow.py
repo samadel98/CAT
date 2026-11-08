@@ -35,14 +35,14 @@ import rdkit
 from rdkit.Chem.AllChem import UFFGetMoleculeForceField as UFF  # noqa: N814
 from scm.plams import finish, Settings, Molecule
 from scm.plams.core.basejob import Job
-from assertionlib import AbstractDataClass, NDRepr
 
 from .key_map import MOL, OPT
 from .workflow_dicts import WORKFLOW_TEMPLATE, _TemplateMapping
-from ..utils import restart_init, parallel_init, JOB_MAP
+from ..utils import restart_init, parallel_init, short_repr, JOB_MAP
 from ..logger import logger
 from ..jobs import get_job_template
 from ..settings_dataframe import SettingsDataFrame
+from .._dataclass import AbstractDataClass
 
 _PANDAS_3 = Version(pd.__version__) >= Version("3.0.0")
 
@@ -54,9 +54,6 @@ else:
     JobRecipe = 'dataCAT.database.JobRecipe'
 
 __all__ = ['WorkFlow']
-
-NDRepr.repr_SettingsDataFrame = NDRepr.repr_DataFrame  # type: ignore
-aNDRepr = NDRepr()
 
 T = TypeVar('T')
 
@@ -430,10 +427,10 @@ class WorkFlow(AbstractDataClass):
                 try:
                     df.loc[slice2] = value
                 except ValueError:
-                    logger.debug(f"df = {aNDRepr.repr(df)}")
-                    logger.debug(f"index = {aNDRepr.repr(slice2[0])}")
-                    logger.debug(f"columns = {aNDRepr.repr(slice2[1])}")
-                    logger.debug(f"value = {aNDRepr.repr(value)}")
+                    logger.debug(f"df = {short_repr(df)}")
+                    logger.debug(f"index = {short_repr(slice2[0])}")
+                    logger.debug(f"columns = {short_repr(slice2[1])}")
+                    logger.debug(f"value = {short_repr(value)}")
                     raise
         logger.info(f"Finishing {self.description}\n")
 

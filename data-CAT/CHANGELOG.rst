@@ -30,6 +30,8 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 * Fix the ``hdf5 index`` column being upcasted to a floating point dtype with pandas < 2.0.
 * Fix ``PDBContainer()`` ignoring the passed **scale** and creating an invalid one if ``scale=None``.
 * ``create_prop_dset()`` now explicitly defaults to the ``float32`` dtype.
+* Drop the runtime dependencies on Nano-Utils and AssertionLib (now only needed for the tests);
+  Data-CAT uses the copies of their utilities in CAT instead.
 
 
 0.7.2

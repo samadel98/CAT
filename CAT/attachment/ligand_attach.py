@@ -44,11 +44,10 @@ from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
 
 from scm.plams import Molecule, Atom, Settings, MoleculeError
-from assertionlib.ndrepr import aNDRepr
 
 from .._compat import COPY_IF_NEEDED, atoms_as_array
 from ..mol_utils import get_index, round_coords, rdkit_props  # noqa: F401
-from ..utils import AnchorTup, KindEnum
+from ..utils import AnchorTup, KindEnum, short_repr
 from ..workflows import WorkFlow, HDF5_INDEX, MOL, OPT
 from ..settings_dataframe import SettingsDataFrame
 from ..data_handling import mol_to_file, WARN_MAP
@@ -531,7 +530,7 @@ def _evaluate_distance(mol: np.ndarray, name: str,
 
         exc = MoleculeError(
             f"\nEncountered >= {n} unique atom-pairs at a distance shorter than "
-            f"{threshold} Angstrom in {name!r}:\n{aNDRepr.repr(idx2.T)}"
+            f"{threshold} Angstrom in {name!r}:\n{short_repr(idx2.T)}"
         )
         action_func(exc)
 
