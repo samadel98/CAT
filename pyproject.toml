@@ -158,7 +158,7 @@ ignore-decorators = ["typing.overload"]
 
 [tool.pytest.ini_options]
 testpaths = ["CAT", "tests"]
-addopts = "--tb=short --doctest-glob='*.py' --doctest-glob='*.rst' --cov=CAT --cov-report xml --cov-report term --cov-report html --doctest-modules --pdbcls=IPython.terminal.debugger:TerminalPdb"
+addopts = "--tb=short --doctest-glob='*.py' --doctest-glob='*.rst' --cov=CAT --cov-config=pyproject.toml --cov-report xml --cov-report term --cov-report html --doctest-modules --pdbcls=IPython.terminal.debugger:TerminalPdb"
 markers = [
     "slow: A marker for slow tests.",
 ]

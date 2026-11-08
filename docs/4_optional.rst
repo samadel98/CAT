@@ -1059,6 +1059,8 @@ Ligand
           Other solvents include ``benzene``, ``ch2cl2``, ``chcl3``, ``cs2``, ``dioxane``,
           ``ether``, ``hexadecane``, ``methanol``, ``nitromethane``, ``octanol``,
           ``phenol`` and ``thf``.
+          A solvent unknown to the installed tblite version gets no value;
+          tblite 0.4, for example, does not know ``acetone``, ``dmf`` and ``dmso``.
         * ``"keep_files"``: Whether or not to keep the output files afterwards.
         * ``"job1"``: The type of PLAMS Job used for the calculation;
           only ``"TBLiteJob"`` is supported.

@@ -362,16 +362,23 @@ def _get_free(atoms: int | list[int], count: int) -> np.ndarray:
 
 
 def solvation_energies(engine: Engine, positions: np.ndarray, solvents: list[str],
-                       energy: float, log: Log = _print) -> dict[str, float]:
+                       energy: float, log: Log = _print) -> dict[str, float | None]:
     """Return the solvation free energy (Hartree) in each of the **solvents**.
 
     The solvation free energy is the difference between the energy with the implicit solvation
     model (*e.g.* ALPB) of the solvent and the gas-phase **energy**, at the same geometry.
+    A value is ``None`` if the calculation in that solvent failed, *e.g.* because the solvent
+    is unknown to the installed tblite version or the SCC did not converge.
 
     """
-    ret = {}
+    ret: dict[str, float | None] = {}
     for solvent in solvents:
-        energy_solv, _ = engine.variant(positions, solvent=solvent)(positions)
+        try:
+            energy_solv, _ = engine.variant(positions, solvent=solvent)(positions)
+        except Exception as ex:
+            log(f"The calculation in {solvent} failed: {ex}")
+            ret[solvent] = None
+            continue
         ret[solvent] = energy_solv - energy
         log(f"Solvation free energy in {solvent}: {ret[solvent]:.10f} Hartree")
     return ret

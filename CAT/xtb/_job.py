@@ -93,13 +93,15 @@ class TBLiteResults(RunnerResults):
 
         Only available for the ``solvation`` task, which computes the energy in each of the
         ``input.solvents`` relative to the gas-phase energy, at the same geometry.
+        A value is ``nan`` if the calculation in that solvent failed.
 
         """
-        solv: None | dict[str, float] = self._read().get("solvation_energies")
+        solv: None | dict[str, float | None] = self._read().get("solvation_energies")
         if solv is None:
             raise ResultsError(f"{self.job.name}: solvation energies are only available for the "
                                "'solvation' task")
-        return {k: float(Units.convert(v, "Hartree", unit)) for k, v in solv.items()}
+        return {k: np.nan if v is None else float(Units.convert(v, "Hartree", unit))
+                for k, v in solv.items()}
 
     def _get_ipea(self, key: str, unit: str) -> float:
         dct = self._read()

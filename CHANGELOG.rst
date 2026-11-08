@@ -76,6 +76,9 @@ Unreleased
 * Add ``optional.parallel_jobs``: the number of quantum chemical jobs of the ligand and quantum
   dot optimizations that run at the same time (*e.g.* with ``TBLiteJob``), with one OpenMP
   thread each unless ``OMP_NUM_THREADS`` is set (``CAT.parallel.thread_map()``).
+* Fix rerunning a job with the same input as an earlier job (the rerun prevention of PLAMS),
+  which raised ``AttributeError: 'str' object has no attribute 'job'`` with PLAMS < 2024 on
+  Python 3.10 and later, *e.g.* when running CAT twice in the same folder without Data-CAT.
 * Fix ``Molecule.as_array()`` returning the coordinates in the old order of the atoms, with
   PLAMS 2024 and later, after CAT reordered them: for canonicalized input molecules, ligands
   optimized with ``optional.processes`` and imported quantum dots (``input_qd``).

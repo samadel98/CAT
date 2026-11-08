@@ -184,6 +184,13 @@ def test_run_solvation() -> None:
     ret3 = runner.run({"input": {}, "atoms": WATER}, log=lambda msg: None)
     assert ret3["solvation_energies"] is None
 
+    # A solvent unknown to tblite gets no value, rather than failing the calculation
+    inp = {"task": "solvation", "solvents": ["water", "unknown"]}
+    ret4 = runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)
+    assert ret4["solvation_energies"] == {
+        "water": pytest.approx(ret["solvation_energies"]["water"], abs=1e-8), "unknown": None
+    }
+
 
 @requires_tblite
 def test_run_ipea(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -330,13 +337,14 @@ def test_tblite_job(job_manager: JobManager) -> None:
 def test_tblite_results(job_manager: JobManager) -> None:
     """Test the solvation energies, ionization potential and electron affinity of the results."""
     mol = from_smiles("CC(=O)[O-]")
-    s = Settings({"input": {"task": "solvation", "solvents": ["water", "dmso"]}})
+    s = Settings({"input": {"task": "solvation", "solvents": ["water", "toluene", "unknown"]}})
     results = TBLiteJob(molecule=mol, settings=s, name="solvation").run()
     e_solv = results.get_solvation_energies()
     e_solv_kcal = results.get_solvation_energies("kcal/mol")
-    assert list(e_solv_kcal) == ["water", "dmso"]
+    assert list(e_solv_kcal) == ["water", "toluene", "unknown"]
     np.testing.assert_allclose(list(e_solv_kcal.values()), np.array(list(e_solv.values())) * 627.5,
                                rtol=1e-4)
+    assert np.isnan(e_solv["unknown"])
     with pytest.raises(ResultsError):
         results.get_ionization_potential()
 
@@ -348,6 +356,18 @@ def test_tblite_results(job_manager: JobManager) -> None:
     assert results.get_ionization_potential() == pytest.approx(ip / 27.2114, rel=1e-4)
     with pytest.raises(ResultsError):
         results.get_solvation_energies()
+
+
+@requires_tblite
+def test_rerun(job_manager: JobManager) -> None:
+    """Test that rerunning a job with the same input copies the results of the first job."""
+    mol = from_smiles("O")
+    s = Settings({"input": {"task": "singlepoint"}})
+    results1 = TBLiteJob(molecule=mol, settings=s.copy(), name="water").run()
+    results2 = TBLiteJob(molecule=mol, settings=s.copy(), name="water").run()
+    assert results1.job.status == "successful"
+    assert results2.job.status == "copied"
+    assert results2.get_energy() == results1.get_energy()
 
 
 @requires_tblite
