@@ -44,6 +44,24 @@ from .key_map import (
     CDFT_DELTAF_PLUS,
     CDFT_MU_MINUS,
     CDFT_MU_PLUS,
+    JOB_SETTINGS_CDFT_XTB,
+    SETTINGS_CDFT_XTB,
+    CDFT_XTB_IP,
+    CDFT_XTB_EA,
+    CDFT_XTB_MU,
+    CDFT_XTB_CHI,
+    CDFT_XTB_ETA,
+    CDFT_XTB_S,
+    CDFT_XTB_OMEGA,
+    CDFT_XTB_NUCLEOFUGE,
+    CDFT_XTB_ELECTROFUGE,
+    CDFT_XTB_W_MINUS,
+    CDFT_XTB_W_PLUS,
+    CDFT_XTB_ELECTROPHILICITY,
+    CDFT_XTB_MU_MINUS,
+    CDFT_XTB_MU_PLUS,
+    JOB_SETTINGS_SOLV_XTB,
+    SETTINGS_SOLV_XTB,
     CONE_ANGLE,
     BRANCH_DISTANCE,
     BRANCH_SIZE,
@@ -62,7 +80,15 @@ if TYPE_CHECKING:
 else:
     _TemplateMapping = 'CAT.workflows.workflow_dicts._TemplateMapping'
 
-__all__ = ['WORKFLOW_TEMPLATE']
+__all__ = ['WORKFLOW_TEMPLATE', 'CDFT_XTB_COLUMNS']
+
+
+#: The columns of the conceptual DFT descriptors computed with xTB, all in eV (or 1/eV)
+CDFT_XTB_COLUMNS = (
+    CDFT_XTB_IP, CDFT_XTB_EA, CDFT_XTB_MU, CDFT_XTB_CHI, CDFT_XTB_ETA, CDFT_XTB_S,
+    CDFT_XTB_OMEGA, CDFT_XTB_NUCLEOFUGE, CDFT_XTB_ELECTROFUGE, CDFT_XTB_W_MINUS,
+    CDFT_XTB_W_PLUS, CDFT_XTB_ELECTROPHILICITY, CDFT_XTB_MU_MINUS, CDFT_XTB_MU_PLUS,
+)
 
 
 def _load_templates() -> dict[str, Any]:
@@ -114,6 +140,11 @@ def finalize_templates():
                                     CDFT_ELECTROFUGE, CDFT_W_MINUS, CDFT_W_PLUS,
                                     CDFT_ELECTROPHILICITY, CDFT_DELTAF_MINUS, CDFT_DELTAF_PLUS,
                                     CDFT_MU_MINUS, CDFT_MU_PLUS)},
+        'cdft_xtb': {'import_columns': dict.fromkeys(CDFT_XTB_COLUMNS, np.nan),
+                     'export_columns': (JOB_SETTINGS_CDFT_XTB, SETTINGS_CDFT_XTB,
+                                        *CDFT_XTB_COLUMNS)},
+        'solv_xtb': {'import_columns': {},
+                     'export_columns': (JOB_SETTINGS_SOLV_XTB, SETTINGS_SOLV_XTB)},
         'cone_angle': {'import_columns': {CONE_ANGLE: np.nan},
                        'export_columns': (CONE_ANGLE,)},
         'branch_distance': {'import_columns': {BRANCH_DISTANCE: "", BRANCH_SIZE: ""},

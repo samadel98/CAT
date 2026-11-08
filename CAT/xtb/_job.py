@@ -70,6 +70,43 @@ class TBLiteResults(Results):
                                "'frequencies' task")
         return np.asarray(Units.convert(np.array(freqs), "cm-1", unit))
 
+    def get_solvation_energies(self, unit: str = "Hartree") -> dict[str, float]:
+        """Return the solvation free energy in each solvent, by default in Hartree.
+
+        Only available for the ``solvation`` task, which computes the energy in each of the
+        ``input.solvents`` relative to the gas-phase energy, at the same geometry.
+
+        """
+        solv: None | dict[str, float] = self._read().get("solvation_energies")
+        if solv is None:
+            raise ResultsError(f"{self.job.name}: solvation energies are only available for the "
+                               "'solvation' task")
+        return {k: float(Units.convert(v, "Hartree", unit)) for k, v in solv.items()}
+
+    def _get_ipea(self, key: str, unit: str) -> float:
+        dct = self._read()
+        if dct["task"] != "ipea":
+            raise ResultsError(f"{self.job.name}: ionization potentials and electron affinities "
+                               "are only available for the 'ipea' task")
+        value: None | float = dct[key]
+        return np.nan if value is None else float(Units.convert(value, "Hartree", unit))
+
+    def get_ionization_potential(self, unit: str = "Hartree") -> float:
+        """Return the vertical ionization potential, by default in Hartree.
+
+        Only available for the ``ipea`` task; ``nan`` if the SCC of the cation did not converge.
+
+        """
+        return self._get_ipea("ionization_potential", unit)
+
+    def get_electron_affinity(self, unit: str = "Hartree") -> float:
+        """Return the vertical electron affinity, by default in Hartree.
+
+        Only available for the ``ipea`` task; ``nan`` if the SCC of the anion did not converge.
+
+        """
+        return self._get_ipea("electron_affinity", unit)
+
     def get_charges(self) -> np.ndarray:
         """Return the atomic partial charges."""
         return np.array(self._read()["charges"])

@@ -36,6 +36,7 @@ from .validation_schemas import (
     subset_schema,
     multi_ligand_schema,
     cdft_schema,
+    solvation_schema,
     bulkiness_schema,
     cone_angle_schema,
     processes_schema,
@@ -186,6 +187,8 @@ def validate_input(s: Settings, validate_only: bool = True) -> None:
             s.optional.ligand.optimize = ligand_opt_schema.validate(s.optional.ligand.optimize)
         if s.optional.ligand.cdft:
             s.optional.ligand.cdft = cdft_schema.validate(s.optional.ligand.cdft)
+        if s.optional.ligand.solvation:
+            s.optional.ligand.solvation = solvation_schema.validate(s.optional.ligand.solvation)
 
         if s.optional.get('crs') is not None:
             s.optional.ligand.crs = crs_schema.validate(s.optional.crs)

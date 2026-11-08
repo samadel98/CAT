@@ -38,7 +38,7 @@ from typing import Any
 
 import numpy as np
 
-__all__ = ["DEFAULTS", "main", "run"]
+__all__ = ["DEFAULTS", "IPEA_SHIFT", "main", "run"]
 
 #: The Bohr radius in Angstrom (CODATA 2018)
 BOHR = 0.529177210903
@@ -56,6 +56,12 @@ AU_TO_CM = np.sqrt(4.3597447222071e-18 / (BOHR * 1e-10)**2 / 1.66053906660e-27) 
 #: the inverse of 70 eV/Angstrom**2, the default of the L-BFGS optimizer of ASE
 H0 = 1 / (70 / 27.211386245988 * BOHR**2)
 
+#: The empirical shift (Hartree) that xtb subtracts from vertical ionization potentials and
+#: electron affinities computed with GFN-xTB methods (``--vip``, ``--vea`` and ``--vipea``),
+#: ``global_ipeashift`` in ``src/tblite/calculator.F90`` of xtb 6.7.
+#: It was fitted for IPEA-xTB (Asgeirsson *et al.*, *Chem. Sci.* 2017, 8, 4879).
+IPEA_SHIFT = 0.178069
+
 #: The default input settings.
 #: Their keys, including those of the nested dictionaries, are the only valid input keys.
 DEFAULTS: Mapping[str, Any] = {
@@ -68,6 +74,8 @@ DEFAULTS: Mapping[str, Any] = {
     "electronic_temperature": 300.0,
     "solvent": None,
     "solvation_model": "alpb",
+    "solvents": [],
+    "ipea_shift": IPEA_SHIFT,
     "verbosity": 0,
     "geometry": {
         "max_iter": 1000,
@@ -83,7 +91,7 @@ DEFAULTS: Mapping[str, Any] = {
     },
 }
 
-TASKS = frozenset({"singlepoint", "geometry", "frequencies"})
+TASKS = frozenset({"singlepoint", "geometry", "frequencies", "solvation", "ipea"})
 SOLVATION_MODELS = frozenset({"alpb", "gbsa"})
 
 Log = Callable[[str], None]
@@ -134,6 +142,8 @@ class Engine:
                  inp: Mapping[str, Any]) -> None:
         from tblite.interface import Calculator
 
+        self.numbers = numbers
+        self.inp = inp
         self.charge = inp["charge"]
         self.uhf = inp["uhf"]
         if self.uhf is None:  # The lowest spin state for this number of electrons
@@ -152,6 +162,10 @@ class Engine:
 
         self.result: Any = None
         self.count = 0
+
+    def variant(self, positions: np.ndarray, **kwargs: Any) -> Engine:
+        """Return a new engine with the input settings of this one, updated with **kwargs**."""
+        return Engine(self.numbers, positions, {**self.inp, **kwargs})
 
     def __call__(self, positions: np.ndarray, keep: bool = True) -> tuple[float, np.ndarray]:
         """Return the energy (Hartree) and gradient (Hartree/Bohr) at **positions** (Bohr).
@@ -345,6 +359,48 @@ def _get_free(atoms: int | list[int], count: int) -> np.ndarray:
     return ret
 
 
+def solvation_energies(engine: Engine, positions: np.ndarray, solvents: list[str],
+                       energy: float, log: Log = _print) -> dict[str, float]:
+    """Return the solvation free energy (Hartree) in each of the **solvents**.
+
+    The solvation free energy is the difference between the energy with the implicit solvation
+    model (*e.g.* ALPB) of the solvent and the gas-phase **energy**, at the same geometry.
+
+    """
+    ret = {}
+    for solvent in solvents:
+        energy_solv, _ = engine.variant(positions, solvent=solvent)(positions)
+        ret[solvent] = energy_solv - energy
+        log(f"Solvation free energy in {solvent}: {ret[solvent]:.10f} Hartree")
+    return ret
+
+
+def vertical_ipea(engine: Engine, positions: np.ndarray, energy: float,
+                  log: Log = _print) -> dict[str, float | None]:
+    """Return the vertical ionization potential and electron affinity (Hartree).
+
+    Both are differences between the energies of the cation or anion (in their lowest spin
+    state) and the neutral molecule, *i.e.* the molecule with the input charge, at the same
+    geometry, minus the empirical shift ``ipea_shift`` of the input (see :data:`IPEA_SHIFT`),
+    like the ``--vipea`` calculation of xtb.
+    A value is ``None`` if the SCC of the ion did not converge.
+
+    """
+    shift = engine.inp["ipea_shift"]
+    ret: dict[str, float | None] = {}
+    for key, charge, sign in [("ionization_potential", engine.charge + 1, 1),
+                              ("electron_affinity", engine.charge - 1, -1)]:
+        try:
+            energy_ion, _ = engine.variant(positions, charge=charge, uhf=None)(positions)
+        except Exception as ex:
+            log(f"The SCC of the molecule with charge {charge} failed: {ex}")
+            ret[key] = None
+            continue
+        ret[key] = sign * (energy_ion - energy) - shift
+        log(f"{key.replace('_', ' ').capitalize()}: {ret[key]:.10f} Hartree")
+    return ret
+
+
 def run(data: Mapping[str, Any], log: Log = _print) -> dict[str, Any]:
     """Run the calculation described by the JSON input **data** and return its results.
 
@@ -362,6 +418,8 @@ def run(data: Mapping[str, Any], log: Log = _print) -> dict[str, Any]:
     free = _get_free(inp["constraints"]["atom"], len(numbers))
 
     start = time.perf_counter()
+    if task == "solvation":  # The reference is the molecule in the gas phase
+        inp["solvent"] = None
     engine = Engine(numbers, positions, inp)
     log(f"tblite {inp['method']} {task}: {len(numbers)} atoms ({np.count_nonzero(~free)} frozen), "
         f"charge {engine.charge}, {engine.uhf} unpaired electron(s)")
@@ -383,6 +441,10 @@ def run(data: Mapping[str, Any], log: Log = _print) -> dict[str, Any]:
         n_imag = np.count_nonzero(freqs < 0)
         log(f"{len(freqs)} vibrational frequencies, {n_imag} imaginary")
 
+    solv = solvation_energies(engine, positions, inp["solvents"], energy, log=log) \
+        if task == "solvation" else None
+    ipea = vertical_ipea(engine, positions, energy, log=log) if task == "ipea" else {}
+
     log(f"Final energy: {energy:.10f} Hartree "
         f"({engine.count} calculations in {time.perf_counter() - start:.2f} s)")
     return {
@@ -399,6 +461,9 @@ def run(data: Mapping[str, Any], log: Log = _print) -> dict[str, Any]:
         "gradient": gradient.tolist(),
         "charges": charges.tolist(),
         "frequencies": None if freqs is None else freqs.tolist(),
+        "solvation_energies": solv,
+        "ionization_potential": ipea.get("ionization_potential"),
+        "electron_affinity": ipea.get("electron_affinity"),
     }
 
 

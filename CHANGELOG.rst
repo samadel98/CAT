@@ -63,6 +63,13 @@ Unreleased
   without any external program (``pip install "nlesc-CAT[xtb]"``). It is available wherever CAT
   accepts a job type, with the ``"tblite"`` alias, *e.g.* for the ligand and quantum dot
   optimizations.
+* Add the ``solvation`` and ``ipea`` tasks to ``TBLiteJob``: solvation free energies in a list of
+  solvents, and vertical ionization potentials and electron affinities (with the empirical shift
+  of ``xtb --vipea``), with the matching ``TBLiteResults`` getters.
+* Add the ``optional.ligand.solvation`` workflow, which computes the solvation free energies of
+  the ligands with GFN2-xTB and the ALPB solvation model, without AMS or COSMO-RS.
+* Add xTB-based conceptual DFT descriptors: ``optional.ligand.cdft`` with ``job1: TBLiteJob``
+  computes them from IPEA1-xTB ionization potentials and electron affinities, without ADF.
 * Add ``optional.parallel_jobs``: the number of quantum chemical jobs of the ligand and quantum
   dot optimizations that run at the same time (*e.g.* with ``TBLiteJob``), with one OpenMP
   thread each unless ``OMP_NUM_THREADS`` is set (``CAT.parallel.thread_map()``).

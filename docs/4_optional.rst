@@ -37,7 +37,8 @@ Option                                    Description
 :attr:`optional.ligand.anchor`            Manually specify SMILES strings representing functional groups.
 :attr:`optional.ligand.split`             If the ligand should be attached in its entirety to the core or not.
 :attr:`optional.ligand.cosmo-rs`          Perform a property calculation with COSMO-RS on the ligand.
-:attr:`optional.ligand.cdft`              Perform a conceptual DFT calculation with ADF on the ligand.
+:attr:`optional.ligand.cdft`              Perform a conceptual DFT calculation with ADF or xTB on the ligand.
+:attr:`optional.ligand.solvation`         Compute the solvation free energy of the ligand with xTB in a list of solvents.
 :attr:`optional.ligand.cone_angle`        Compute the smallest enclosing cone angle within a ligand.
 :attr:`optional.ligand.branch_distance`   Compute the size of branches and their distance w.r.t. to the anchor within a ligand.
 
@@ -81,6 +82,7 @@ Default Settings
             split: True
             cosmo-rs: False
             cdft: False
+            solvation: False
             cone_angle: False
 
         qd:
@@ -671,6 +673,7 @@ Ligand
                 split: True
                 cosmo-rs: False
                 cdft: False
+                solvation: False
                 cone_angle: False
                 branch_distance: False
 
@@ -978,10 +981,36 @@ Ligand
         This block can be furthermore customized with one or more of the following keys:
 
         * ``"keep_files"``: Whether or not to delete the ADF output afterwards.
-        * ``"job1"``: The type of PLAMS Job used for running the calculation.
-          The only value that should be supplied here (if any) is ``"ADFJob"``.
+        * ``"job1"``: The type of PLAMS Job used for running the calculation:
+          ``"ADFJob"`` (the default) or ``"TBLiteJob"`` (see below).
         * ``"s1"``: The job Settings used for running the CDFT calculation.
           Can be left blank to use the default template (:data:`nanoCAT.cdft.cdft`).
+
+        With ``job1: TBLiteJob`` the descriptors are computed without ADF,
+        from the vertical ionization potential :math:`I` and electron affinity :math:`A`
+        of the ligand, at its geometry, with the open-source `tblite <https://github.com/tblite/tblite>`_
+        package (see :ref:`xTB`).
+        :math:`I` and :math:`A` are energy differences between the ligand and its cation or anion
+        (in their lowest spin state), minus the empirical shift of the ``--vipea`` calculation
+        of the xtb program (:data:`CAT.xtb.runner.IPEA_SHIFT`, 4.85 eV).
+        The method is IPEA1-xTB, which is parametrized for this purpose,
+        unless ``s1`` specifies another one (*e.g.* ``s1: {input: {method: GFN2-xTB}}``).
+        The descriptors are computed from :math:`I` and :math:`A` with finite-difference
+        expressions (see :func:`nanoCAT.cdft.get_xtb_descriptors`), whereas ADF uses the
+        orbital energies, and are stored in eV in separate ``cdft_xtb`` columns:
+
+        * Ionization potential (I)
+        * Electron affinity (A)
+        * Electronic chemical potential (mu), (mu+) and (mu-)
+        * Electronegativity (chi=-mu)
+        * Hardness (eta)
+        * Softness (S), in 1/eV
+        * Electrophilicity index (w=omega)
+        * Dissociation energy (nucleofuge) and (electrofuge)
+        * Electrodonating power (w-) and Electroaccepting power (w+)
+        * Net Electrophilicity
+
+        The hyperhardness and the dual descriptors require the orbitals and are not computed.
 
         .. admonition:: Examples
 
@@ -998,6 +1027,58 @@ Ligand
                         cdft:
                             job1: ADFJob
                             s1: ...  # Insert custom settings here
+
+            .. code:: yaml
+
+                optional:
+                    ligand:
+                        cdft:
+                            job1: TBLiteJob
+
+
+    .. attribute:: optional.ligand.solvation
+
+        :Parameter:     * **Type** - :class:`bool` or :class:`dict`
+                        * **Default value** – ``False``
+
+        Compute the solvation free energy of the ligand in a list of solvents with
+        GFN2-xTB and the ALPB implicit solvation model of the open-source
+        `tblite <https://github.com/tblite/tblite>`_ package (see :ref:`xTB`).
+        It requires neither AMS nor COSMO-RS.
+
+        The solvation free energy is the difference between the energies of the ligand
+        with and without the solvation model, at the geometry of the ligand.
+        It is stored in kcal/mol in the ``("E_solv_xtb", solvent)`` columns.
+
+        This block can be furthermore customized with one or more of the following keys:
+
+        * ``"solvents"``: The solvents, by their names in tblite.
+          The default solvents are those of :attr:`optional.ligand.cosmo-rs`:
+          ``acetone``, ``acetonitrile``, ``dmf``, ``dmso``, ``ethanol``,
+          ``ethylacetate``, ``hexane``, ``toluene`` and ``water``.
+          Other solvents include ``benzene``, ``ch2cl2``, ``chcl3``, ``cs2``, ``dioxane``,
+          ``ether``, ``hexadecane``, ``methanol``, ``nitromethane``, ``octanol``,
+          ``phenol`` and ``thf``.
+        * ``"keep_files"``: Whether or not to keep the output files afterwards.
+        * ``"job1"``: The type of PLAMS Job used for the calculation;
+          only ``"TBLiteJob"`` is supported.
+        * ``"s1"``: The input settings of the :class:`~CAT.xtb.TBLiteJob`,
+          *e.g.* ``s1: {input: {method: GFN1-xTB, solvation_model: gbsa}}``.
+
+        .. admonition:: Examples
+
+            .. code:: yaml
+
+                optional:
+                    ligand:
+                        solvation: True
+
+            .. code:: yaml
+
+                optional:
+                    ligand:
+                        solvation:
+                            solvents: [water, toluene, chcl3]
 
 
     .. attribute:: optional.ligand.cone_angle

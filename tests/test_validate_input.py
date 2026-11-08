@@ -72,6 +72,7 @@ def test_validate_input() -> None:
     ref.ligand.cdft = False
     ref.ligand.cone_angle = False
     ref.ligand.branch_distance = False
+    ref.ligand.solvation = False
 
     ref.qd.bulkiness = False
     ref.qd.construct_qd = True

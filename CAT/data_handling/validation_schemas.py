@@ -14,6 +14,7 @@ Index
     bde_schema
     qd_opt_schema
     crs_schema
+    solvation_schema
     asa_schema
     subset_schema
     multi_ligand_schema
@@ -43,6 +44,8 @@ API
 .. autodata:: asa_schema
     :annotation: : schema.Schema
 .. autodata:: crs_schema
+    :annotation: : schema.Schema
+.. autodata:: solvation_schema
     :annotation: : schema.Schema
 .. autodata:: subset_schema
     :annotation: : schema.Schema
@@ -91,6 +94,7 @@ from ..utils import AllignmentEnum, AllignmentTup
 __all__ = ['mol_schema', 'core_schema', 'ligand_schema', 'qd_schema', 'database_schema',
            'mongodb_schema', 'bde_schema', 'ligand_opt_schema', 'qd_opt_schema', 'crs_schema',
            'asa_schema', 'subset_schema', 'bulkiness_schema', 'cone_angle_schema',
+           'solvation_schema', 'SOLVATION_SOLVENTS',
            'processes_schema', 'parallel_jobs_schema']
 
 #: Schema for validating ``optional.processes``: the number of processes,
@@ -549,6 +553,13 @@ ligand_schema: Schema = Schema({
         Or(
             bool,
             error='optional.ligand.branch_distance expects a boolean'
+        ),
+
+    Optional_('solvation', default=False):  # Ligand solvation energies with xTB
+        Or(
+            dict,
+            And(bool, Use(lambda n: {} if n else False)),
+            error='optional.ligand.solvation expects a boolean or dictionary'
         ),
 })
 
@@ -1087,6 +1098,54 @@ multi_ligand_schema: Schema = Schema({
             None,
             And(val_float, lambda n: 0 <= float(n) <= 1, Use(float))
         )
+})
+
+
+#: The default solvents of the ``['optional']['ligand']['solvation']`` block:
+#: those of the COSMO-RS workflow (see :mod:`CAT.data.coskf`)
+SOLVATION_SOLVENTS: tuple[str, ...] = (
+    'acetone', 'acetonitrile', 'dmf', 'dmso', 'ethanol', 'ethylacetate', 'hexane', 'toluene',
+    'water',
+)
+
+#: Schema for validating the ``['optional']['ligand']['solvation']`` block.
+solvation_schema: Schema = Schema({
+    # Delete files after the calculations are finished
+    Optional_('keep_files', default=True):
+        And(bool, error='optional.ligand.solvation.keep_files expects a boolean'),
+
+    # The solvents, by their names in the implicit solvation model of tblite
+    Optional_('solvents', default=lambda: list(SOLVATION_SOLVENTS)):
+        Or(
+            And(str, Use(lambda n: [n])),
+            And(
+                abc.Sequence, lambda n: len(n) > 0 and all(isinstance(i, str) for i in n),
+                Use(list),
+            ),
+            error='optional.ligand.solvation.solvents expects a string or a list of strings'
+        ),
+
+    # The job type; only TBLiteJob is supported
+    Optional_('job1', default=lambda: TBLiteJob):
+        Or(
+            And(
+                And(type, lambda n: issubclass(n, TBLiteJob), Use(val_job_type)),
+                error='optional.ligand.solvation.job1 expects TBLiteJob'
+            ),
+            And(
+                str, Use(str_to_job_type), lambda n: n is TBLiteJob,
+                error='optional.ligand.solvation.job1 expects TBLiteJob'
+            ),
+        ),
+
+    # The job settings
+    Optional_('s1', default=lambda: Settings()):
+        Or(
+            None,
+            dict,
+            And(str, Use(lambda n: get_template(n, from_cat_data=False))),
+            error='optional.ligand.solvation.s1 expects a string or a dictionary'
+        ),
 })
 
 
