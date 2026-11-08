@@ -32,7 +32,6 @@ For example, for the ligand and quantum dot optimizations, the bond dissociation
             dissociate:
                 core_atom: Cd
                 lig_count: 2
-                xyn_pre_opt: False  # The pre-optimization requires AMS
                 job1: tblite
                 job2: tblite
 

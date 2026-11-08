@@ -40,6 +40,10 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
   ``Molecule.as_array()`` in sync with the atoms of the molecules that Nano-CAT builds.
   The conceptual DFT workflow, which needs ``ADFJob``, still requires PLAMS < 2024.
 * Test with the latest PLAMS in CI.
+* Pre-optimize the |XYn| fragment of the BDE workflow (``xyn_pre_opt``) with GFN2-xTB when AMS is
+  not available, rather than failing; skip it with a warning if tblite is not installed either.
+* Fix the BDE workflow placing all monoatomic ligands (*e.g.* halides) of an |XYn| fragment on
+  top of each other; they are now spread around the ion in a plane.
 
 
 0.7.2
@@ -236,3 +240,6 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
 .. _AssertionLib: https://github.com/nlesc-nano/AssertionLib
 .. _CAT: https://github.com/nlesc-nano/CAT
 .. _MATCH: http://brooks.chem.lsa.umich.edu/index.php?page=match&subdir=articles/resources/software
+
+
+.. |XYn| replace:: :math:`XY_{n}`
