@@ -18,6 +18,7 @@ Option                                    Description
 ========================================= =========================================================================================================
 :attr:`optional.processes`                The number of processes for the RDKit UFF ligand optimization.
 :attr:`optional.parallel_jobs`            The number of quantum chemical jobs that can run at the same time.
+:attr:`optional.report`                   Write an HTML report of the run, with all properties and a 3D view of every molecule.
 
 :attr:`optional.database.dirname`         The name of the directory where the database will be stored.
 :attr:`optional.database.read`            Attempt to read results from the database before starting calculations.
@@ -60,6 +61,7 @@ Default Settings
     optional:
         processes: 1
         parallel_jobs: 1
+        report: False
 
         database:
             dirname: database
@@ -168,6 +170,37 @@ Parallel jobs
             ligand:
                 optimize:
                     job2: tblite
+
+|
+
+Report
+------
+
+.. attribute:: optional.report
+
+    :Parameter:     * **Type** - :class:`bool` or :class:`str`
+                    * **Default Value** - ``False``
+
+    Write an HTML report of the run: a table of the quantum dots, ligands and cores
+    with all their properties (*e.g.* the results of the optional workflows),
+    and a 3D view of every molecule.
+
+    ``True`` writes ``report.html`` to the working directory (:attr:`path`);
+    a string sets the name of the file, relative to the working directory.
+    The report is a single, self-contained file that any web browser can open,
+    also without an internet connection.
+
+    Example:
+
+    .. code:: yaml
+
+        optional:
+            report: True
+
+    The report can also be written from Python, *e.g.* for the dataframes returned by
+    :func:`CAT.base.prep`, with :func:`CAT.report.write_report`.
+
+.. autofunction:: CAT.report.write_report
 
 |
 

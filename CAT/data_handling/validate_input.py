@@ -42,6 +42,7 @@ from .validation_schemas import (
     cone_angle_schema,
     processes_schema,
     parallel_jobs_schema,
+    report_schema,
 )
 
 from .validate_ff import validate_ff, update_ff_jobs
@@ -161,6 +162,7 @@ def validate_input(s: Settings, validate_only: bool = True) -> None:
     s.optional.parallel_jobs = get_processes(
         parallel_jobs_schema.validate(s.optional.get('parallel_jobs', 1))
     )
+    s.optional.report = report_schema.validate(s.optional.get('report', False))
     with context:
         s.optional.ligand = ligand_schema.validate(s.optional.ligand)
         s.optional.core = core_schema.validate(s.optional.core)

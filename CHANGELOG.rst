@@ -76,6 +76,9 @@ Unreleased
 * Add the ``optional.ligand.conformers`` workflow, a conformer search of the ligands with RDKit
   and GFN2-xTB, which stores the number of conformers and the energy of CAT's conformer
   relative to the lowest-energy one, and writes the conformers to an .xyz file.
+* Add ``optional.report``, which writes an HTML report of the run: the properties of the quantum
+  dots, ligands and cores, and a 3D view of every molecule, in one self-contained file
+  (``CAT.report.write_report()``).
 * Add ``optional.parallel_jobs``: the number of quantum chemical jobs of the ligand and quantum
   dot optimizations that run at the same time (*e.g.* with ``TBLiteJob``), with one OpenMP
   thread each unless ``OMP_NUM_THREADS`` is set (``CAT.parallel.thread_map()``).

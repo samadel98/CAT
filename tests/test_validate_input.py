@@ -59,6 +59,7 @@ def test_validate_input() -> None:
     ref.database.thread_safe = False
     ref.processes = 1
     ref.parallel_jobs = 1
+    ref.report = False
     if HAS_DATACAT:
         ref.database.db = Database(ref.database.dirname, **ref.database.mongodb)
     else:

@@ -16,6 +16,7 @@ Index
     crs_schema
     solvation_schema
     conformers_schema
+    report_schema
     asa_schema
     subset_schema
     multi_ligand_schema
@@ -50,6 +51,8 @@ API
     :annotation: : schema.Schema
 .. autodata:: conformers_schema
     :annotation: : schema.Schema
+.. autodata:: report_schema
+    :annotation: : schema.Schema
 .. autodata:: subset_schema
     :annotation: : schema.Schema
 .. autodata:: multi_ligand_schema
@@ -61,6 +64,7 @@ API
 
 """
 
+import os
 from types import MappingProxyType
 from typing import Any, TypeVar
 from collections.abc import Collection, Callable, Mapping
@@ -99,7 +103,7 @@ __all__ = ['mol_schema', 'core_schema', 'ligand_schema', 'qd_schema', 'database_
            'mongodb_schema', 'bde_schema', 'ligand_opt_schema', 'qd_opt_schema', 'crs_schema',
            'asa_schema', 'subset_schema', 'bulkiness_schema', 'cone_angle_schema',
            'solvation_schema', 'SOLVATION_SOLVENTS', 'conformers_schema',
-           'processes_schema', 'parallel_jobs_schema']
+           'processes_schema', 'parallel_jobs_schema', 'report_schema']
 
 #: Schema for validating ``optional.processes``: the number of processes,
 #: with ``None`` or ``0`` meaning one per CPU core
@@ -115,6 +119,14 @@ parallel_jobs_schema: Schema = Schema(Or(
     None,
     And(int, lambda n: not isinstance(n, bool) and n >= 0),
     error="optional.parallel_jobs expects None or a non-negative integer",
+))
+
+#: Schema for validating ``optional.report``: the file name of the HTML report of the run,
+#: with ``True`` meaning ``"report.html"`` and ``False`` or ``None`` meaning no report
+report_schema: Schema = Schema(Or(
+    And(Or(None, bool), Use(lambda value: 'report.html' if value else False)),
+    And(Or(str, os.PathLike), Use(os.fspath), lambda name: bool(name.strip())),
+    error="optional.report expects a boolean or a file name",
 ))
 
 

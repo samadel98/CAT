@@ -22,6 +22,7 @@ API
 
 """
 
+import os
 from time import time
 
 import numpy as np
@@ -47,6 +48,7 @@ from .attachment.ligand_anchoring import init_ligand_anchoring
 from .attachment.core_anchoring import set_core_anchors
 
 from .workflows import MOL
+from .report import write_report
 
 try:
     import nanoCAT
@@ -130,6 +132,10 @@ def prep(arg: Settings, return_mol: bool = True
 
     # The End
     delta_t = time() - time_start
+    if arg.optional.report:
+        filename = os.path.join(arg.path, arg.optional.report)
+        logger.info(f'Writing the report of the run to {filename!r}')
+        write_report(filename, qd_df, core_df, ligand_df, elapsed=delta_t)
     logger.info(f'Total elapsed time: {delta_t:.4f} sec')
 
     if return_mol:
