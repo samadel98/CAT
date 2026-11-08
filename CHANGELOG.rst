@@ -73,6 +73,9 @@ Unreleased
   the ligands with GFN2-xTB and the ALPB solvation model, without AMS or COSMO-RS.
 * Add xTB-based conceptual DFT descriptors: ``optional.ligand.cdft`` with ``job1: TBLiteJob``
   computes them from IPEA1-xTB ionization potentials and electron affinities, without ADF.
+* Add the ``optional.ligand.conformers`` workflow, a conformer search of the ligands with RDKit
+  and GFN2-xTB, which stores the number of conformers and the energy of CAT's conformer
+  relative to the lowest-energy one, and writes the conformers to an .xyz file.
 * Add ``optional.parallel_jobs``: the number of quantum chemical jobs of the ligand and quantum
   dot optimizations that run at the same time (*e.g.* with ``TBLiteJob``), with one OpenMP
   thread each unless ``OMP_NUM_THREADS`` is set (``CAT.parallel.thread_map()``).

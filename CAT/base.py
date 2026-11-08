@@ -57,6 +57,7 @@ try:
     from nanoCAT.ff.ff_assignment import init_ff_assignment
     from nanoCAT.cdft import init_cdft
     from nanoCAT.xtb_solvation import init_xtb_solv
+    from nanoCAT.conformers import init_conformers
     if Version(nanoCAT.__version__) >= Version("0.7.2"):
         from nanoCAT.cone_angle import init_cone_angle
         from nanoCAT.bulk.mol_graph2 import init_branch_distance
@@ -259,6 +260,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     crs = ligand_df.settings.optional.ligand.crs
     cdft = ligand_df.settings.optional.ligand.cdft
     solvation = ligand_df.settings.optional.ligand.solvation
+    conformers = ligand_df.settings.optional.ligand.conformers
     cone_angle = ligand_df.settings.optional.ligand.cone_angle
     branch_distance = ligand_df.settings.optional.ligand.branch_distance
 
@@ -280,6 +282,11 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     else:
         for lig in ligand_df[MOL]:
             allign_axis(lig)
+
+    # Search for the lowest-energy conformers of the ligands
+    if conformers:
+        val_nano_cat("Ligand conformer searches require the nano-CAT package")
+        init_conformers(ligand_df)
 
     if branch_distance:
         val_nano_cat("The ligand branch-distance workflow requires the nano-CAT package")

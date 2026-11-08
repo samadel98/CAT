@@ -224,6 +224,24 @@ solv_xtb:
         job1: [optional, ligand, solvation, job1]
         s1: [optional, ligand, solvation, s1]
 
+conformers:
+    description: ligand conformer search
+    mol_type: ligand
+    template:
+        db: [optional, database, db]
+        read: [optional, database, read]
+        write: [optional, database, write]
+        overwrite: [optional, database, overwrite]
+        thread_safe: [optional, database, thread_safe]
+
+        path: [optional, ligand, dirname]
+        parallel_jobs: [optional, parallel_jobs]
+        n_conformers: [optional, ligand, conformers, n]
+        seed: [optional, ligand, conformers, seed]
+        keep_files: [optional, ligand, conformers, keep_files]
+        job1: [optional, ligand, conformers, job1]
+        s1: [optional, ligand, conformers, s1]
+
 branch_distance:
     description: Ligand branch size & distance computation
     mol_type: ligand

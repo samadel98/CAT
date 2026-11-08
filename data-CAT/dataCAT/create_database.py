@@ -187,6 +187,7 @@ def create_hdf5(path, name='structures.hdf5'):  # noqa: E302
     dataset_names_3d = (
         'job_settings_crs', 'job_settings_qd_opt', 'job_settings_BDE', 'job_settings_ASA',
         'job_settings_cdft', 'job_settings_cdft_xtb', 'job_settings_solv_xtb',
+        'job_settings_conformers',
     )
 
     with h5py.File(path, 'a', libver='latest') as f:

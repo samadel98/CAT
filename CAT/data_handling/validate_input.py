@@ -37,6 +37,7 @@ from .validation_schemas import (
     multi_ligand_schema,
     cdft_schema,
     solvation_schema,
+    conformers_schema,
     bulkiness_schema,
     cone_angle_schema,
     processes_schema,
@@ -191,6 +192,8 @@ def validate_input(s: Settings, validate_only: bool = True) -> None:
             s.optional.ligand.cdft = cdft_schema.validate(s.optional.ligand.cdft)
         if s.optional.ligand.solvation:
             s.optional.ligand.solvation = solvation_schema.validate(s.optional.ligand.solvation)
+        if s.optional.ligand.conformers:
+            s.optional.ligand.conformers = conformers_schema.validate(s.optional.ligand.conformers)
 
         if s.optional.get('crs') is not None:
             s.optional.ligand.crs = crs_schema.validate(s.optional.crs)

@@ -15,6 +15,7 @@ Index
     qd_opt_schema
     crs_schema
     solvation_schema
+    conformers_schema
     asa_schema
     subset_schema
     multi_ligand_schema
@@ -46,6 +47,8 @@ API
 .. autodata:: crs_schema
     :annotation: : schema.Schema
 .. autodata:: solvation_schema
+    :annotation: : schema.Schema
+.. autodata:: conformers_schema
     :annotation: : schema.Schema
 .. autodata:: subset_schema
     :annotation: : schema.Schema
@@ -95,7 +98,7 @@ from ..utils import AllignmentEnum, AllignmentTup
 __all__ = ['mol_schema', 'core_schema', 'ligand_schema', 'qd_schema', 'database_schema',
            'mongodb_schema', 'bde_schema', 'ligand_opt_schema', 'qd_opt_schema', 'crs_schema',
            'asa_schema', 'subset_schema', 'bulkiness_schema', 'cone_angle_schema',
-           'solvation_schema', 'SOLVATION_SOLVENTS',
+           'solvation_schema', 'SOLVATION_SOLVENTS', 'conformers_schema',
            'processes_schema', 'parallel_jobs_schema']
 
 #: Schema for validating ``optional.processes``: the number of processes,
@@ -565,6 +568,13 @@ ligand_schema: Schema = Schema({
             dict,
             And(bool, Use(lambda n: {} if n else False)),
             error='optional.ligand.solvation expects a boolean or dictionary'
+        ),
+
+    Optional_('conformers', default=False):  # Ligand conformer search
+        Or(
+            dict,
+            And(bool, Use(lambda n: {} if n else False)),
+            error='optional.ligand.conformers expects a boolean or dictionary'
         ),
 })
 
@@ -1150,6 +1160,48 @@ solvation_schema: Schema = Schema({
             dict,
             And(str, Use(lambda n: get_template(n, from_cat_data=False))),
             error='optional.ligand.solvation.s1 expects a string or a dictionary'
+        ),
+})
+
+
+#: Schema for validating the ``['optional']['ligand']['conformers']`` block.
+conformers_schema: Schema = Schema({
+    # Delete files after the calculations are finished
+    Optional_('keep_files', default=True):
+        And(bool, error='optional.ligand.conformers.keep_files expects a boolean'),
+
+    # The number of conformers generated with RDKit
+    Optional_('n', default=10):
+        And(int, lambda n: not isinstance(n, bool) and n >= 0,
+            error='optional.ligand.conformers.n expects a non-negative integer'),
+
+    # The random seed of RDKit
+    Optional_('seed', default=1):
+        And(int, lambda n: not isinstance(n, bool),
+            error='optional.ligand.conformers.seed expects an integer'),
+
+    # The job type of the geometry optimizations
+    Optional_('job1', default=lambda: TBLiteJob):
+        Or(
+            And(
+                And(type, lambda n: issubclass(n, Job), Use(val_job_type)),
+                error=('optional.ligand.conformers.job1 expects a type object '
+                       'that is a subclass of plams.Job')
+            ),
+            And(
+                str, Use(str_to_job_type),
+                error=('optional.ligand.conformers.job1 expects a string '
+                       'that is a valid plams.Job alias')
+            ),
+        ),
+
+    # The job settings
+    Optional_('s1', default=lambda: Settings()):
+        Or(
+            None,
+            dict,
+            And(str, Use(lambda n: get_template(n, from_cat_data=False))),
+            error='optional.ligand.conformers.s1 expects a string or a dictionary'
         ),
 })
 
