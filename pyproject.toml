@@ -79,6 +79,7 @@ test = [
     "sphinx>=2.4",
     "sphinx_rtd_theme",
     "tblite>=0.4; platform_system!='Windows'",  # No Windows wheels
+    "ase>=3.22.1",
 ]
 docs = [
     "sphinx>=2.4",
@@ -89,6 +90,9 @@ lint = [
 ]
 xtb = [
     "tblite>=0.4",
+]
+ase = [
+    "ase>=3.22.1",
 ]
 
 [tool.setuptools.packages.find]

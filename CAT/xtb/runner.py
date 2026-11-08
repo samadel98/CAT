@@ -102,28 +102,30 @@ def _print(msg: str) -> None:
 
 
 def parse_input(inp: Mapping[str, Any], defaults: Mapping[str, Any] = DEFAULTS,
-                prefix: str = "") -> dict[str, Any]:
+                prefix: str = "", tasks: frozenset[str] = TASKS) -> dict[str, Any]:
     """Return **defaults** updated with **inp**, raising a :exc:`KeyError` for unknown keys.
 
     Keys are case insensitive and dashes are equivalent to underscores.
+    The values of keys whose default is not a dictionary, *e.g.* ``None``, are not parsed.
+    The task must be one of **tasks**.
 
     """
     ret = dict(defaults)
     for key, value in inp.items():
         k = str(key).lower().replace("-", "_")
         if k not in defaults:
-            raise ValueError(f"Unknown TBLiteJob setting: 'input.{prefix}{key}'")
+            raise ValueError(f"Unknown setting: 'input.{prefix}{key}'")
         elif isinstance(defaults[k], Mapping):
             if not isinstance(value, Mapping):
                 raise TypeError(f"'input.{prefix}{key}' expects a dictionary")
-            ret[k] = parse_input(value, defaults[k], prefix=f"{prefix}{k}.")
+            ret[k] = parse_input(value, defaults[k], prefix=f"{prefix}{k}.", tasks=tasks)
         else:
             ret[k] = value
 
     task = ret.get("task")
-    if not prefix and str(task).lower() not in TASKS:
-        raise ValueError(f"Invalid TBLiteJob task: {task!r}; expected one of {sorted(TASKS)}")
-    model = ret.get("solvation_model")
+    if not prefix and str(task).lower() not in tasks:
+        raise ValueError(f"Invalid task: {task!r}; expected one of {sorted(tasks)}")
+    model = ret.get("solvation_model", "alpb")
     if not prefix and str(model).lower() not in SOLVATION_MODELS:
         raise ValueError(f"Invalid TBLiteJob solvation model: {model!r}; "
                          f"expected one of {sorted(SOLVATION_MODELS)}")
@@ -476,8 +478,14 @@ def write_xyz(filename: str, symbols: list[str], positions: list[list[float]],
             f.write(f"{symbol:<3} {x:16.10f} {y:16.10f} {z:16.10f}\n")
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Run the calculation of the JSON input file in **argv**; return the exit code."""
+def main(argv: list[str] | None = None,
+         runner: Callable[[Mapping[str, Any]], dict[str, Any]] | None = None) -> int:
+    """Run the calculation of the JSON input file in **argv**; return the exit code.
+
+    The calculation is run by **runner**, by default :func:`run`.
+
+    """
+    runner = run if runner is None else runner
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
         print("usage: python runner.py JOBNAME.in", file=sys.stderr)
@@ -487,7 +495,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with open(args[0]) as f:
             data = json.load(f)
-        ret = run(data)
+        ret = runner(data)
     except Exception as ex:
         # CAT reports the first line of stderr as the reason why a job failed
         print(f"{ex.__class__.__name__}: {ex}", file=sys.stderr)

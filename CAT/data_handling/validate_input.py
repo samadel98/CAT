@@ -49,7 +49,7 @@ from .anchor_parsing import parse_anchors
 from ..utils import validate_path, SetEnviron
 from ..parallel import get_processes
 from ..logger import logger
-from ..xtb import TBLiteJob
+from ..xtb import RunnerJob
 
 try:
     from dataCAT import Database
@@ -103,16 +103,18 @@ def parse_qmflows_keywords(bde_dict: dict[str, Any]) -> dict[str, Any]:
 
 
 def tblite_settings(raw: Mapping[str, Any], validated: dict[str, Any]) -> dict[str, Any]:
-    """Give a :class:`~CAT.xtb.TBLiteJob` without user-specified settings empty settings.
+    """Give a :class:`~CAT.xtb.RunnerJob` without user-specified settings empty settings.
 
     The default settings of ``s1`` and ``s2`` are meant for an
     :class:`~scm.plams.interfaces.adfsuite.ams.AMSJob` (or are ``None``).
-    They are replaced by empty settings if ``job1`` or ``job2`` is a TBLiteJob,
+    They are replaced by empty settings if ``job1`` or ``job2`` is a
+    :class:`~CAT.xtb.TBLiteJob` or :class:`~CAT.ase.ASEJob`,
     while the matching settings are absent from the unvalidated block, **raw**.
 
     """
     for job_key, s_key in [("job1", "s1"), ("job2", "s2")]:
-        if validated.get(job_key) is TBLiteJob and s_key not in raw:
+        job = validated.get(job_key)
+        if isinstance(job, type) and issubclass(job, RunnerJob) and s_key not in raw:
             validated[s_key] = Settings()
     return validated
 

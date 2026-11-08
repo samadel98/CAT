@@ -662,6 +662,7 @@ class WorkFlow(AbstractDataClass):
             * ``ORCAJob``
             * ``CRSJob``
             * ``TBLiteJob``
+            * ``ASEJob``
 
         Parameters
         ----------

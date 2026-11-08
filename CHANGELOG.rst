@@ -63,6 +63,9 @@ Unreleased
   without any external program (``pip install "nlesc-CAT[xtb]"``). It is available wherever CAT
   accepts a job type, with the ``"tblite"`` alias, *e.g.* for the ligand and quantum dot
   optimizations.
+* Add ``CAT.ase.ASEJob`` (alias ``"ase"``), which runs single points, geometry optimizations and
+  frequency analyses with any ASE calculator, *e.g.* machine-learned potentials such as MACE,
+  with the optimizer and frequency analysis of ``TBLiteJob`` (``pip install "nlesc-CAT[ase]"``).
 * Add the ``solvation`` and ``ipea`` tasks to ``TBLiteJob``: solvation free energies in a list of
   solvents, and vertical ionization potentials and electron affinities (with the empirical shift
   of ``xtb --vipea``), with the matching ``TBLiteResults`` getters.

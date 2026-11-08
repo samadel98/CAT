@@ -17,13 +17,16 @@ from scm.plams.core.basejob import SingleJob
 from ..logger import logger
 from ..mol_utils import rdkit_props
 
-__all__ = ["TBLiteJob", "TBLiteResults", "TEMPLATES", "check_tblite"]
+__all__ = [
+    "RunnerJob", "RunnerResults", "TBLiteJob", "TBLiteResults", "TEMPLATES", "check_tblite"
+]
 
 #: The path to the script that runs the calculation of a :class:`TBLiteJob`
 RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runner.py")
 
 #: The settings that the job presets of :mod:`CAT.jobs` add to the settings of a
-#: :class:`TBLiteJob`, the counterpart of the QMFlows templates used for other job types
+#: :class:`TBLiteJob` (or any other :class:`RunnerJob`),
+#: the counterpart of the QMFlows templates used for other job types
 TEMPLATES: Mapping[str, Settings] = MappingProxyType({
     "singlepoint": Settings({"task": "singlepoint"}),
     "geometry": Settings({"task": "geometry"}),
@@ -40,8 +43,8 @@ def check_tblite() -> None:
         raise ModuleNotFoundError(msg, name="tblite")
 
 
-class TBLiteResults(Results):
-    """The results of a :class:`TBLiteJob`."""
+class RunnerResults(Results):
+    """The results of a :class:`RunnerJob`, read from the JSON output of its runner script."""
 
     def _read(self) -> dict[str, Any]:
         with open(self["$JN.json"]) as f:
@@ -69,6 +72,21 @@ class TBLiteResults(Results):
             raise ResultsError(f"{self.job.name}: frequencies are only available for the "
                                "'frequencies' task")
         return np.asarray(Units.convert(np.array(freqs), "cm-1", unit))
+
+    def get_charges(self) -> np.ndarray:
+        """Return the atomic partial charges."""
+        charges = self._read()["charges"]
+        if charges is None:
+            raise ResultsError(f"{self.job.name}: the calculator does not compute charges")
+        return np.array(charges, dtype=np.float64)
+
+    def get_gradients(self) -> np.ndarray:
+        """Return the gradient of the final geometry in Hartree/Bohr."""
+        return np.array(self._read()["gradient"])
+
+
+class TBLiteResults(RunnerResults):
+    """The results of a :class:`TBLiteJob`."""
 
     def get_solvation_energies(self, unit: str = "Hartree") -> dict[str, float]:
         """Return the solvation free energy in each solvent, by default in Hartree.
@@ -107,36 +125,36 @@ class TBLiteResults(Results):
         """
         return self._get_ipea("electron_affinity", unit)
 
-    def get_charges(self) -> np.ndarray:
-        """Return the atomic partial charges."""
-        return np.array(self._read()["charges"])
 
-    def get_gradients(self) -> np.ndarray:
-        """Return the gradient of the final geometry in Hartree/Bohr."""
-        return np.array(self._read()["gradient"])
+def _to_json(value: Any, lower: bool = True) -> Any:
+    """Convert PLAMS Settings and NumPy objects into JSON-compatible ones.
 
+    The keys of mappings are converted into lowercase strings if **lower** is true.
 
-def _to_json(value: Any) -> Any:
-    """Convert PLAMS Settings and NumPy objects into JSON-compatible ones."""
+    """
     if isinstance(value, Mapping):
-        return {str(k).lower(): _to_json(v) for k, v in value.items()}
+        return {(str(k).lower() if lower else str(k)): _to_json(v, lower)
+                for k, v in value.items()}
     elif isinstance(value, (list, tuple, np.ndarray)):
-        return [_to_json(i) for i in value]
+        return [_to_json(i, lower) for i in value]
     elif isinstance(value, np.generic):
         return value.item()
     return value
 
 
-class TBLiteJob(SingleJob):
-    """A PLAMS job running an extended tight-binding (xTB) calculation with tblite.
+class RunnerJob(SingleJob):
+    """A PLAMS job running a calculation with a Python script, :attr:`RUNNER`.
 
-    The job runs GFN2-xTB by default, in a separate Python process
-    (see :mod:`CAT.xtb.runner`).
-    Its input settings are described in :ref:`xTB`.
+    The script is run with the Python interpreter of CAT. It reads the JSON input written
+    by :meth:`get_input`, and writes the results to ``JOBNAME.json`` and the final geometry
+    to ``JOBNAME.xyz``.
 
     """
 
-    _result_type = TBLiteResults
+    _result_type: type[RunnerResults] = RunnerResults
+
+    #: The path to the script that runs the calculation
+    RUNNER: str
 
     def get_input(self) -> str:
         """Return the JSON input of the runner script.
@@ -156,7 +174,7 @@ class TBLiteJob(SingleJob):
 
     def get_runscript(self) -> str:
         """Return the command that runs the runner script with this interpreter."""
-        ret = f'"{sys.executable}" "{RUNNER}" "{self._filename("inp")}"'
+        ret = f'"{sys.executable}" "{self.RUNNER}" "{self._filename("inp")}"'
         if self.settings.runscript.stdout_redirect:
             ret += f' >"{self._filename("out")}"'
         return ret + "\n"
@@ -167,3 +185,16 @@ class TBLiteJob(SingleJob):
             return bool(self.results._read()["converged"])
         except Exception:
             return False
+
+
+class TBLiteJob(RunnerJob):
+    """A PLAMS job running an extended tight-binding (xTB) calculation with tblite.
+
+    The job runs GFN2-xTB by default, in a separate Python process
+    (see :mod:`CAT.xtb.runner`).
+    Its input settings are described in :ref:`xTB`.
+
+    """
+
+    _result_type = TBLiteResults
+    RUNNER = RUNNER

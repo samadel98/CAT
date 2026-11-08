@@ -88,6 +88,7 @@ from .str_to_func import str_to_func
 from .._compat import ADFJob, UFFJob, BANDJob, DFTBJob, MOPACJob, ReaxFFJob
 from ..utils import get_template, validate_path, validate_core_atom, check_sys_var
 from ..xtb import TBLiteJob, check_tblite
+from ..ase import ASEJob, check_ase
 from ..mol_utils import to_atnum
 from ..utils import AllignmentEnum, AllignmentTup
 
@@ -149,6 +150,7 @@ JOB_MAP: Mapping[str, type[Job]] = MappingProxyType({
     'gamess': GamessJob, 'gamessjob': GamessJob,
     'dftbplus': DFTBPlusJob, 'dftbplusjob': DFTBPlusJob,
     'tblite': TBLiteJob, 'tblitejob': TBLiteJob, 'xtb': TBLiteJob,
+    'ase': ASEJob, 'asejob': ASEJob,
 })
 
 
@@ -176,14 +178,17 @@ FORMAT_NAMES2: tuple[str, ...] = ('pdb', 'xyz', 'mol', 'mol2')
 def val_job_type(value: type) -> type:
     """Check that the software of **value** is available.
 
-    Calls :func:`.check_sys_var` if **value** is in :data:`.JOB_MAP_SCM` and
-    :func:`.check_tblite` if it is :class:`~CAT.xtb.TBLiteJob`.
+    Calls :func:`.check_sys_var` if **value** is in :data:`.JOB_MAP_SCM`,
+    :func:`.check_tblite` if it is :class:`~CAT.xtb.TBLiteJob` and
+    :func:`.check_ase` if it is :class:`~CAT.ase.ASEJob`.
 
     """
     if value in JOB_MAP_SCM.values():
         check_sys_var()
     elif isinstance(value, type) and issubclass(value, TBLiteJob):
         check_tblite()
+    elif isinstance(value, type) and issubclass(value, ASEJob):
+        check_ase()
     return value
 
 

@@ -12,6 +12,8 @@ Index
 .. autosummary::
     TBLiteJob
     TBLiteResults
+    RunnerJob
+    RunnerResults
     check_tblite
 
 API
@@ -20,10 +22,15 @@ API
     :members: get_input, get_runscript, check
 .. autoclass:: TBLiteResults
     :members:
+    :inherited-members: Results
+.. autoclass:: RunnerJob
+.. autoclass:: RunnerResults
 .. autofunction:: check_tblite
 
 """
 
-from ._job import TBLiteJob, TBLiteResults, TEMPLATES, check_tblite
+from ._job import TBLiteJob, TBLiteResults, RunnerJob, RunnerResults, TEMPLATES, check_tblite
 
-__all__ = ["TBLiteJob", "TBLiteResults", "TEMPLATES", "check_tblite"]
+__all__ = [
+    "TBLiteJob", "TBLiteResults", "RunnerJob", "RunnerResults", "TEMPLATES", "check_tblite"
+]

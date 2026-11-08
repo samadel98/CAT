@@ -47,6 +47,8 @@ Aliases
 
 -   |TBLiteJob| = ``"tblite"`` = ``"tblitejob"`` = ``"xtb"`` (see :ref:`xTB`)
 
+-   |ASEJob| = ``"ase"`` = ``"asejob"`` (see :ref:`ASE`)
+
 
 .. |ADFJob| replace:: :class:`ADFJob<scm.plams.interfaces.adfsuite.adf.ADFJob>`
 .. |AMSJob| replace:: :class:`AMSJob<scm.plams.interfaces.adfsuite.ams.AMSJob>`
@@ -62,3 +64,4 @@ Aliases
 .. |DFTBPlusJob| replace:: :class:`DFTBPlusJob<scm.plams.interfaces.thirdparty.dftbplus.DFTBPlusJob>`
 .. |CRSJob| replace:: :class:`CRSJob<scm.plams.interfaces.adfsuite.crs.CRSJob>`
 .. |TBLiteJob| replace:: :class:`TBLiteJob<CAT.xtb.TBLiteJob>`
+.. |ASEJob| replace:: :class:`ASEJob<CAT.ase.ASEJob>`
