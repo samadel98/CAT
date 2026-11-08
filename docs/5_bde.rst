@@ -256,10 +256,11 @@ Arguments - Job Customization
         :Parameter:     * **Type** - :class:`bool`
                         * **Default value** – ``True``
 
-        Pre-optimize the |XYn| fragment with UFF.
+        Pre-optimize the |XYn| fragment, keeping its ion (|X|) frozen.
 
-        .. note::
-            Requires AMS.
+        The pre-optimization uses UFF if AMS is available (``$AMSBIN`` is set)
+        and GFN2-xTB otherwise (see :ref:`xTB`);
+        it is skipped, with a warning, if tblite is not installed either.
 
     .. attribute:: optional.qd.dissociate.job1
 

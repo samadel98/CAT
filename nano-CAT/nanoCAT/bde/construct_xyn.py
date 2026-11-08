@@ -20,14 +20,18 @@ API
 
 from __future__ import annotations
 
+import os
+import importlib.util
 from itertools import chain
 
 import numpy as np
-from scm.plams import MoleculeError, Molecule, Atom, AMSJob, axis_rotation_matrix
+from scm.plams import MoleculeError, Molecule, Atom, AMSJob, Settings, axis_rotation_matrix
 
 from CAT.jobs import job_geometry_opt  # noqa: F401
+from CAT.logger import logger
 from CAT.utils import get_template
 from CAT.mol_utils import to_atnum, rdkit_props
+from CAT.xtb import TBLiteJob
 
 __all__ = ['get_xyn', 'get_perpendicular_vec']
 
@@ -82,7 +86,9 @@ def get_xyn(
         If ``None``, return the ligand (:math:`Y`) without an additional ion.
 
     opt : bool
-        Perform a constrained geometry optimization (RDKit UFF) on the :math:`XY_{n}` complex.
+        Perform a constrained geometry optimization on the :math:`XY_{n}` complex,
+        with AMS UFF if AMS is available and GFN2-xTB (tblite) otherwise
+        (see :func:`_preoptimize`).
 
     Returns
     -------
@@ -121,7 +127,7 @@ def get_xyn(
     rdkit_props(X).pdb_info.ResidueName = 'COR'
     rdkit_props(X).pdb_info.ResidueNumber = 1
 
-    # Perform a constrained UFF optimization on XYn with X frozen
+    # Perform a constrained optimization on XYn with X frozen
     if opt:
         XYn.round_coords()
         _preoptimize(XYn)
@@ -190,18 +196,15 @@ def _construct_xyn(
         dist = anchor.radius + X.radius
 
         # Translate and rotate the ligand
-        #
-        # NOTE: `nan` can appear in the rotation matrix and `vec3`
-        # if the ligand only has a single atom
         mol.translate(vec1)
-        if not np.isnan(rotmat).all():
-            mol.rotate(rotmat)
-
-        vec3 = anchor.vector_to(mol.get_center_of_mass())
-        vec3 /= np.linalg.norm(vec3) / dist
-        if np.isnan(vec3).all():
-            mol.translate((0, 0, dist))
+        if len(mol) == 1:
+            # A monoatomic ligand (*e.g.* a halide) has no orientation;
+            # place the n ligands in a plane around X instead
+            mol.translate(dist * np.array([np.cos(angle), np.sin(angle), 0.0]))
         else:
+            mol.rotate(rotmat)
+            vec3 = anchor.vector_to(mol.get_center_of_mass())
+            vec3 /= np.linalg.norm(vec3) / dist
             mol.translate(vec3)
 
         # Set pdb attributes
@@ -216,12 +219,36 @@ def _construct_xyn(
     return XYn, X
 
 
+#: The settings of the GFN2-xTB pre-optimization of :func:`_preoptimize`;
+#: a loose convergence criterion suffices for a starting geometry
+XTB_PREOPT_SETTINGS = Settings({'input': {'geometry': {'gradient_tol': 5e-3, 'max_iter': 500}}})
+
+
 def _preoptimize(mol: Molecule) -> None:
-    """Perform a constrained geometry optimization of **mol** with AMS UFF."""
-    s = get_template('qd.yaml')['UFF']
-    s.input.ams.constraints.atom = mol.properties.indices
-    s.input.ams.GeometryOptimization.coordinatetype = 'Cartesian'
-    mol.job_geometry_opt(AMSJob, s, name='E_XYn_preopt')
+    """Perform a geometry optimization of **mol** with the ion frozen.
+
+    The frozen atoms are those in ``mol.properties.indices`` (1-based).
+
+    The optimization uses AMS UFF if AMS is available (*i.e.* ``$AMSBIN`` is set),
+    GFN2-xTB if tblite is installed and is skipped, with a warning, otherwise.
+    RDKit's UFF is no alternative, as it lacks parameters for most ions
+    (*e.g.* :math:`Cd^{2+}` with two ligands).
+
+    """
+    if os.environ.get('AMSBIN'):
+        s = get_template('qd.yaml')['UFF']
+        s.input.ams.constraints.atom = mol.properties.indices
+        s.input.ams.GeometryOptimization.coordinatetype = 'Cartesian'
+        mol.job_geometry_opt(AMSJob, s, name='E_XYn_preopt')
+    elif importlib.util.find_spec('tblite') is not None:
+        s = XTB_PREOPT_SETTINGS.copy()
+        s.input.constraints.atom = list(mol.properties.indices)
+        mol.job_geometry_opt(TBLiteJob, s, name='E_XYn_preopt')
+    else:
+        logger.warning(
+            f'{mol.properties.name}: skipping the pre-optimization of the XYn fragment, '
+            'as it requires either AMS ($AMSBIN is not set) or tblite (`pip install tblite`)'
+        )
 
 
 def _parse_ion(ion: Molecule | str | int) -> tuple[Molecule, Atom]:

@@ -159,6 +159,10 @@ class TestBDEWorkflowTBLite:
             "job2": TBLiteJob, "s2": Settings({"input": {"solvent": "water"}}),
         },
         "qd_opt": {"core_index": [3], "job1": TBLiteJob, "s1": Settings(), "qd_opt": True},
+        # Without AMS, the XYn fragment is pre-optimized with GFN2-xTB
+        "xyn_pre_opt": {
+            "core_index": [3], "job1": TBLiteJob, "s1": Settings(), "xyn_pre_opt": True,
+        },
     }
 
     @pytest.mark.parametrize("kwargs", PARAMS.values(), ids=PARAMS)
