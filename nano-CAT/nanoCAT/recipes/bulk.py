@@ -37,6 +37,7 @@ import numpy as np
 
 from scm.plams import Molecule, Atom, Bond
 from rdkit import Chem
+from rdkit.Chem import rdDepictor
 from CAT.data_handling.mol_import import read_mol
 from CAT.data_handling.validate_mol import validate_mol
 from CAT.data_handling.anchor_parsing import parse_anchors
@@ -267,7 +268,16 @@ def _molecule_from_rdmol(
     matches: Iterable[Sequence[int]],
     split: bool = True,
 ) -> Generator[Molecule, None, None]:
-    """Construct a PLAMS molecule from the passed rdkit mol's ``MolBlock``."""
+    """Construct a PLAMS molecule from the passed rdkit mol's ``MolBlock``.
+
+    If **split** is ``True``, the capping atom (*e.g.* the proton of a carboxylic acid), the last
+    atom of each match, is removed and the anchor atom, the first one, gets a negative charge.
+
+    """
+    # Lay out the complete molecule once, so that the capping atom does not affect the layout;
+    # `canonOrient=False` gives the same layout as `MolToMolBlock()` of a molecule without one
+    rdmol = Chem.Mol(rdmol)
+    rdDepictor.Compute2DCoords(rdmol, canonOrient=False)
     for tup in matches:
         try:
             i, *_, j = tup
@@ -288,12 +298,12 @@ def _molecule_from_rdmol(
             rdmol_new = rdmol
 
         # Parse the .mol block and convert it into a PLAMS molecule
-        mol_block = Chem.MolToMolBlock(rdmol)
-        iterator = _iter_mol_block(mol_block, size=rdmol.GetNumAtoms())
+        mol_block = Chem.MolToMolBlock(rdmol_new)
+        iterator = _iter_mol_block(mol_block, size=rdmol_new.GetNumAtoms())
         mol = Molecule()
         # Fill the existing list: `Molecule.as_array()` of PLAMS >= 2024 keeps the original list
         mol.atoms[:] = [Atom(symbol=symbol, coords=xyz, mol=mol) for symbol, xyz in iterator]
-        for bond in rdmol.GetBonds():
+        for bond in rdmol_new.GetBonds():
             at1 = mol.atoms[bond.GetBeginAtomIdx()]
             at2 = mol.atoms[bond.GetEndAtomIdx()]
             mol.add_bond(Bond(at1, at2, order=bond.GetBondTypeAsDouble()))

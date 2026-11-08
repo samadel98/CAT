@@ -44,6 +44,12 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
   not available, rather than failing; skip it with a warning if tblite is not installed either.
 * Fix the BDE workflow placing all monoatomic ligands (*e.g.* halides) of an |XYn| fragment on
   top of each other; they are now spread around the ion in a plane.
+* Fix ``fast_bulk_workflow()`` returning different bulkiness values from run to run: bonds were
+  identified by XOR-ing the hashes of their atoms, which can collide, so that whole branches of a
+  ligand were sometimes skipped.
+* Fix ``fast_bulk_workflow()`` keeping the capping atom (*e.g.* the proton of a carboxylic acid)
+  that it removes from the ligands; the anchor atom now carries the negative charge instead.
+  The geometries are otherwise unchanged.
 
 
 0.7.2
