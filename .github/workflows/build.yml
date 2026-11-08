@@ -1,0 +1,56 @@
+# Build the distributions of CAT, Nano-CAT and Data-CAT and validate them with twine;
+# nothing is published (the packages are installed from this repository)
+
+name: Build
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+    cancel-in-progress: true
+
+jobs:
+    build:
+        name: Build ${{ matrix.package }}
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    -   package: CAT
+                        path: .
+                    -   package: Nano-CAT
+                        path: nano-CAT
+                    -   package: Data-CAT
+                        path: data-CAT
+        defaults:
+            run:
+                working-directory: ${{ matrix.path }}
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
+
+            -   name: Set up Python
+                uses: actions/setup-python@v7
+                with:
+                    python-version: '3.14'
+
+            -   name: Install dependencies
+                run: pip install build twine
+
+            -   name: Build the package
+                run: python -m build --sdist --wheel
+
+            -   name: Validate the distributions
+                run: |
+                    ls -l dist
+                    twine check --strict dist/*

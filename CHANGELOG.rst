@@ -83,6 +83,11 @@ Unreleased
 * Fix the quantum dot optimization with AMS, and the ligand optimization with job settings of
   its own, crashing with PLAMS 2024 and later, whose ``Settings`` constructor no longer converts
   nested frozen settings (see the new ``CAT.frozen_settings.thaw_settings()``).
+* Add ``environment.yml``, a conda environment with CAT, Nano-CAT, Data-CAT and the
+  conda-forge builds of RDKit, h5py and tblite, whose optimized BLAS makes the xTB jobs about
+  8 times faster than the tblite wheels on PyPI; CI checks it weekly.
+* Replace the PyPI publishing workflow by a ``Build`` workflow that builds and checks the
+  distributions of the three packages; nothing is published.
 
 
 1.1.1

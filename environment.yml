@@ -1,0 +1,30 @@
+# A conda environment with CAT, Nano-CAT, Data-CAT and their dependencies.
+# The compiled dependencies come from conda-forge, including tblite (for the GFN2-xTB jobs),
+# which conda-forge links against an optimized BLAS library (OpenBLAS by default),
+# unlike the tblite wheels on PyPI.
+#
+#   conda env create -f environment.yml   # or mamba / micromamba
+#   conda activate cat
+#
+# AMS and CP2K, needed by some workflows, are installed separately.
+
+name: cat
+channels:
+    - conda-forge
+dependencies:
+    - python=3.13
+    - pip
+    - numpy>=2.1
+    - scipy
+    - pandas
+    - pyyaml
+    - rdkit=2026.09
+    - h5py
+    - pymongo
+    - tblite-python
+    - pip:
+        - plams>=1.5.1,<2024
+        - nlesc-CAT @ git+https://github.com/samadel98/CAT
+        - Nano-CAT @ git+https://github.com/samadel98/CAT#subdirectory=nano-CAT
+        - Data-CAT @ git+https://github.com/samadel98/CAT#subdirectory=data-CAT
+        - Auto-FOX @ git+https://github.com/samadel98/auto-FOX

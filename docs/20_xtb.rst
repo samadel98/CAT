@@ -154,7 +154,11 @@ Performance
     a single SCC iteration takes about 6 seconds on 4 cores and the SCC needed over 90 iterations.
     The PyPI wheels of tblite bundle the reference (unoptimized) BLAS and LAPACK libraries;
     the conda-forge packages (``conda install -c conda-forge tblite-python``) link against the
-    optimized BLAS and LAPACK of conda-forge instead, which matters most for large systems.
+    optimized BLAS and LAPACK of conda-forge instead, which matters most for large systems:
+    15 SCC iterations of the Cd\ :sub:`68`\ Se\ :sub:`55`\ Cl\ :sub:`26` core (149 atoms) took
+    3.8 seconds with conda-forge's tblite and 30 seconds with the PyPI wheel (4 cores).
+    The ``environment.yml`` file at the root of the repository creates a conda environment with
+    CAT, Nano-CAT, Data-CAT and conda-forge's tblite.
     Raise ``max_iter`` if the SCC does not converge.
 
     tblite uses OpenMP, its number of threads being set by the ``OMP_NUM_THREADS``
