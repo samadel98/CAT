@@ -105,7 +105,8 @@ jobs:
             -   name: Install this checkout
                 run: |
                     pip install --no-deps -e . -e ./nano-CAT -e ./data-CAT
-                    pip install pytest pytest-cov pytest-mock
+                    # The test-only dependencies; environment.yml has the runtime ones
+                    pip install pytest pytest-cov pytest-mock Nano-Utils AssertionLib
 
             -   name: Info installed packages
                 run: micromamba list
