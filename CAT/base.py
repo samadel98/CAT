@@ -22,6 +22,7 @@ API
 
 """
 
+import os
 from time import time
 
 import numpy as np
@@ -47,6 +48,7 @@ from .attachment.ligand_anchoring import init_ligand_anchoring
 from .attachment.core_anchoring import set_core_anchors
 
 from .workflows import MOL
+from .report import write_report
 
 try:
     import nanoCAT
@@ -57,6 +59,7 @@ try:
     from nanoCAT.ff.ff_assignment import init_ff_assignment
     from nanoCAT.cdft import init_cdft
     from nanoCAT.xtb_solvation import init_xtb_solv
+    from nanoCAT.conformers import init_conformers
     if Version(nanoCAT.__version__) >= Version("0.7.2"):
         from nanoCAT.cone_angle import init_cone_angle
         from nanoCAT.bulk.mol_graph2 import init_branch_distance
@@ -129,6 +132,10 @@ def prep(arg: Settings, return_mol: bool = True
 
     # The End
     delta_t = time() - time_start
+    if arg.optional.report:
+        filename = os.path.join(arg.path, arg.optional.report)
+        logger.info(f'Writing the report of the run to {filename!r}')
+        write_report(filename, qd_df, core_df, ligand_df, elapsed=delta_t)
     logger.info(f'Total elapsed time: {delta_t:.4f} sec')
 
     if return_mol:
@@ -259,6 +266,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     crs = ligand_df.settings.optional.ligand.crs
     cdft = ligand_df.settings.optional.ligand.cdft
     solvation = ligand_df.settings.optional.ligand.solvation
+    conformers = ligand_df.settings.optional.ligand.conformers
     cone_angle = ligand_df.settings.optional.ligand.cone_angle
     branch_distance = ligand_df.settings.optional.ligand.branch_distance
 
@@ -280,6 +288,11 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     else:
         for lig in ligand_df[MOL]:
             allign_axis(lig)
+
+    # Search for the lowest-energy conformers of the ligands
+    if conformers:
+        val_nano_cat("Ligand conformer searches require the nano-CAT package")
+        init_conformers(ligand_df)
 
     if branch_distance:
         val_nano_cat("The ligand branch-distance workflow requires the nano-CAT package")

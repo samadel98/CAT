@@ -18,6 +18,7 @@ Option                                    Description
 ========================================= =========================================================================================================
 :attr:`optional.processes`                The number of processes for the RDKit UFF ligand optimization.
 :attr:`optional.parallel_jobs`            The number of quantum chemical jobs that can run at the same time.
+:attr:`optional.report`                   Write an HTML report of the run, with all properties and a 3D view of every molecule.
 
 :attr:`optional.database.dirname`         The name of the directory where the database will be stored.
 :attr:`optional.database.read`            Attempt to read results from the database before starting calculations.
@@ -39,6 +40,7 @@ Option                                    Description
 :attr:`optional.ligand.cosmo-rs`          Perform a property calculation with COSMO-RS on the ligand.
 :attr:`optional.ligand.cdft`              Perform a conceptual DFT calculation with ADF or xTB on the ligand.
 :attr:`optional.ligand.solvation`         Compute the solvation free energy of the ligand with xTB in a list of solvents.
+:attr:`optional.ligand.conformers`        Search for the lowest-energy conformers of the ligand with RDKit and xTB.
 :attr:`optional.ligand.cone_angle`        Compute the smallest enclosing cone angle within a ligand.
 :attr:`optional.ligand.branch_distance`   Compute the size of branches and their distance w.r.t. to the anchor within a ligand.
 
@@ -59,6 +61,7 @@ Default Settings
     optional:
         processes: 1
         parallel_jobs: 1
+        report: False
 
         database:
             dirname: database
@@ -83,6 +86,7 @@ Default Settings
             cosmo-rs: False
             cdft: False
             solvation: False
+            conformers: False
             cone_angle: False
 
         qd:
@@ -166,6 +170,37 @@ Parallel jobs
             ligand:
                 optimize:
                     job2: tblite
+
+|
+
+Report
+------
+
+.. attribute:: optional.report
+
+    :Parameter:     * **Type** - :class:`bool` or :class:`str`
+                    * **Default Value** - ``False``
+
+    Write an HTML report of the run: a table of the quantum dots, ligands and cores
+    with all their properties (*e.g.* the results of the optional workflows),
+    and a 3D view of every molecule.
+
+    ``True`` writes ``report.html`` to the working directory (:attr:`path`);
+    a string sets the name of the file, relative to the working directory.
+    The report is a single, self-contained file that any web browser can open,
+    also without an internet connection.
+
+    Example:
+
+    .. code:: yaml
+
+        optional:
+            report: True
+
+    The report can also be written from Python, *e.g.* for the dataframes returned by
+    :func:`CAT.base.prep`, with :func:`CAT.report.write_report`.
+
+.. autofunction:: CAT.report.write_report
 
 |
 
@@ -674,6 +709,7 @@ Ligand
                 cosmo-rs: False
                 cdft: False
                 solvation: False
+                conformers: False
                 cone_angle: False
                 branch_distance: False
 
@@ -1081,6 +1117,62 @@ Ligand
                     ligand:
                         solvation:
                             solvents: [water, toluene, chcl3]
+
+
+    .. attribute:: optional.ligand.conformers
+
+        :Parameter:     * **Type** - :class:`bool` or :class:`dict`
+                        * **Default value** – ``False``
+
+        Search for the lowest-energy conformers of the ligand.
+
+        The conformers are the conformer of CAT (the one attached to the core) and
+        ``n`` conformers generated with RDKit (ETKDG), all optimized with GFN2-xTB
+        (:class:`~CAT.xtb.TBLiteJob`, see :ref:`xTB`) or with another job type.
+        Conformers whose energies differ by less than 0.1 kcal/mol and whose principal moments of
+        inertia differ by less than 1% are considered identical.
+        The unique conformers are written, lowest energy first, to
+        ``{ligand name}.conformers.xyz`` in the ligand directory (:attr:`optional.ligand.dirname`).
+
+        Two properties are stored:
+
+        * ``("conformers", "count")``: the number of unique conformers.
+        * ``("conformers", "E_rel")``: the energy of the conformer of CAT, after its optimization,
+          relative to the lowest-energy conformer, in kcal/mol.
+          CAT picks the conformer with the most extended ligand, which suits the ligand shell
+          of a quantum dot but is not necessarily the most stable one.
+
+        The search is also available as a function, :func:`nanoCAT.conformers.conformer_search`.
+        The geometry optimizations of the ligands run at the same time as set by
+        :attr:`optional.parallel_jobs`.
+
+        This block can be furthermore customized with one or more of the following keys:
+
+        * ``"n"``: The number of conformers generated with RDKit (default: ``10``).
+        * ``"seed"``: The random seed of RDKit (default: ``1``).
+        * ``"keep_files"``: Whether or not to keep the output files afterwards.
+        * ``"job1"``: The job type of the geometry optimizations, *e.g.* ``"ase"`` for a
+          machine-learned potential (see :ref:`ASE`) (default: ``"tblite"``).
+        * ``"s1"``: The job settings of the geometry optimizations.
+
+        .. admonition:: Examples
+
+            .. code:: yaml
+
+                optional:
+                    ligand:
+                        conformers: True
+
+            .. code:: yaml
+
+                optional:
+                    ligand:
+                        conformers:
+                            n: 50
+                            job1: tblite
+                            s1:
+                                input:
+                                    solvent: toluene
 
 
     .. attribute:: optional.ligand.cone_angle

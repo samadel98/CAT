@@ -47,6 +47,9 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
   see ``nanoCAT.cdft.get_xtb_descriptors()``.
 * Add ``nanoCAT.xtb_solvation``, the ``optional.ligand.solvation`` workflow, which computes
   ligand solvation free energies with GFN2-xTB and the ALPB solvation model.
+* Add ``nanoCAT.conformers``: ``conformer_search()``, which optimizes an RDKit conformer ensemble
+  with GFN2-xTB (or any other job) and sorts the unique conformers by energy, and the
+  ``optional.ligand.conformers`` workflow.
 * Fix the BDE workflow placing all monoatomic ligands (*e.g.* halides) of an |XYn| fragment on
   top of each other; they are now spread around the ion in a plane.
 * Fix ``fast_bulk_workflow()`` returning different bulkiness values from run to run: bonds were
