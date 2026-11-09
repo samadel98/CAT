@@ -8,14 +8,22 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from nanoutils import PathType
+from CAT._nanoutils import PathType
 from CAT.workflows import HDF5_INDEX
 
 __all__: list[str] = []
 
 
 def _update_hdf5_settings(f: h5py.File, df: pd.DataFrame, column: str) -> None:
-    """Export all files in **df[column]** to hdf5 dataset **column**."""
+    """Export all files in **df[column]** to hdf5 dataset **column**.
+
+    The dataset is created if it does not exist yet, *e.g.* for a workflow that is newer
+    than the database.
+
+    """
+    if column not in f:
+        f.create_dataset(column, data=np.empty((0, 1, 1), dtype='S120'), chunks=True,
+                         maxshape=(None, None, None), compression='gzip')
     i, j, k = f[column].shape
 
     # Create a 3D array of input files

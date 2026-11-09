@@ -43,13 +43,11 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "Nano-Utils>=2.3.1",
     "numpy>=1.21.2",
     "numpy>=2.1; python_version>='3.13'",  # NumPy 1.x has no wheels for Python >= 3.13
     "scipy>=1.7.2",
     "pandas>=1.4.0",
     "pyyaml>=6.0",
-    "AssertionLib>=2.3",
     "noodles>=0.3.3",
     "more-itertools>=1.0",
     # Nano-CAT supports PLAMS >= 2024, but no QMFlows release does (they need the removed `ADFJob`);
@@ -74,6 +72,8 @@ lint = [
 test = [
     "pytest>=6.2.5",
     "pytest-cov",
+    "Nano-Utils>=2.3.1",
+    "AssertionLib>=2.3",
     "tblite>=0.4; platform_system!='Windows'",  # No Windows wheels
 ]
 

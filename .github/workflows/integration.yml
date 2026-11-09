@@ -81,3 +81,38 @@ jobs:
                 env:
                     DATACAT_REQUIRE_MONGODB: '1'
                 run: pytest --no-cov
+
+    conda:
+        # Check that `environment.yml` works (and that its conda-forge tblite runs the xTB jobs),
+        # with this checkout of CAT, Nano-CAT and Data-CAT installed over the released ones
+        name: conda environment (environment.yml)
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+        defaults:
+            run:
+                shell: bash -el {0}
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    persist-credentials: false
+
+            -   name: Create the conda environment
+                uses: mamba-org/setup-micromamba@v2
+                with:
+                    environment-file: environment.yml
+                    cache-environment: false
+
+            -   name: Install this checkout
+                run: |
+                    pip install --no-deps -e . -e ./nano-CAT -e ./data-CAT
+                    pip install pytest pytest-cov pytest-mock
+
+            -   name: Info installed packages
+                run: micromamba list
+
+            -   name: Test the xTB jobs
+                run: pytest --no-cov tests/test_xtb.py
+
+            -   name: Test the Nano-CAT BDE workflow with xTB
+                working-directory: nano-CAT
+                run: pytest --no-cov -m "not slow" tests/test_bde_workflow.py tests/test_construct_xyn.py

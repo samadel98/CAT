@@ -29,7 +29,7 @@ from qmflows.cp2k_utils import prm_to_df
 from qmflows.packages import registry, CP2KMM_Result
 from noodles.run.threading.sqlite3 import run_parallel
 
-from nanoutils import SetAttr
+from CAT._nanoutils import SetAttr
 from nanoCAT.ff import MatchJob
 from nanoCAT.qd_opt_ff import constrain_charge
 from FOX import PSFContainer, PRMContainer

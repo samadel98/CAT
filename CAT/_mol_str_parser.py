@@ -22,8 +22,9 @@ import textwrap
 from typing import Any
 from collections.abc import Callable
 
-from nanoutils import PartialPrepend
 from packaging.version import Version
+
+from ._nanoutils import PartialPrepend
 
 try:
     import rdkit

@@ -74,7 +74,7 @@ class GraphConstructor:
 
     """
 
-    id_set: set[int]
+    id_set: set[frozenset[int]]
     neighbor_dict: dict[Molecule, NeighborTuple]
 
     @property
@@ -148,12 +148,15 @@ class GraphConstructor:
         mol_prev: None | Molecule = None,
     ) -> NeighborTuple:
         """Construct a :class:`NeighborTuple` for **mol**."""
-        intersection = self.bond_mapping.keys() & set(mol)
+        # Sort the atoms (rather than iterating over a set) and identify bonds by the indices
+        # of their atoms (rather than XOR-ing their hashes, which can collide),
+        # as either made the graph, and thus the bulkiness, vary between runs
+        intersection = sorted(self.bond_mapping.keys() & set(mol), key=lambda at: at.id)
 
         mol_next = {}
         iterator = ((at, self.bond_mapping[at]) for at in intersection)
         for at1, at2 in iterator:
-            id = hash(at1) ^ hash(at2)
+            id = frozenset((at1.id, at2.id))
             if id not in self.id_set:
                 self.id_set.add(id)
                 dist = self.dist_mat[at1.id, start.id].item()

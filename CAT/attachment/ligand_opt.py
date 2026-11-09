@@ -62,6 +62,7 @@ from ..jobs import job_geometry_opt  # noqa: F401
 from ..utils import KindEnum, AnchorTup
 from ..parallel import parallel_map, thread_map, pack_atom_refs, unpack_atom_refs
 from ..xtb import TBLiteJob
+from ..ase import ASEJob
 from ..frozen_settings import thaw_settings
 
 if TYPE_CHECKING:
@@ -127,6 +128,7 @@ CHARGE_FUNC_MAPPING: Mapping[type[Job], ChargeFunc] = MappingProxyType({
         (AMSJob, _set_charge_amsjob),
         (Cp2kJob, _set_charge_cp2kjob),
         (TBLiteJob, _set_charge_tblitejob),
+        (ASEJob, _set_charge_tblitejob),
     ] if k is not None
 })
 

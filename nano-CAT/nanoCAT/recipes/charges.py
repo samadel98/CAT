@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from scm.plams import Molecule, Settings, init, finish
-from nanoutils import as_nd_array
+from CAT._nanoutils import as_nd_array
 from nanoCAT.ff import run_match_job
 
 __all__ = ['get_lig_charge']

@@ -41,12 +41,12 @@ from scipy.spatial.distance import cdist
 
 from scm.plams import Molecule, Atom, MoleculeError
 from scm.plams.interfaces.molecule import rdkit as molkit
-from assertionlib.dataclass import AbstractDataClass
+from CAT._dataclass import AbstractDataClass
 
 from CAT.utils import iter_repeat
 from CAT.mol_utils import to_atnum, rdkit_props
 from CAT.attachment.ligand_anchoring import _smiles_to_rdmol
-from nanoutils import group_by_values
+from CAT._nanoutils import group_by_values
 
 from .guess_core_dist import guess_core_core_dist
 from .identify_surface import identify_surface

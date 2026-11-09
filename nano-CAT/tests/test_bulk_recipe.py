@@ -157,7 +157,6 @@ class TestFastBulkWorkflow:
                 mol.unset_atoms_id()
         self.assert_ex_dict(ex_dict, i)
 
-    @pytest.mark.xfail(reason="FIXME")
     def test_bulk(self, output: Output) -> None:
         """Validate the output bulkiness values."""
         np.testing.assert_allclose(output.bulk, output.bulk_ref)

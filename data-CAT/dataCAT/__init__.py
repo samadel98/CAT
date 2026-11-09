@@ -2,7 +2,7 @@
 
 # ruff: noqa: F401, E402
 
-from nanoutils import VersionInfo
+from CAT._nanoutils import VersionInfo
 
 from .__version__ import __version__
 

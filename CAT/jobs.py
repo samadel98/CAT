@@ -51,7 +51,7 @@ from .logger import (logger, log_start, log_succes, log_fail, log_copy)
 from .mol_utils import rdkit_props
 from .thermo_chem import get_thermo
 from .utils import type_to_string
-from .xtb import TBLiteJob, TEMPLATES as TBLITE_TEMPLATES
+from .xtb import RunnerJob, TEMPLATES as TBLITE_TEMPLATES
 from .frozen_settings import thaw_settings
 
 __all__ = ['job_single_point', 'job_geometry_opt', 'job_freq']
@@ -125,11 +125,11 @@ def get_job_template(job_type: type[Job], template_name: str) -> Settings:
     """Return the input settings of a job preset for **job_type**.
 
     These are the settings of a QMFlows template, or :data:`CAT.xtb.TEMPLATES` for
-    a :class:`~CAT.xtb.TBLiteJob`.
+    a :class:`~CAT.xtb.TBLiteJob` or :class:`~CAT.ase.ASEJob`.
     **template_name** is ``"singlepoint"``, ``"geometry"`` or ``"freq"``.
 
     """
-    if issubclass(job_type, TBLiteJob):
+    if issubclass(job_type, RunnerJob):
         return TBLITE_TEMPLATES[template_name].copy()
     type_key = type_to_string(job_type)
     return getattr(qmflows, template_name)['specific'][type_key].copy()
@@ -161,15 +161,16 @@ def freeze_atoms(job_type: type[Job] | None, s: Settings | None,
                  indices: Sequence[int]) -> Settings | None:
     """Return a copy of **s** that freezes the atoms in **indices** (1-based).
 
-    Constraints are supported by :class:`~scm.plams.interfaces.adfsuite.ams.AMSJob` and
-    :class:`~CAT.xtb.TBLiteJob`; **s** is returned unchanged for other job types.
+    Constraints are supported by :class:`~scm.plams.interfaces.adfsuite.ams.AMSJob`,
+    :class:`~CAT.xtb.TBLiteJob` and :class:`~CAT.ase.ASEJob`;
+    **s** is returned unchanged for other job types.
 
     """
     if job_type is AMSJob:
         ret = thaw_settings(s)
         ret.input.ams.constraints.atom = list(indices)
         return ret
-    elif job_type is TBLiteJob:
+    elif isinstance(job_type, type) and issubclass(job_type, RunnerJob):
         ret = thaw_settings(s)
         ret.input.constraints.atom = list(indices)
         return ret

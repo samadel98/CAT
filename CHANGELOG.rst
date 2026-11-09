@@ -63,9 +63,22 @@ Unreleased
   without any external program (``pip install "nlesc-CAT[xtb]"``). It is available wherever CAT
   accepts a job type, with the ``"tblite"`` alias, *e.g.* for the ligand and quantum dot
   optimizations.
+* Add ``CAT.ase.ASEJob`` (alias ``"ase"``), which runs single points, geometry optimizations and
+  frequency analyses with any ASE calculator, *e.g.* machine-learned potentials such as MACE,
+  with the optimizer and frequency analysis of ``TBLiteJob`` (``pip install "nlesc-CAT[ase]"``).
+* Add the ``solvation`` and ``ipea`` tasks to ``TBLiteJob``: solvation free energies in a list of
+  solvents, and vertical ionization potentials and electron affinities (with the empirical shift
+  of ``xtb --vipea``), with the matching ``TBLiteResults`` getters.
+* Add the ``optional.ligand.solvation`` workflow, which computes the solvation free energies of
+  the ligands with GFN2-xTB and the ALPB solvation model, without AMS or COSMO-RS.
+* Add xTB-based conceptual DFT descriptors: ``optional.ligand.cdft`` with ``job1: TBLiteJob``
+  computes them from IPEA1-xTB ionization potentials and electron affinities, without ADF.
 * Add ``optional.parallel_jobs``: the number of quantum chemical jobs of the ligand and quantum
   dot optimizations that run at the same time (*e.g.* with ``TBLiteJob``), with one OpenMP
   thread each unless ``OMP_NUM_THREADS`` is set (``CAT.parallel.thread_map()``).
+* Fix rerunning a job with the same input as an earlier job (the rerun prevention of PLAMS),
+  which raised ``AttributeError: 'str' object has no attribute 'job'`` with PLAMS < 2024 on
+  Python 3.10 and later, *e.g.* when running CAT twice in the same folder without Data-CAT.
 * Fix ``Molecule.as_array()`` returning the coordinates in the old order of the atoms, with
   PLAMS 2024 and later, after CAT reordered them: for canonicalized input molecules, ligands
   optimized with ``optional.processes`` and imported quantum dots (``input_qd``).
@@ -83,6 +96,14 @@ Unreleased
 * Fix the quantum dot optimization with AMS, and the ligand optimization with job settings of
   its own, crashing with PLAMS 2024 and later, whose ``Settings`` constructor no longer converts
   nested frozen settings (see the new ``CAT.frozen_settings.thaw_settings()``).
+* Add ``environment.yml``, a conda environment with CAT, Nano-CAT, Data-CAT and the
+  conda-forge builds of RDKit, h5py and tblite, whose optimized BLAS makes the xTB jobs about
+  8 times faster than the tblite wheels on PyPI; CI checks it weekly.
+* Replace the PyPI publishing workflow by a ``Build`` workflow that builds and checks the
+  distributions of the three packages; nothing is published.
+* Drop the runtime dependencies on Nano-Utils and AssertionLib, which are no longer maintained:
+  the few utilities CAT, Nano-CAT and Data-CAT used are copied into ``CAT._nanoutils`` and
+  ``CAT._dataclass``. Both remain test dependencies.
 
 
 1.1.1

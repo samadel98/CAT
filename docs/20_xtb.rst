@@ -120,8 +120,16 @@ An unknown key makes the job fail.
     *   - ``constraints.atom``
         - ``[]``
         - The 1-based indices of the atoms that are frozen during geometry optimizations.
+    *   - ``solvents``
+        - ``[]``
+        - The solvents of the ``solvation`` task.
+    *   - ``ipea_shift``
+        - ``0.178069``
+        - The empirical shift subtracted from the ionization potential and electron affinity
+          of the ``ipea`` task, in Hartree (:data:`CAT.xtb.runner.IPEA_SHIFT`).
 
-The ``task`` key (``singlepoint``, ``geometry`` or ``frequencies``) is set by CAT.
+The ``task`` key (``singlepoint``, ``geometry``, ``frequencies``, ``solvation`` or ``ipea``)
+is set by CAT.
 
 
 Details
@@ -148,13 +156,31 @@ Frequencies
     like all frequencies below 100 cm\ :sup:`-1`, they are set to 100 cm\ :sup:`-1` when
     computing thermochemical properties (see :func:`~CAT.thermo_chem.get_thermo`).
 
+Ligand descriptors
+    The ``solvation`` task computes the solvation free energy in each of the ``solvents``:
+    the energy with the implicit solvation model minus the gas-phase energy, at the same
+    geometry (:meth:`TBLiteResults.get_solvation_energies()
+    <CAT.xtb.TBLiteResults.get_solvation_energies>`).
+    The ``ipea`` task computes the vertical ionization potential and electron affinity
+    (:meth:`~CAT.xtb.TBLiteResults.get_ionization_potential` and
+    :meth:`~CAT.xtb.TBLiteResults.get_electron_affinity`) like ``xtb --vipea``,
+    including its empirical shift; use it with ``method: IPEA1-xTB``.
+    With IPEA1-xTB, the ionization potentials of benzene and nitrobenzene are within 0.3 eV
+    of experiment, that of water 1.1 eV too high.
+    They are used by :attr:`optional.ligand.solvation` and
+    :attr:`optional.ligand.cdft` (with ``job1: TBLiteJob``).
+
 Performance
     Ligands take seconds, but quantum dots with hundreds of atoms are expensive:
     for a Cd\ :sub:`68`\ Se\ :sub:`55` core with 26 acetates (305 atoms), as built by CAT,
     a single SCC iteration takes about 6 seconds on 4 cores and the SCC needed over 90 iterations.
     The PyPI wheels of tblite bundle the reference (unoptimized) BLAS and LAPACK libraries;
     the conda-forge packages (``conda install -c conda-forge tblite-python``) link against the
-    optimized BLAS and LAPACK of conda-forge instead, which matters most for large systems.
+    optimized BLAS and LAPACK of conda-forge instead, which matters most for large systems:
+    15 SCC iterations of the Cd\ :sub:`68`\ Se\ :sub:`55`\ Cl\ :sub:`26` core (149 atoms) took
+    3.8 seconds with conda-forge's tblite and 30 seconds with the PyPI wheel (4 cores).
+    The ``environment.yml`` file at the root of the repository creates a conda environment with
+    CAT, Nano-CAT, Data-CAT and conda-forge's tblite.
     Raise ``max_iter`` if the SCC does not converge.
 
     tblite uses OpenMP, its number of threads being set by the ``OMP_NUM_THREADS``
@@ -172,4 +198,4 @@ API
 .. automodule:: CAT.xtb
 
 .. automodule:: CAT.xtb.runner
-    :members: DEFAULTS, run, main
+    :members: DEFAULTS, IPEA_SHIFT, run, main

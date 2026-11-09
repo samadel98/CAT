@@ -38,12 +38,25 @@ This project adheres to `Semantic Versioning <http://semver.org/>`_.
   that supports them, like CAT: import ``ADFJob`` only where PLAMS still has it, read the formal
   charges and PDB info of atoms with ``CAT.mol_utils.rdkit_props()``, and keep
   ``Molecule.as_array()`` in sync with the atoms of the molecules that Nano-CAT builds.
-  The conceptual DFT workflow, which needs ``ADFJob``, still requires PLAMS < 2024.
+  The ADF-based conceptual DFT workflow, which needs ``ADFJob``, still requires PLAMS < 2024.
 * Test with the latest PLAMS in CI.
 * Pre-optimize the |XYn| fragment of the BDE workflow (``xyn_pre_opt``) with GFN2-xTB when AMS is
   not available, rather than failing; skip it with a warning if tblite is not installed either.
+* Add xTB-based conceptual DFT descriptors (``optional.ligand.cdft`` with ``job1: TBLiteJob``),
+  computed from IPEA1-xTB ionization potentials and electron affinities without ADF;
+  see ``nanoCAT.cdft.get_xtb_descriptors()``.
+* Add ``nanoCAT.xtb_solvation``, the ``optional.ligand.solvation`` workflow, which computes
+  ligand solvation free energies with GFN2-xTB and the ALPB solvation model.
 * Fix the BDE workflow placing all monoatomic ligands (*e.g.* halides) of an |XYn| fragment on
   top of each other; they are now spread around the ion in a plane.
+* Fix ``fast_bulk_workflow()`` returning different bulkiness values from run to run: bonds were
+  identified by XOR-ing the hashes of their atoms, which can collide, so that whole branches of a
+  ligand were sometimes skipped.
+* Fix ``fast_bulk_workflow()`` keeping the capping atom (*e.g.* the proton of a carboxylic acid)
+  that it removes from the ligands; the anchor atom now carries the negative charge instead.
+  The geometries are otherwise unchanged.
+* Drop the runtime dependencies on Nano-Utils and AssertionLib (now only needed for the tests);
+  Nano-CAT uses the copies of their utilities in CAT instead.
 
 
 0.7.2

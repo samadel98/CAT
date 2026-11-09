@@ -185,7 +185,7 @@ API
     .
 
     Field names are based on their, identically named, counterpart in
-    the :class:`nanoutils.VersionInfo` namedtuple.
+    the :class:`~CAT._nanoutils.VersionInfo` namedtuple.
 
     .. code:: python
 

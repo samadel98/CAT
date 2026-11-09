@@ -29,7 +29,7 @@ from scm.plams import read_molecules, Molecule
 from scm.plams.interfaces.molecule.rdkit import to_rdmol
 from rdkit.Chem import rdMolDescriptors, FindMolChiralCenters, Mol
 
-from nanoutils import PathType
+from CAT._nanoutils import PathType
 from CAT.logger import logger
 from CAT.attachment.dye import label_lig, label_core, substitution
 from CAT.attachment.substitution_symmetry import del_equiv_structures

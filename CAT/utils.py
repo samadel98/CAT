@@ -34,6 +34,7 @@ import operator
 import threading
 import functools
 import pprint
+import reprlib
 from types import MappingProxyType, TracebackType
 from shutil import rmtree
 from logging import Logger
@@ -64,6 +65,7 @@ from .mol_utils import to_atnum, rdkit_props
 from .gen_job_manager import GenJobManager
 from ._mol_str_parser import FormatEnum
 from .xtb import TBLiteJob
+from .ase import ASEJob
 
 pformat = functools.partial(pprint.pformat, sort_dicts=False, compact=True)
 
@@ -71,7 +73,7 @@ __all__ = [
     'JOB_MAP', 'check_sys_var', 'dict_concatenate', 'get_template',
     'cycle_accumulate', 'iter_repeat', 'get_nearest_neighbors',
     'log_traceback_locals', 'KindEnum', 'AnchorTup', 'AllignmentEnum',
-    'AllignmentTup', 'FormatEnum',
+    'AllignmentTup', 'FormatEnum', 'short_repr',
 ]
 
 JOB_MAP: Mapping[type[Job], str] = MappingProxyType({
@@ -84,6 +86,7 @@ JOB_MAP: Mapping[type[Job], str] = MappingProxyType({
         (ORCAJob, 'orca'),
         (CRSJob, 'cosmo-rs'),
         (TBLiteJob, 'tblite'),
+        (ASEJob, 'ase'),
     ] if k is not None
 })
 
@@ -643,3 +646,19 @@ def get_formula(mol: Molecule) -> str:
     """
     dct = Counter(at.symbol for at in mol)
     return "".join(f"{at}{i}" for at, i in sorted(dct.items()))
+
+
+def short_repr(obj: object) -> str:
+    """Return a shortened :func:`repr` of **obj** for log and error messages.
+
+    NumPy arrays and pandas objects are summarized, with at most three items at each end of an
+    axis; other objects are shortened with :func:`reprlib.repr`.
+
+    """
+    if isinstance(obj, np.ndarray):
+        with np.printoptions(threshold=20, edgeitems=3):
+            return repr(obj)
+    elif hasattr(obj, "to_string") and hasattr(obj, "shape"):  # A pandas object
+        ret: str = obj.to_string(max_rows=6, max_cols=6)
+        return ret
+    return reprlib.repr(obj)

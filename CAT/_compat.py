@@ -10,7 +10,7 @@ import numpy as np
 import scm.plams.interfaces.molecule.rdkit as molkit
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from scm.plams import Atom, Molecule
+from scm.plams import Atom, Molecule, Results
 from scm.plams.core.basejob import Job
 
 __all__ = [
@@ -107,3 +107,23 @@ BANDJob = _import_legacy_job("band", "BANDJob")
 DFTBJob = _import_legacy_job("dftb", "DFTBJob")
 MOPACJob = _import_legacy_job("mopac", "MOPACJob")
 ReaxFFJob = _import_legacy_job("reaxff", "ReaxFFJob")
+
+
+def _fix_results_copy() -> None:
+    """Fix copying the results of a previously run job in PLAMS < 2024 on Python >= 3.10.
+
+    PLAMS wraps every callable attribute of :class:`~scm.plams.Results` in an access guard that
+    expects ``self`` to be a :class:`~scm.plams.Results` instance. Static methods are callable
+    since Python 3.10, so the static method ``Results._replace_job_name()`` is wrapped as well.
+    Its first argument is a file name, so rerunning a job with the same input
+    (see the rerun prevention of PLAMS) raises
+    ``AttributeError: 'str' object has no attribute 'job'``.
+    """
+    func = Results.__dict__.get("_replace_job_name")
+    # The original static method if `func` is the access guard; otherwise a plain function
+    wrapped = getattr(func, "__wrapped__", None)
+    if isinstance(wrapped, staticmethod):
+        Results._replace_job_name = wrapped  # type: ignore[method-assign]
+
+
+_fix_results_copy()

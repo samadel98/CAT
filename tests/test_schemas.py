@@ -129,6 +129,7 @@ def test_ligand_schema() -> None:
         'cdft': False,
         'cone_angle': False,
         'branch_distance': False,
+        'solvation': False,
     }
 
     assertion.eq(ligand_schema.validate(lig_dict), ref)

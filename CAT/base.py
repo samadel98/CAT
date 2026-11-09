@@ -56,6 +56,7 @@ try:
     from nanoCAT.ligand_solvation import init_solv
     from nanoCAT.ff.ff_assignment import init_ff_assignment
     from nanoCAT.cdft import init_cdft
+    from nanoCAT.xtb_solvation import init_xtb_solv
     if Version(nanoCAT.__version__) >= Version("0.7.2"):
         from nanoCAT.cone_angle import init_cone_angle
         from nanoCAT.bulk.mol_graph2 import init_branch_distance
@@ -257,6 +258,7 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     optimize = ligand_df.settings.optional.ligand.optimize
     crs = ligand_df.settings.optional.ligand.crs
     cdft = ligand_df.settings.optional.ligand.cdft
+    solvation = ligand_df.settings.optional.ligand.solvation
     cone_angle = ligand_df.settings.optional.ligand.cone_angle
     branch_distance = ligand_df.settings.optional.ligand.branch_distance
 
@@ -289,6 +291,11 @@ def prep_ligand(ligand_df: SettingsDataFrame) -> SettingsDataFrame:
     if crs:
         val_nano_cat("Ligand COSMO-RS calculations require the nano-CAT package")
         init_solv(ligand_df)
+
+    # Compute solvation free energies with xTB
+    if solvation:
+        val_nano_cat("Ligand solvation energies with xTB require the nano-CAT package")
+        init_xtb_solv(ligand_df)
 
     # Assign CHARMM CGenFF atom types to all ligands
     if forcefield:

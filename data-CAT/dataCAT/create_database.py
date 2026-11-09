@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 from pymongo import MongoClient, ASCENDING
 
-from nanoutils import PathType
+from CAT._nanoutils import PathType
 from CAT.logger import logger
 
 from .dtype import BACKUP_IDX_DTYPE, LIG_IDX_DTYPE, QD_IDX_DTYPE, FORMULA_DTYPE, LIG_COUNT_DTYPE
@@ -186,7 +186,7 @@ def create_hdf5(path, name='structures.hdf5'):  # noqa: E302
     kwargs_3d = {'chunks': True, 'maxshape': (None, None, None), 'compression': 'gzip'}
     dataset_names_3d = (
         'job_settings_crs', 'job_settings_qd_opt', 'job_settings_BDE', 'job_settings_ASA',
-        'job_settings_cdft'
+        'job_settings_cdft', 'job_settings_cdft_xtb', 'job_settings_solv_xtb',
     )
 
     with h5py.File(path, 'a', libver='latest') as f:

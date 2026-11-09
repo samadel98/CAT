@@ -35,7 +35,7 @@ from qmflows import adf, Settings
 from qmflows.utils import InitRestart
 from qmflows.packages import registry, Package, Result
 from noodles.run.threading.sqlite3 import run_parallel
-from nanoutils import SetAttr, split_dict
+from CAT._nanoutils import SetAttr, split_dict
 
 from nanoCAT.cdft import _CDFT, cdft, get_global_descriptors
 

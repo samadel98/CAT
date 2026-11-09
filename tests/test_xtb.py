@@ -13,7 +13,7 @@ from collections.abc import Generator
 import numpy as np
 import pytest
 from scm.plams import (
-    AMSJob, Cp2kJob, JobManager, Molecule, Settings, config, from_smiles, init
+    AMSJob, Cp2kJob, JobManager, Molecule, ResultsError, Settings, config, from_smiles, init
 )
 
 from CAT.jobs import get_job_template
@@ -163,6 +163,72 @@ def test_run_water() -> None:
 
 
 @requires_tblite
+def test_run_solvation() -> None:
+    """Compute the solvation free energies of water with GFN2-xTB and ALPB."""
+    def energy(**inp: Any) -> float:
+        return runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)["energy"]
+
+    # The `solvent` setting is ignored: the reference is the gas phase
+    inp = {"task": "solvation", "solvents": ["water", "toluene"], "solvent": "hexane"}
+    ret = runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)
+    assert ret["energy"] == pytest.approx(energy(), abs=1e-8)
+    assert list(ret["solvation_energies"]) == ["water", "toluene"]
+    for solvent, e_solv in ret["solvation_energies"].items():
+        assert e_solv == pytest.approx(energy(solvent=solvent) - ret["energy"], abs=1e-8)
+    assert ret["solvation_energies"]["water"] < ret["solvation_energies"]["toluene"] < 0
+    assert ret["ionization_potential"] is None
+
+    ret2 = runner.run({"input": {"task": "solvation"}, "atoms": WATER}, log=lambda msg: None)
+    assert ret2["solvation_energies"] == {}
+
+    ret3 = runner.run({"input": {}, "atoms": WATER}, log=lambda msg: None)
+    assert ret3["solvation_energies"] is None
+
+    # A solvent unknown to tblite gets no value, rather than failing the calculation
+    inp = {"task": "solvation", "solvents": ["water", "unknown"]}
+    ret4 = runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)
+    assert ret4["solvation_energies"] == {
+        "water": pytest.approx(ret["solvation_energies"]["water"], abs=1e-8), "unknown": None
+    }
+
+
+@requires_tblite
+def test_run_ipea(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Compute the vertical ionization potential and electron affinity of water."""
+    def energy(**inp: Any) -> float:
+        inp["method"] = "IPEA1-xTB"
+        return runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)["energy"]
+
+    inp = {"task": "ipea", "method": "IPEA1-xTB"}
+    ret = runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)
+    shift = runner.IPEA_SHIFT
+    assert ret["energy"] == pytest.approx(energy(), abs=1e-8)
+    assert ret["ionization_potential"] == pytest.approx(
+        energy(charge=1) - ret["energy"] - shift, abs=1e-8
+    )
+    assert ret["electron_affinity"] == pytest.approx(
+        ret["energy"] - energy(charge=-1) - shift, abs=1e-8
+    )
+    assert ret["solvation_energies"] is None
+
+    # Without the empirical shift of xtb
+    inp["ipea_shift"] = 0.0
+    ret2 = runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)
+    assert ret2["ionization_potential"] == pytest.approx(
+        ret["ionization_potential"] + shift, abs=1e-8
+    )
+
+    # An ion whose SCC fails gives `None`
+    def fail(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("SCF not converged")
+
+    monkeypatch.setattr(runner.Engine, "variant", fail)
+    ret3 = runner.run({"input": inp, "atoms": WATER}, log=lambda msg: None)
+    assert ret3["ionization_potential"] is None
+    assert ret3["electron_affinity"] is None
+
+
+@requires_tblite
 def test_run_main(tmp_path: Path) -> None:
     """Test the files written by :func:`CAT.xtb.runner.main`."""
     inp_file = tmp_path / "water.in"
@@ -265,6 +331,43 @@ def test_tblite_job(job_manager: JobManager) -> None:
 
     mol2.job_single_point(TBLiteJob, Settings({"input": {"foo": 1}}))
     assert np.isnan(mol2.properties.energy.E)
+
+
+@requires_tblite
+def test_tblite_results(job_manager: JobManager) -> None:
+    """Test the solvation energies, ionization potential and electron affinity of the results."""
+    mol = from_smiles("CC(=O)[O-]")
+    s = Settings({"input": {"task": "solvation", "solvents": ["water", "toluene", "unknown"]}})
+    results = TBLiteJob(molecule=mol, settings=s, name="solvation").run()
+    e_solv = results.get_solvation_energies()
+    e_solv_kcal = results.get_solvation_energies("kcal/mol")
+    assert list(e_solv_kcal) == ["water", "toluene", "unknown"]
+    np.testing.assert_allclose(list(e_solv_kcal.values()), np.array(list(e_solv.values())) * 627.5,
+                               rtol=1e-4)
+    assert np.isnan(e_solv["unknown"])
+    with pytest.raises(ResultsError):
+        results.get_ionization_potential()
+
+    s = Settings({"input": {"task": "ipea", "method": "IPEA1-xTB"}})
+    results = TBLiteJob(molecule=mol, settings=s, name="ipea").run()
+    ip, ea = results.get_ionization_potential("eV"), results.get_electron_affinity("eV")
+    assert 0 < ip < 10
+    assert ea < ip
+    assert results.get_ionization_potential() == pytest.approx(ip / 27.2114, rel=1e-4)
+    with pytest.raises(ResultsError):
+        results.get_solvation_energies()
+
+
+@requires_tblite
+def test_rerun(job_manager: JobManager) -> None:
+    """Test that rerunning a job with the same input copies the results of the first job."""
+    mol = from_smiles("O")
+    s = Settings({"input": {"task": "singlepoint"}})
+    results1 = TBLiteJob(molecule=mol, settings=s.copy(), name="water").run()
+    results2 = TBLiteJob(molecule=mol, settings=s.copy(), name="water").run()
+    assert results1.job.status == "successful"
+    assert results2.job.status == "copied"
+    assert results2.get_energy() == results1.get_energy()
 
 
 @requires_tblite
